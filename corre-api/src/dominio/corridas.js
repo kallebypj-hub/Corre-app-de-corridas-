@@ -342,10 +342,27 @@ async function expiraVencidas(pool) {
   return aplicadas;
 }
 
+// Trava de segurança (medida provisória até a Etapa 7, decisão do dono
+// 2026-08-09): os estados vivos 3, 4 e 5 ainda não têm prazo e retêm
+// dinheiro de terceiro. Esta consulta lista toda corrida parada em estado
+// vivo há mais de `horas` — dinheiro preso nunca fica invisível.
+async function corridasParadas(pool, { horas = 24 } = {}) {
+  const { rows } = await pool.query(
+    `SELECT id, estado, seq, atualizado_em, now() - atualizado_em AS parada_ha
+     FROM corridas
+     WHERE estado = ANY($1::int[])
+       AND atualizado_em <= now() - make_interval(hours => $2)
+     ORDER BY atualizado_em`,
+    [E.VIVOS, horas],
+  );
+  return rows;
+}
+
 module.exports = {
   criaCorrida,
   transiciona,
   reconstroiEstado,
   expiraVencidas,
+  corridasParadas,
   buscaCorrida,
 };

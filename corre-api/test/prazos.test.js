@@ -7,7 +7,11 @@ const { promisify } = require('node:util');
 const { setTimeout: espera } = require('node:timers/promises');
 const path = require('node:path');
 
-const { criaCorrida, transiciona, expiraVencidas } = require('../src/dominio/corridas');
+const { Pool } = require('pg');
+
+const {
+  criaCorrida, transiciona, expiraVencidas, corridasParadas,
+} = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
 const { poolApp, levaAte } = require('./ajuda-maquina');
 const { randomUUID } = require('node:crypto');
@@ -103,6 +107,34 @@ test('prazos e tempo do servidor', async (t) => {
     await expiraVencidas(pool);
     const { rows: [linha] } = await pool.query('SELECT estado FROM corridas WHERE id = $1', [corrida.id]);
     assert.equal(linha.estado, 1);
+  });
+
+  await t.test('trava de segurança: corrida em estado vivo há mais de 24 horas aparece na consulta de paradas', async () => {
+    // Medida provisória até a Etapa 7 (CORRE.md, seção 4, decisão 4):
+    // estados 3-5 não têm prazo e retêm dinheiro — parada não pode sumir.
+    // O recuo do relógio é adulteração deliberada via dono, só para
+    // simular a corrida esquecida há 25 horas.
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    try {
+      const parada = await levaAte(pool, 3);
+      const recente = await levaAte(pool, 3);
+      const finalizada = await levaAte(pool, 7);
+      await dono.query(
+        "UPDATE corridas SET atualizado_em = now() - interval '25 hours' WHERE id = ANY($1::uuid[])",
+        [[parada.id, finalizada.id]],
+      );
+
+      const paradas = await corridasParadas(pool);
+      const ids = new Set(paradas.map((linha) => linha.id));
+      assert.ok(ids.has(parada.id), 'corrida viva parada há 25h tem que aparecer');
+      assert.ok(!ids.has(recente.id), 'corrida viva recém-movida não aparece');
+      assert.ok(!ids.has(finalizada.id), 'corrida em estado final não aparece');
+
+      const linha = paradas.find((p) => p.id === parada.id);
+      assert.equal(linha.estado, 3);
+    } finally {
+      await dono.end();
+    }
   });
 
   await t.test('varredor é idempotente: rodar duas vezes não duplica evento', async () => {

@@ -5,6 +5,8 @@ Versão 1.0 · Documento único: instruções de construção + especificação
 
 > **Como usar:** salve este arquivo na raiz do repositório e cole a PARTE 1 no Claude Code.
 
+> **Fonte oficial (decisão do dono, 2026-08-09):** este arquivo, dentro do repositório, é a fonte **única e oficial** da especificação. Toda decisão tomada em sessão entra aqui **no mesmo PR**, com data e motivo; e o relatório de cada etapa lista, em seção própria, toda alteração feita na especificação naquela etapa, com o texto de antes e o de depois.
+
 ---
 ---
 
@@ -182,6 +184,7 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 > 1. O estado 6 (Em disputa) fica **sem transições até a Etapa 10** (painel), que definirá abertura e resolução por migration própria; até lá a máquina recusa qualquer par envolvendo o estado 6. A disputa pós-entrega (prazo de 24h da seção 11) **não reabre corrida** — estado final é final; será fluxo compensatório do painel.
 > 2. Cancelamento pela operação vale para os estados **3, 4 e 5** ("do estado 3 em diante", seção 5), sempre com motivo registrado.
 > 3. A máquina da Etapa 1 fica com **13 arestas legais** além da criação (∅→1): 1→2, 1→8, 1→10, 2→3, 2→9, 2→10, 3→4, 3→10, 4→5, 4→7, 4→10, 5→10, 5→11.
+> 4. **Medida provisória até a Etapa 7 (dono, 2026-08-09):** os estados 3, 4 e 5 retêm dinheiro de terceiro e ainda não têm prazo — corrida esquecida ali é dinheiro preso sem ninguém saber. Até a Etapa 7 definir os prazos operacionais, a consulta `corridasParadas` (`corre-api/src/dominio/corridas.js`) lista toda corrida em estado vivo há mais de 24 horas, coberta por teste. Sem tela, sem alerta, sem job — só a consulta.
 
 ## 5. Cancelamento
 

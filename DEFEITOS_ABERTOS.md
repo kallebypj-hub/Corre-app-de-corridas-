@@ -43,7 +43,10 @@ corrigir. Entrada só sai daqui por decisão registrada — nunca por apagamento
   (espera na porta de 5 min + 1 ligação, retorno) são regra da Etapa 7 —
   defini-los na Etapa 1 seria inventar valor sem especificação.
 - **Mitigação ativa:** cancelamento pela operação (3, 4, 5 → 10) já existe
-  e exige motivo registrado.
+  e exige motivo registrado; e a consulta `corridasParadas`
+  (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda
+  corrida em estado vivo há mais de 24 horas — dinheiro preso nunca fica
+  invisível (medida provisória exigida pelo dono em 2026-08-09).
 - **Estado:** aberto, aceito até a Etapa 7.
 
 ## 2026-08-09 — Monorepo em vez de dois repositórios (8º achado da revisão da Etapa 0)
