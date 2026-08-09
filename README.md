@@ -5,8 +5,10 @@ A especificação completa e as 8 leis inegociáveis estão em [`CORRE.md`](CORR
 
 ## Estrutura
 
-A especificação pede dois repositórios (`corre-api` e `corre-app`); este
-repositório único os abriga como diretórios de um monorepo:
+Monorepo aprovado pelo dono (2026-08-09): quando o contrato da API mudar,
+o app Kotlin muda no mesmo PR. O tronco é `main`; toda etapa entra por PR
+com a bateria e o controle negativo verdes no CI. Limites conhecidos e
+aceitos ficam registrados em [`DEFEITOS_ABERTOS.md`](DEFEITOS_ABERTOS.md).
 
 | Diretório | Conteúdo |
 |---|---|
@@ -17,7 +19,7 @@ repositório único os abriga como diretórios de um monorepo:
 
 | Etapa | Situação |
 |---|---|
-| 0 — Fundação: migrations, tabela de eventos, CI | **Concluída, aguardando aprovação** |
+| 0 — Fundação: migrations, tabela de eventos, CI | **Concluída — em PR contra `main`, aguardando aprovação** |
 | 1 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
 
 ## Rodando a bateria da Etapa 0
@@ -51,3 +53,7 @@ migrations — nunca rode apontando para um banco que importa.
 - Dinheiro é inteiro em centavos (Lei 1): domínio `centavos` (`BIGINT`).
 - Migration aplicada não se edita: o runner registra o checksum SHA-256 e
   recusa divergência.
+- Trava de boot: a aplicação se recusa a iniciar se a credencial da conexão
+  for superusuário, dono de `eventos` ou tiver qualquer escrita em
+  `eventos` (`corre-api/src/db/boot.js`) — a regra "app conecta só como
+  `corre_app`" é verificada em execução, não prometida em texto.

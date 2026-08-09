@@ -24,6 +24,12 @@ async function conectaApp() {
   return client;
 }
 
+async function conectaSuper() {
+  const client = new Client({ connectionString: exigeEnv('DATABASE_URL_SUPER') });
+  await client.connect();
+  return client;
+}
+
 // Executa a consulta esperando erro; devolve o erro para asserções extras.
 async function esperaErro(client, sql, params = []) {
   try {
@@ -67,6 +73,7 @@ async function insereEvento(client, evento) {
 module.exports = {
   conectaDono,
   conectaApp,
+  conectaSuper,
   esperaErro,
   eventoSintetico,
   insereEvento,

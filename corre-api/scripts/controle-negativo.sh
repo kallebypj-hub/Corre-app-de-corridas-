@@ -14,6 +14,7 @@ cd "$(dirname "$0")/.."
 
 URL_DONO="postgresql://corre_dono:${CORRE_DONO_SENHA}@${PGHOST}:${PGPORT}/${CORRE_DB}"
 URL_APP="postgresql://corre_app:${CORRE_APP_SENHA}@${PGHOST}:${PGPORT}/${CORRE_DB}"
+URL_SUPER="postgresql://${PGSUPERUSER}:${PGSUPERPASSWORD}@${PGHOST}:${PGPORT}/${CORRE_DB}"
 SAIDAS="${TMPDIR:-/tmp}"
 
 psql_super() {
@@ -33,7 +34,7 @@ sabota() {
   psql_super "$sql" > /dev/null
 
   local saida="${SAIDAS}/controle_negativo_${nome}.log"
-  if DATABASE_URL="$URL_DONO" DATABASE_URL_APP="$URL_APP" node --test > "$saida" 2>&1; then
+  if DATABASE_URL="$URL_DONO" DATABASE_URL_APP="$URL_APP" DATABASE_URL_SUPER="$URL_SUPER" node --test > "$saida" 2>&1; then
     echo "FALSO POSITIVO: bateria ficou VERDE com a regra sabotada (${nome})."
     echo "Saída completa em ${saida}"
     exit 1
@@ -69,8 +70,14 @@ sabota "colunas_protegidas_liberadas" "
   GRANT INSERT (id, criado_em) ON eventos TO corre_app;
 " "OVERRIDING SYSTEM VALUE"
 
+# A credencial da aplicação ganha escrita em eventos: a trava de boot tem
+# que passar a recusá-la — o teste que aceita corre_app fica vermelho.
+sabota "credencial_do_app_com_escrita" "
+  GRANT UPDATE, DELETE, TRUNCATE ON eventos TO corre_app;
+" "boot aceita a credencial restrita"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 scripts/setup-db.sh > /dev/null
 DATABASE_URL="$URL_DONO" node src/db/migrar.js > /dev/null
 
-echo "controle negativo OK: as três sabotagens deixaram a bateria vermelha nos testes certos"
+echo "controle negativo OK: as quatro sabotagens deixaram a bateria vermelha nos testes certos"

@@ -25,7 +25,7 @@ Se algo não está na especificação, **não está no escopo**. A seção 16 li
 - **Banco:** PostgreSQL
 - **Pagamento:** gateway com Pix e split por subconta (a definir — ver Lei 7)
 - **Infra:** VPS dedicada, separada de qualquer outro sistema
-- **Repositórios:** `corre-api` e `corre-app`
+- **Repositórios:** monorepo único com os diretórios `corre-api/` e `corre-app/` *(decisão do dono, 2026-08-09: quando o contrato da API mudar, o app Kotlin muda no mesmo PR — substitui os dois repositórios separados da versão 1.0)*
 
 ## As 8 leis inegociáveis
 
