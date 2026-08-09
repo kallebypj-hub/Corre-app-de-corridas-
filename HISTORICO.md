@@ -108,7 +108,9 @@ A decisão de mover o pagamento para a porta derrubou, em cascata, o Portão C, 
 | 46 | **Estado "Expirada"** (seção 4) | Existia: ninguém pagou o link em 15 min | **Extinto.** Sem cobrança no início, corrida sem motoboy morre em "Sem motoboy" | Não sobrou nada para expirar |
 | 47 | **Retorno nunca carrega dinheiro pago** (seções 4 e 5) | Retorno acontecia com valor retido | Depois de Pago só existem Entregue e Disputa. O retorno só sai de "Com a mercadoria" ou "Na porta, cobrando" | Mantém o estorno fora do caminho normal — é o que torna o modelo simples |
 | 48 | **Cancelamento** (seção 5) | Livre até o estado 2 (Procurando motoboy); da 3 em diante só a operação | Livre no estado **1** (Procurando motoboy); dos estados 2, 3, 4 e 6 só a operação, com motivo; **do 5 em diante não se cancela** | Renumeração + decisão 42 |
-| 49 | **Prazos provisórios** (seção 4) | Estados 3, 4 e 5 sem prazo até a Etapa 7 | Estados **2, 3 e 6** sem prazo até a **Etapa 8**. `corridasParadas` continua obrigatória | Renumeração. O risco **encolheu** (não há mais dinheiro de terceiro retido) mas **não sumiu**: há mercadoria de terceiro na mão do motoboy, que é pior de perder de vista |
+| 49 | **Prazos provisórios** (seção 4) | Estados 3, 4 e 5 sem prazo até a Etapa 7 | Estados **2, 3, 5 e 6** sem prazo até a **Etapa 8**. `corridasParadas` continua obrigatória | Renumeração. O risco **encolheu** (não há mais dinheiro de terceiro retido) mas **não sumiu**: há mercadoria de terceiro na mão do motoboy, que é pior de perder de vista |
+| 49b | **Fechar Pago por decurso de prazo — proibido** (seção 4) | — | Corrida parada em **Pago** (dinheiro já dividido, entrega não confirmada) **não fecha sozinha em Entregue**. Fica em `corridasParadas` até gente resolver, enquanto a Etapa 8 não define o destino | Fechar por prazo é carimbar como entregue uma corrida que talvez não tenha sido — e é justamente a fresta que o fim do PIN abriu (capítulo 3) |
+| 49c | **O estado de disputa nasce sem aresta nenhuma** (seções 5 e 13) | Mesma regra valia para o antigo estado 6, mas o dinheiro estava retido e o estorno tinha lastro | Continua sem arestas até a **Etapa 11** — e agora isso significa que **entre o pagamento e a Etapa 11 não existe recurso dentro do sistema**. O que der errado depois do split se resolve por fora, com gente | Inventar fluxo de disputa antes da etapa que o especifica seria pior. Registrado como o motivo de a Etapa 11 não poder ficar para o fim da fila |
 
 ### As superfícies
 
@@ -214,11 +216,15 @@ Registro exigido pelo dono: defeito conhecido e não registrado é defeito que v
 - **Descrição:** a regra do projeto diz que "nenhuma corrida fica presa em
   estado vivo para sempre: todo estado vivo tem prazo e destino", mas a
   tabela da seção 4 marca prazo "Etapa 8" para os estados **2** (a caminho
-  da loja), **3** (com a mercadoria) e **6** (em retorno). Uma corrida
-  nesses estados só sai dali por ação do motoboy ou cancelamento da
-  operação — se o motoboy sumir, ela fica viva indefinidamente.
-  *(Antes da revisão do pagamento eram os estados 3, 4 e 5, e o prazo era
-  a Etapa 7.)*
+  da loja), **3** (com a mercadoria), **5** (pago) e **6** (em retorno).
+  Uma corrida nesses estados só sai dali por ação do motoboy ou
+  cancelamento da operação — se o motoboy sumir, ela fica viva
+  indefinidamente. *(Antes da revisão do pagamento eram os estados 3, 4 e
+  5, e o prazo era a Etapa 7.)*
+- **O estado 5 é o pior dos quatro:** o dinheiro **já foi dividido** e o
+  único fato em aberto é se a mercadoria mudou de mão. Fechar em Entregue
+  por decurso de prazo está **proibido** (decisão 49b) — seria carimbar
+  como entregue uma corrida que talvez não tenha sido.
 - **Risco:** **mudou de natureza com a revisão de 2026-08-09.** Encolheu de
   um lado — nesses estados **não há mais dinheiro de terceiro retido**,
   porque nada foi pago ainda. Cresceu do outro: há **mercadoria de

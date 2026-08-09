@@ -7,7 +7,7 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
-> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções 1 a 12, 14 a 17, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1.
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 64.
 
 ---
 
@@ -251,7 +251,9 @@ Fica **sem transições até a Etapa 11** (painel), que definirá abertura e res
 
 Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai no evento e na projeção, e vencer é consulta ao banco. Reinício de processo não perde vencimento. Tempo é **sempre do servidor** — instante vindo do cliente é recusado.
 
-**Medida provisória até a Etapa 8:** os estados 2, 3 e 6 ainda não têm prazo. A consulta `corridasParadas` (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda corrida em estado vivo há mais de 24 horas. O risco encolheu com a revisão — nesses estados **não há mais dinheiro de terceiro retido** —, mas continua havendo **mercadoria de terceiro** na mão do motoboy, que é pior de perder de vista. A consulta continua obrigatória.
+**Medida provisória até a Etapa 8:** os estados **2, 3, 5 e 6** ainda não têm prazo. A consulta `corridasParadas` (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda corrida em estado vivo há mais de 24 horas. O risco encolheu com a revisão — nesses estados **não há mais dinheiro de terceiro retido** —, mas continua havendo **mercadoria de terceiro** na mão do motoboy, que é pior de perder de vista. A consulta continua obrigatória.
+
+**O estado 5 (Pago) merece atenção própria.** Ele é o único estado vivo em que o dinheiro **já foi dividido** e o único fato ainda em aberto é se a mercadoria mudou de mão. **A saída fácil seria fechar em Entregue sozinho depois de N minutos, e ela está proibida:** fechar por decurso de prazo é carimbar como entregue uma corrida que talvez não tenha sido. Enquanto a Etapa 8 não definir o destino, corrida parada em Pago aparece em `corridasParadas` e é resolvida por gente.
 
 ## 5. Cancelamento
 
@@ -259,6 +261,8 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 - **Dos estados 2, 3, 4 e 6**, só a operação cancela, sempre com **motivo registrado** (motivo em branco é recusado).
 - **Cancelamento pós-aceite causado pelo lojista:** cobrado do **cartão de garantia do lojista** e repassado ao motoboy.
 - **Depois do estado 5 (Pago) não se cancela.** O dinheiro já foi dividido em três contas que não são nossas. O que existe dali em diante é **disputa** (estado 7), resolvida no painel por evento compensatório.
+
+> **Buraco declarado até a Etapa 11:** o estado 7 nasce **sem nenhuma aresta** — nem de entrada. Ou seja, entre o pagamento e a Etapa 11 **não existe recurso dentro do sistema**: o que der errado depois do split se resolve por fora, com gente. É consciente — inventar um fluxo de disputa antes da etapa que o especifica seria pior — e é o motivo de a Etapa 11 não poder ficar para o fim.
 
 > Princípio: **quem causa paga.** Não existe custo sem dono. O Corre nunca banca do próprio bolso.
 
@@ -304,7 +308,7 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 
 ### Preço da mercadoria
 
-O valor da mercadoria é **digitado pelo lojista e cobrado integral**. O Corre **não tem comissão nenhuma sobre mercadoria** (seção 9), não conferе preço, não tabela produto e não guarda catálogo — a mercadoria é um número que atravessa a cobrança e cai inteiro na subconta do lojista.
+O valor da mercadoria é **digitado pelo lojista e cobrado integral**. O Corre **não tem comissão nenhuma sobre mercadoria** (seção 9), não confere preço, não tabela produto e não guarda catálogo — a mercadoria é um número que atravessa a cobrança e cai inteiro na subconta do lojista.
 
 Ele **substituiu o "valor declarado"** da versão anterior: antes era uma declaração para limitar responsabilidade em caso de perda; agora é o valor efetivamente cobrado. O teto da seção 11 passa a incidir sobre um número real, e não sobre uma estimativa de quem tem interesse nela.
 
