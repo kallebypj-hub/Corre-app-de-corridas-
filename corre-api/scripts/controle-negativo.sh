@@ -248,6 +248,35 @@ sabota_codigo "otp_codigo_em_claro" src/dominio/otp.js \
   's|hashDoCodigo(telefone, codigo), config.otpMaxTentativas|codigo, config.otpMaxTentativas|; s|const confere = hashDoCodigo(telefone, codigo) === slot.codigo_hash;|const confere = codigo === slot.codigo_hash;|' \
   test/otp.test.js "código nunca em claro"
 
+# ---------- Etapa 3: zonas e preço ----------
+
+# Centavos trocados por ponto flutuante (reais): o frete deixa de ser inteiro
+# em centavos — Lei 1. O teste de valor exato fora de zona fica vermelho.
+sabota_codigo "preco_em_ponto_flutuante" src/dominio/preco.js \
+  's|frete_centavos: Number(total),|frete_centavos: Number(total) / 100,|' \
+  test/preco.test.js "fora de todas as zonas"
+
+# Versão nova reescreve preço antigo: o cálculo ignora a versão pedida e usa
+# a vigente. Corrida em versão antiga passa a mudar de preço.
+sabota_codigo "versao_reescreve_preco_antigo" src/dominio/preco.js \
+  's|const alvo = tabelaId \|\| await tabelaVigente(pool);|const alvo = await tabelaVigente(pool);|' \
+  test/preco.test.js "não altera o preço"
+
+# Fronteira não-determinística: a resolução passa a sortear a zona.
+sabota_codigo "fronteira_nao_deterministica" src/dominio/preco.js \
+  's|  for (const zona of zonas) {|  for (const zona of [...zonas].sort(() => Math.random() - 0.5)) {|' \
+  test/preco.test.js "fronteira"
+
+# Parâmetro de tempo no preço: o total passa a depender do relógio.
+sabota_codigo "hora_no_preco" src/dominio/preco.js \
+  's|const total = maisCaraCentavos + adicional;|const total = maisCaraCentavos + adicional + BigInt(new Date().getMilliseconds());|' \
+  test/preco.test.js "mesmo centavo"
+
+# Regra de arredondamento removida: km por piso em vez de teto declarado.
+sabota_codigo "arredondamento_removido" src/dominio/preco.js \
+  's|return (m + MIL - 1n) / MIL;|return m / MIL;|' \
+  test/preco.test.js "arredonda para CIMA"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 

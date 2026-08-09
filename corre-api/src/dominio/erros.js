@@ -39,6 +39,8 @@ const CODIGOS = {
   CODIGO_INVALIDO: 'codigo_invalido',
   CODIGO_EXPIRADO: 'codigo_expirado',
   CODIGO_INCORRETO: 'codigo_incorreto',
+  // Etapa 3 — zonas e preço
+  TABELA_PRECO_INEXISTENTE: 'tabela_preco_inexistente',
 };
 
 module.exports = { ErroDeDominio, CODIGOS };

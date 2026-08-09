@@ -106,6 +106,9 @@ test('migrations', async (t) => {
       { column_name: 'criado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
       { column_name: 'atualizado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
       { column_name: 'lojista_id', data_type: 'uuid', is_nullable: 'NO' },
+      { column_name: 'tabela_preco_id', data_type: 'uuid', is_nullable: 'YES' },
+      { column_name: 'frete_centavos', data_type: 'bigint', is_nullable: 'YES' },
+      { column_name: 'zona_nome', data_type: 'text', is_nullable: 'YES' },
     ]);
   });
 
@@ -234,7 +237,10 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'INSERT'
       ORDER BY column_name
     `);
-    assert.deepEqual(inserir.rows.map((r) => r.column_name), ['estado', 'lojista_id', 'seq', 'vence_em']);
+    assert.deepEqual(
+      inserir.rows.map((r) => r.column_name),
+      ['estado', 'frete_centavos', 'lojista_id', 'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
+    );
 
     const atualizar = await dono.query(`
       SELECT column_name
