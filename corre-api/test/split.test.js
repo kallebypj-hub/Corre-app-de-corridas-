@@ -406,6 +406,56 @@ test('a aplicação não altera, não apaga e não publica configuração (Lei 9
   }
 });
 
+test('falha de configuração responde 503, é registrada, e não vaza centavo ao cliente', async (t) => {
+  // Ainda não existe rota HTTP que crie corrida (é da Etapa 7). Para provar
+  // o mapeamento PELO EFEITO, e não por leitura, uma rota existente é
+  // levada a falhar com o erro de configuração: o que se testa aqui é o
+  // envelope de erro da API, não a regra de negócio.
+  const express = require('express');
+  const { montaApi } = require('../src/http/api');
+
+  const falha = () => {
+    throw new ErroDeDominio(
+      CODIGOS.CONFIGURACAO_DE_TAXA_AUSENTE,
+      'configuração "segredo-interno" deixaria o Corre com -557 centavos',
+    );
+  };
+  const poolQueFalha = { query: async () => falha(), connect: async () => falha() };
+  const app = express();
+  app.use(montaApi(poolQueFalha));
+  const servidor = app.listen(0);
+  await new Promise((resolve) => { servidor.on('listening', resolve); });
+  t.after(() => servidor.close());
+
+  const erroOriginal = console.error;
+  const registrado = [];
+  console.error = (...args) => registrado.push(args.join(' '));
+  let resposta;
+  let corpo;
+  try {
+    resposta = await fetch(`http://127.0.0.1:${servidor.address().port}/lojistas`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nome: 'Loja', telefone: '88999990000' }),
+    });
+    corpo = await resposta.json();
+  } finally {
+    console.error = erroOriginal;
+  }
+
+  // 503, não 4xx: o serviço é que não pode operar. O usuário não errou.
+  assert.equal(resposta.status, 503);
+  assert.equal(corpo.erro, 'configuracao_de_taxa_ausente');
+  // A mensagem detalhada é NOSSA: centavos e rótulo da configuração não vão
+  // para o cliente.
+  assert.doesNotMatch(corpo.mensagem, /centavos|segredo-interno/);
+  assert.match(corpo.mensagem, /nada foi cobrado/);
+  // E foi REGISTRADA como problema nosso, com o detalhe inteiro.
+  assert.equal(registrado.length, 1);
+  assert.match(registrado[0], /falha de configuração/);
+  assert.match(registrado[0], /segredo-interno/);
+});
+
 test('publicações simultâneas não deixam a vigente ambígua', async (t) => {
   const dono = await conectaDono();
   t.after(() => dono.end());

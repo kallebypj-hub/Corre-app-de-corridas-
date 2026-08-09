@@ -9,7 +9,7 @@
 
 const express = require('express');
 
-const { ErroDeDominio } = require('../dominio/erros');
+const { ErroDeDominio, ehFalhaDeConfiguracao } = require('../dominio/erros');
 const contas = require('../dominio/contas');
 const otp = require('../dominio/otp');
 const { emTransacao } = require('../dominio/nucleo');
@@ -86,6 +86,20 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
         await handler(req, res);
       } catch (erro) {
         if (erro instanceof ErroDeDominio) {
+          // Falha de configuração não é erro do usuário. Ela vira 503 (o
+          // serviço não pode operar), é REGISTRADA como problema nosso, e a
+          // mensagem detalhada — que carrega centavos e o rótulo da
+          // configuração — não vai para o cliente.
+          if (ehFalhaDeConfiguracao(erro)) {
+            console.error(
+              `falha de configuração em ${req.method} ${req.originalUrl}: ${erro.codigo}: ${erro.message}`,
+            );
+            res.status(503).json({
+              erro: erro.codigo,
+              mensagem: 'a plataforma está fora de operação por configuração de taxa; nada foi cobrado',
+            });
+            return;
+          }
           res.status(STATUS_POR_CODIGO[erro.codigo] || 422).json({
             erro: erro.codigo,
             mensagem: erro.message,

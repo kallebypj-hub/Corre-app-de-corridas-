@@ -342,6 +342,12 @@ sabota_sql "app_publica_configuracao_de_taxa" "
   GRANT INSERT, UPDATE, DELETE ON configuracoes_taxa TO corre_app;
 " test/split.test.js "não altera, não apaga e não publica"
 
+# Falha de configuração volta a ser tratada como erro do usuário: 4xx, sem
+# registro nosso, e com a mensagem interna (centavos, rótulo) vazando.
+sabota_codigo "falha_de_configuracao_vira_erro_do_usuario" src/http/api.js \
+  's|if (ehFalhaDeConfiguracao(erro)) {|if (false) {|' \
+  test/split.test.js "responde 503"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 
