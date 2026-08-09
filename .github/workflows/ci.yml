@@ -3,9 +3,11 @@
 # regra de imutabilidade é sabotada.
 name: CI
 
+# Só push (mais disparo manual): o status prende no SHA e aparece no PR do
+# mesmo repositório; push + pull_request sem filtro rodaria tudo em dobro.
 on:
   push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   bateria:

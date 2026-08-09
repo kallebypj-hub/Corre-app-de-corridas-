@@ -5,10 +5,17 @@
 --
 -- Lei 3 — Evento não se apaga nem se edita, em nenhuma circunstância.
 -- Garantido no banco, em duas camadas independentes:
---   (a) privilégio: o papel da aplicação (corre_app) recebe só SELECT e
---       INSERT — UPDATE/DELETE/TRUNCATE falham com erro de permissão;
---   (b) trigger: UPDATE/DELETE/TRUNCATE falham até para o dono da tabela.
--- Remover essas travas exige uma nova migration, que fica auditada no git.
+--   (a) privilégio: o papel da aplicação (corre_app) tem SELECT na tabela e
+--       INSERT só nas colunas de negócio — UPDATE/DELETE/TRUNCATE falham com
+--       erro de permissão, e id/criado_em são sempre atribuídos pelo banco
+--       (nem OVERRIDING SYSTEM VALUE passa: falta privilégio na coluna id);
+--   (b) trigger: UPDATE/DELETE/TRUNCATE diretos falham até para o dono da
+--       tabela. Limite inerente do PostgreSQL: o dono (corre_dono) consegue
+--       desabilitar trigger ou trocar a função em sessão comum. Por isso a
+--       garantia forte de runtime é a camada (a): a aplicação conecta SEMPRE
+--       como corre_app — corre_dono é reservado a migrations e nunca vira
+--       credencial de aplicação ou de painel.
+-- Remoção sancionada das travas só por migration versionada no git.
 -- Correção é sempre um novo evento compensatório.
 
 -- Papel da aplicação. Criado sem LOGIN; credencial de acesso é dada fora
@@ -58,6 +65,10 @@ CREATE TRIGGER eventos_bloqueia_truncate
   BEFORE TRUNCATE ON eventos
   FOR EACH STATEMENT EXECUTE FUNCTION eventos_imutaveis();
 
--- Camada (a): a aplicação só anexa e lê.
+-- Camada (a): a aplicação só anexa e lê. O INSERT é por coluna: id e
+-- criado_em ficam de fora, então a ordem do log e o carimbo de tempo são
+-- sempre atribuídos pelo banco — não são forjáveis pela aplicação.
 REVOKE ALL ON eventos FROM PUBLIC;
-GRANT SELECT, INSERT ON eventos TO corre_app;
+GRANT SELECT ON eventos TO corre_app;
+GRANT INSERT (tipo, agregado_tipo, agregado_id, payload, autor_tipo, autor_id)
+  ON eventos TO corre_app;

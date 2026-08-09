@@ -86,14 +86,27 @@ test('migrations', async (t) => {
     assert.equal(rows[0].base, 'int8');
   });
 
-  await t.test('corre_app tem só SELECT e INSERT em eventos', async () => {
-    const { rows } = await dono.query(`
+  await t.test('corre_app: SELECT na tabela, INSERT só nas colunas de negócio', async () => {
+    const tabela = await dono.query(`
       SELECT privilege_type
       FROM information_schema.role_table_grants
       WHERE table_schema = 'public' AND table_name = 'eventos' AND grantee = 'corre_app'
       ORDER BY privilege_type
     `);
-    assert.deepEqual(rows.map((r) => r.privilege_type), ['INSERT', 'SELECT']);
+    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), ['SELECT']);
+
+    // INSERT por coluna: id e criado_em ficam de fora — sempre do banco.
+    const colunas = await dono.query(`
+      SELECT column_name
+      FROM information_schema.role_column_grants
+      WHERE table_schema = 'public' AND table_name = 'eventos'
+        AND grantee = 'corre_app' AND privilege_type = 'INSERT'
+      ORDER BY column_name
+    `);
+    assert.deepEqual(
+      colunas.rows.map((r) => r.column_name),
+      ['agregado_id', 'agregado_tipo', 'autor_id', 'autor_tipo', 'payload', 'tipo'],
+    );
   });
 
   await t.test('os dois triggers de imutabilidade existem e estão ativos', async () => {

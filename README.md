@@ -39,10 +39,15 @@ migrations — nunca rode apontando para um banco que importa.
 ## Garantias da fundação (Etapa 0)
 
 - `eventos` é append-only em duas camadas independentes, no banco:
-  o papel da aplicação (`corre_app`) só tem `SELECT` e `INSERT`, e triggers
-  fazem `UPDATE`/`DELETE`/`TRUNCATE` falharem **até para o dono da tabela**.
-  Remover as travas exige migration nova, auditada no git. A aplicação
-  nunca conecta como dono nem como superusuário.
+  o papel da aplicação (`corre_app`) tem `SELECT` na tabela e `INSERT` só
+  nas colunas de negócio — `id` e `criado_em` são sempre atribuídos pelo
+  banco (nem `OVERRIDING SYSTEM VALUE` passa), e triggers fazem
+  `UPDATE`/`DELETE`/`TRUNCATE` diretos falharem **até para o dono da
+  tabela**. Limite inerente do PostgreSQL: o dono ainda consegue desligar
+  as travas em sessão comum — por isso `corre_dono` é reservado a
+  migrations e a aplicação conecta **sempre** como `corre_app`, nunca como
+  dono nem superusuário. Remoção sancionada das travas só por migration
+  versionada no git.
 - Dinheiro é inteiro em centavos (Lei 1): domínio `centavos` (`BIGINT`).
 - Migration aplicada não se edita: o runner registra o checksum SHA-256 e
   recusa divergência.

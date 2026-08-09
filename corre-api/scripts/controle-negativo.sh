@@ -22,7 +22,7 @@ psql_super() {
 }
 
 sabota() {
-  local nome="$1" sql="$2"
+  local nome="$1" sql="$2" esperado="$3"
   echo "== sabotagem: ${nome} =="
 
   # Banco novo, migrado, íntegro...
@@ -38,7 +38,14 @@ sabota() {
     echo "Saída completa em ${saida}"
     exit 1
   fi
-  echo "ok: bateria ficou vermelha com ${nome} (saída em ${saida})"
+  # Vermelho por qualquer motivo não vale: tem que ser o teste que vigia
+  # exatamente a regra sabotada.
+  if ! grep -Eq "not ok .*${esperado}" "$saida"; then
+    echo "ERRO: bateria vermelha, mas não pelo teste esperado ('${esperado}')."
+    echo "Saída completa em ${saida}"
+    exit 1
+  fi
+  echo "ok: bateria ficou vermelha pelo teste esperado com ${nome} (saída em ${saida})"
 }
 
 # Camada de privilégio + camada de trigger derrubadas: o papel da aplicação
@@ -47,17 +54,23 @@ sabota "app_com_escrita_liberada" "
   DROP TRIGGER eventos_bloqueia_update_delete ON eventos;
   DROP TRIGGER eventos_bloqueia_truncate ON eventos;
   GRANT UPDATE, DELETE, TRUNCATE ON eventos TO corre_app;
-"
+" "UPDATE como corre_app"
 
 # Só a camada de trigger derrubada: o dono da tabela passa a conseguir
 # UPDATE/DELETE/TRUNCATE em eventos.
 sabota "triggers_removidos" "
   DROP TRIGGER eventos_bloqueia_update_delete ON eventos;
   DROP TRIGGER eventos_bloqueia_truncate ON eventos;
-"
+" "UPDATE até como dono"
+
+# Colunas protegidas liberadas: o papel da aplicação passa a poder forjar
+# id (via OVERRIDING SYSTEM VALUE) e criado_em.
+sabota "colunas_protegidas_liberadas" "
+  GRANT INSERT (id, criado_em) ON eventos TO corre_app;
+" "OVERRIDING SYSTEM VALUE"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 scripts/setup-db.sh > /dev/null
 DATABASE_URL="$URL_DONO" node src/db/migrar.js > /dev/null
 
-echo "controle negativo OK: as duas sabotagens deixaram a bateria vermelha"
+echo "controle negativo OK: as três sabotagens deixaram a bateria vermelha nos testes certos"

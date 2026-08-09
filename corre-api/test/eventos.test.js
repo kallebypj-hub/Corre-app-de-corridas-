@@ -73,6 +73,37 @@ test('eventos append-only', async (t) => {
   await t.test('corre_app não desliga os triggers de imutabilidade', async () => {
     const erro = await esperaErro(app, 'ALTER TABLE eventos DISABLE TRIGGER eventos_bloqueia_update_delete');
     assert.equal(erro.code, '42501');
+    // 42501 sai para qualquer ALTER TABLE de não-dono, até com trigger
+    // inexistente — então confira também que os alvos seguem lá, ativos.
+    const { rows } = await dono.query(`
+      SELECT tgname FROM pg_trigger
+      WHERE tgrelid = 'eventos'::regclass AND NOT tgisinternal AND tgenabled = 'O'
+      ORDER BY tgname
+    `);
+    assert.deepEqual(
+      rows.map((r) => r.tgname),
+      ['eventos_bloqueia_truncate', 'eventos_bloqueia_update_delete'],
+    );
+  });
+
+  await t.test('corre_app não escolhe o id nem com OVERRIDING SYSTEM VALUE (42501)', async () => {
+    const erro = await esperaErro(
+      app,
+      `INSERT INTO eventos (id, tipo, agregado_tipo, agregado_id, autor_tipo)
+       OVERRIDING SYSTEM VALUE VALUES (999999, 'forjado', 'corrida', $1, 'sistema')`,
+      [randomUUID()],
+    );
+    assert.equal(erro.code, '42501');
+  });
+
+  await t.test('corre_app não forja criado_em (42501)', async () => {
+    const erro = await esperaErro(
+      app,
+      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, autor_tipo, criado_em)
+       VALUES ('forjado', 'corrida', $1, 'sistema', '2000-01-01T00:00:00Z')`,
+      [randomUUID()],
+    );
+    assert.equal(erro.code, '42501');
   });
 
   await t.test('evento de painel sem autor identificado é recusado (23514)', async () => {
@@ -106,11 +137,14 @@ test('eventos append-only', async (t) => {
     const depois = BigInt((await app.query('SELECT count(*) AS n FROM eventos')).rows[0].n);
     assert.equal(depois - antes, 5000n);
 
+    // id é IDENTITY (nunca duplica por construção); a integridade que importa
+    // é nenhum payload perdido nem duplicado.
     const { rows } = await app.query(`
-      SELECT count(*) AS n, count(DISTINCT id) AS distintos
+      SELECT count(*) AS n, count(DISTINCT (payload->>'n')) AS distintos
       FROM eventos WHERE tipo = 'corrida_sintetica'
     `);
-    assert.equal(rows[0].n, rows[0].distintos);
+    assert.equal(rows[0].n, '5000');
+    assert.equal(rows[0].distintos, '5000');
   });
 
   await t.test('concorrência: 10 conexões x 200 inserts, nada se perde nem duplica', async () => {
@@ -142,7 +176,8 @@ test('eventos append-only', async (t) => {
     assert.equal(depois - antes, 2000n);
 
     const { rows } = await app.query(`
-      SELECT count(*) AS n, count(DISTINCT id) AS distintos
+      SELECT count(*) AS n,
+             count(DISTINCT ((payload->>'conexao') || ':' || (payload->>'sequencia'))) AS distintos
       FROM eventos WHERE tipo = 'evento_concorrente'
     `);
     assert.equal(rows[0].n, '2000');
