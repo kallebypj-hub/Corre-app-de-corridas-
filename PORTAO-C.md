@@ -1,6 +1,18 @@
 # PORTÃO C — quando o split ocorre
 
-**Status: ABERTO. Decisão do dono. Bloqueia a Etapa 4 inteira.**
+## ✅ DECIDIDO em 2026-08-09 — **Caminho A: PagBank com Custódia**
+
+> **Escolha do dono:** PagBank com o recurso **Custódia**. É o único que passa nos dois portões — retenção com liberação por API, que é o que a máquina de estados exige, e preço percentual.
+>
+> **O Efí foi descartado** apesar de mais barato: divide no ato, e sem retenção o estorno de "sem motoboy", cancelamento e disputa não tem de onde sair. **Preço melhor não compra arquitetura quebrada.**
+>
+> **Critério permanente acrescentado:** *o dinheiro nunca encosta na conta do Corre.* O motivo não é taxa, é a **Res. BCB 494/2025** — guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. Isso descarta por construção os caminhos **B** e **H**, que eram os mais baratos.
+>
+> **Consequências registradas no `CORRE.md`:** a promessa "1 saque grátis por dia" **caiu** (seção 9); o onboarding do motoboy passa a exigir **subconta no gateway** (seção 10); a conta da Lei 7 foi atualizada com o número real (**líquido R$ 0,31 por corrida, 3,1%**); e a Etapa 4 é construída **gateway-agnóstica**, com a implementação real do PagBank para depois.
+>
+> **Continuam desconhecidos** (seção 17, itens 10 e 11): quanto custa ao motoboy sacar da subconta, e o que o PagBank exige de documento e prazo para aprovar a subconta.
+
+**O restante deste documento é o levantamento que embasou a decisão.** Fica como registro — não precisa ser lido para trabalhar.
 
 Levantamento feito em 2026-08-09 por 11 agentes de pesquisa (5 de busca + 5 verificadores céticos + 1 consolidador), 518 consultas, com verificação em documentação oficial de 24 fornecedores. Cada afirmação abaixo foi aberta na fonte por um segundo agente antes de ser aceita; o que não se confirmou está marcado.
 

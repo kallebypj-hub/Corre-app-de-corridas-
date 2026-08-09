@@ -12,7 +12,8 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 |---|---|
 | **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço) |
 | **Etapa atual** | **4 — Pedido, link do cliente, Pix e split** |
-| **Situação da Etapa 4** | **BLOQUEADA no Portão C.** Não construir. Aguarda decisão do dono — ver [`PORTAO-C.md`](PORTAO-C.md) |
+| **Situação da Etapa 4** | **LIBERADA.** Portão C decidido em 2026-08-09: **PagBank com Custódia**, construída **gateway-agnóstica** (interface + implementação falsa, como o SMS; nenhuma credencial, nenhuma chamada real). Ver [`PORTAO-C.md`](PORTAO-C.md) |
+| **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis), não propriedade do destino. **PR próprio, bloqueado**: falta a tabela real de Sobral no repositório |
 | **Última bateria verde** | 152 testes, 0 falhas · controle negativo: 34 sabotagens, todas vermelhas no teste certo |
 | **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 |
 
@@ -39,8 +40,11 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 
 | # | Pendência | Trava o quê |
 |---|---|---|
-| **C** | **Portão C — quando o split ocorre.** Investigação **concluída**; 8 caminhos levantados com fonte em [`PORTAO-C.md`](PORTAO-C.md). Falta a **escolha do dono**. Achados que mudam a decisão: split postergado existe mas é raro (PagBank "Custódia", Zoop/Barte "a posteriori"); **o Asaas está descartado** (Pix fixo R$ 1,99); e a promessa "1 saque grátis/dia" da seção 9 **não é nossa para prometer** na maioria dos caminhos | **Etapa 4 inteira** |
-| 1 | Escolha do gateway (Pix percentual é requisito; fixo por transação é descartado) | Integração real (pós-Etapa 4) |
+| ~~C~~ | ~~Portão C~~ **RESOLVIDO** — PagBank com Custódia | — |
+| ~~1~~ | ~~Escolha do gateway~~ **RESOLVIDO** — PagBank | — |
+| **T** | **Tabela real de Sobral não está no repositório.** É o insumo da correção da Etapa 3 (matriz 6×6 de anéis) e do preço real | **Correção da Etapa 3**; a Etapa 4 roda sem ela |
+| 10 | Custo do saque para o motoboy (subconta → banco dele) — é custo dele, não nosso, mas afeta a atratividade | Lançamento |
+| 11 | Documentos e prazo para o PagBank aprovar a subconta do motoboy — se for demorado, colide com "cadastra e roda na hora" | Lançamento |
 | 2 | Valor do adicional por km fora de zona | Preço real; hoje roda com valor de exemplo |
 | 3 | Transcrição da tabela de zonas de Sobral | Preço real; hoje roda com tabela de exemplo |
 | 4 | Taxa zero nos primeiros 90 dias | Lançamento |
@@ -53,8 +57,7 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 
 ## Próximo passo exato
 
-1. O dono decide o **Portão C** lendo `PORTAO-C.md`.
-2. Com a decisão registrada no `CORRE.md` (seção 9 e seção 17, item 9), abre-se **sessão nova** para a Etapa 4 com o prompt da etapa.
-3. A Etapa 4 constrói: pedido do lojista → link do cliente → confirmação de Pix idempotente e assíncrona (com conciliação ativa) → retenção → split na transição para Entregue → estornos. **Sem provedor real de pagamento**: tudo atrás de interface, com implementação falsa nos testes, como foi feito com o SMS.
+1. **Correção da Etapa 3** (PR próprio, antes ou em paralelo à Etapa 4 — são arquivos diferentes, mas *nunca* na mesma sessão): preço deixa de ser propriedade do destino e vira **matriz 6×6 de anel de origem × anel de destino**, com a regra `preço = tabela_anel1[max(anel_origem, anel_destino)]`. **Bloqueada até a tabela real de Sobral entrar no repositório.**
+2. **Etapa 4**, em **sessão nova** com o prompt da etapa: pedido do lojista → link do cliente → confirmação de Pix idempotente e assíncrona (com conciliação ativa) → **retenção em custódia no gateway** → **liberação do split na transição para Entregue** → estornos. **Sem provedor real de pagamento**: tudo atrás de interface, com implementação falsa nos testes, como foi feito com o SMS. PagBank é o alvo da implementação real, que fica **para depois** da Etapa 4.
 4. Exigências da etapa: 6 controles negativos (confirmação não-idempotente, recálculo de preço pós-pagamento, split fora da transição para Entregue, estorno virando apagamento, par estorno/split não atômico, confirmação fora de ordem aceita em silêncio); teste de 10.000 corridas fechando ao centavo; Lei 9 nos três pontos onde dinheiro nasce ou some duas vezes (confirmação, split, estorno×split).
 5. Auditoria adversarial é **obrigatória** nesta etapa (caminho de dinheiro), depois da obra e nunca em paralelo.

@@ -57,6 +57,18 @@ Todas de 2026-08-09, tomadas pelo dono durante a construção das Etapas 0 a 3.
 | 21 | **Uma sessão por etapa** | Sessão única atravessando várias etapas (custo passou de 94 milhões de tokens de cache lido) | A sessão abre no prompt da etapa e fecha no merge; a próxima começa em sessão nova lendo `RETOMAR.md`, `CORRE.md` e a `main` | Custo. E força a disciplina: o que importa tem que estar no repositório |
 | 22 | **Regime de esforço** | Esforço máximo em tudo | Raciocínio máximo **só** em auditoria adversarial e caminho de dinheiro (Etapas 4, 7, 8); demais, esforço normal | Custo. Corta-se conversa longa, nunca auditoria |
 
+## Etapa 4 — Portão C, o gateway e o dinheiro (decidido antes da obra)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 23 | **Portão C — quando o split ocorre** | Aberto: a spec exigia reter do estado 2 ao 6 e dividir só na entrega; os gateways brasileiros tipicamente dividem na confirmação do Pix, o que deixaria o estorno sem lastro | **PagBank com "Custódia"** — retenção no gateway do estado 2 ao 6, liberação por comando de API (`POST /splits/{id}/custody/release`) na transição para Entregue | É o único que passa nos dois portões: retenção com liberação por API **e** preço percentual |
+| 24 | **Escolha do gateway** | Em aberto desde a versão 1.0 | **PagBank.** O **Efí** foi descartado apesar de mais barato (1,19% e Pix enviado grátis) porque **divide no ato** | *"Preço melhor não compra arquitetura quebrada."* Sem retenção, o estorno de "sem motoboy", cancelamento e disputa não tem de onde sair. O **Asaas**, que tinha o escrow ideal, já havia caído no Portão A (Pix fixo de R$ 1,99) |
+| 25 | **Critério permanente: o dinheiro nunca encosta na conta do Corre** | Não existia como critério — os caminhos "recebe 100% e transfere depois" e "BaaS com conta da plataforma" estavam sobre a mesa, e eram os mais baratos | Qualquer desenho em que o frete transite pela conta da plataforma está **descartado por construção** | **Res. BCB 494/2025:** guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. Não é decisão de taxa |
+| 26 | **"1 saque grátis por dia" (seção 9)** | Saldo no app, **1 saque grátis por dia**, extras com taxa | O split cai na **subconta do motoboy no gateway**. O saldo exibido no app é **espelho da subconta, não conta nossa**. O saque é **ato dele** e o **custo da transferência é dele**. O Corre **não intermedeia saque nem promete gratuidade** | A promessa pressupunha o dinheiro passando pela nossa conta — o que a decisão 25 proíbe. Consequência direta da Res. BCB 494/2025 |
+| 27 | **Onboarding do motoboy (seção 10)** | Chave Pix igual ao CPF | Chave Pix igual ao CPF **+ subconta aberta e aprovada no gateway** (é para onde o split cai) | Sem subconta aprovada não há para onde mandar o dinheiro dele. **Risco registrado:** se a aprovação for demorada, colide com "cadastra e roda na hora" |
+| 28 | **Conta da Lei 7, com número real** | Estimativa: gateway ~1%, líquido ~R$ 0,40 (~4%) | **PagBank a 1,89%: frete R$ 10 → comissão R$ 0,50 → gateway R$ 0,19 → líquido R$ 0,31 (3,1%)**. O teto de 1,89% é **preço de tabela** e será negociado antes da contratação | Lei 7 exige a conta escrita em reais **antes** de integrar |
+| 29 | **Etapa 4 gateway-agnóstica** | — | A Etapa 4 é construída atrás de **interface com implementação falsa**, como o SMS. A implementação real do PagBank fica **para depois da Etapa 4**. Nenhuma credencial, nenhuma chamada real | Permite construir e testar o caminho do dinheiro sem depender de contrato assinado |
+
 ---
 
 # 2. Achados de auditoria adversarial

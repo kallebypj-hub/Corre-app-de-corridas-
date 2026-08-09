@@ -246,28 +246,35 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 
 ## 9. Dinheiro
 
-**Comissão: 5% do frete.** Num frete de R$ 10, R$ 0,50. Gateway consome ~1%, sobrando ~4% líquidos.
+**Comissão: 5% do frete.** Num frete de R$ 10, R$ 0,50.
 
-- Split com conta-pai (Corre) e subcontas (motoboys). O valor **nasce dividido** — o Corre nunca recebe o frete inteiro.
-- Motoboy acumula **saldo no app** e saca quando quiser.
-- **1 saque grátis por dia.** Extras com taxa.
+**Critério permanente: o dinheiro nunca encosta na conta do Corre.** Não é questão de taxa — é a **Res. BCB 494/2025**: guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. Qualquer desenho em que o frete transite pela conta da plataforma está **descartado por construção**, por mais barato que seja.
+
+- Split com conta-pai (Corre) e subcontas (motoboys), **dentro do gateway**. O valor **nasce dividido** — o Corre nunca recebe o frete inteiro.
+- **Retenção até a entrega:** o valor fica **em custódia no gateway** do estado 2 ao 6 e só é liberado na transição para Entregue (PIN validado). Estorno de "sem motoboy", cancelamento e disputa acontecem enquanto o dinheiro ainda está retido — é isso que dá lastro ao estorno.
+- **O saldo exibido no app é espelho da subconta do motoboy no gateway, não conta nossa.** O saque é ato dele, feito pelos canais do gateway, e **o custo da transferência é dele**. O Corre **não intermedeia saque nem promete gratuidade**.
 - **Primeiro saque travado** até conferência dos documentos. É **estado gravado** da conta (`primeiro_saque`), nasce `travado` por padrão do banco, e só a operação libera.
 
 **Cartão de garantia do lojista:** fica no cadastro, **nunca é cobrado no fluxo normal**. Cobre apenas cancelamento pós-aceite causado pelo lojista e custo de retorno por cliente ausente (repassado integral ao motoboy).
 
-> **Atenção — Portão C aberto:** a exigência de reter do estado 2 ao 6 e só dividir na entrega pode ser incompatível com o split no ato dos gateways brasileiros. Decisão pendente do dono; ver `PORTAO-C.md`. Enquanto não decidido, a Etapa 4 não é construída.
+**Conta da Lei 7 com o fornecedor escolhido (PagBank):** frete R$ 10 → comissão R$ 0,50 → PagBank a 1,89% = **R$ 0,19** → **líquido R$ 0,31 por corrida (3,1% do frete)**. O teto de 1,89% é **preço de tabela** e será negociado antes da contratação.
 
 ## 10. Cadastro
 
 ### Motoboy
 - CNH + CRLV da moto + selfie
 - **Chave Pix obrigatoriamente do mesmo CPF do cadastro**
+- **Subconta no gateway** (é para lá que o split cai; sem ela o motoboy não tem onde receber)
 - Um aparelho por conta
 - Aprovação automática — roda na hora. O **primeiro saque** fica travado até conferência
 
 **Chave Pix = o próprio CPF do cadastro**, verificada no ato (validação dos dígitos verificadores no código **e** `CHECK` no banco). Motivo: sem consulta DICT no MVP, chave de outro tipo (e-mail, telefone, aleatória) não é verificável quanto ao dono — seria brecha de conta laranja. Quando o gateway (Etapa 4) trouxer consulta de titularidade, ampliar é decisão nova.
 
-**Nota de operação (onboarding):** no cadastro, o motoboy precisa ser instruído a **cadastrar antes, no banco dele, a chave Pix igual ao seu CPF**. É atrito conhecido e aceito no MVP.
+**Nota de operação (onboarding):** o motoboy precisa de **duas coisas prontas antes de rodar**:
+1. **Chave Pix igual ao seu CPF**, cadastrada antes no banco dele.
+2. **Subconta aberta e aprovada no gateway** — é onde o split cai. Sem subconta aprovada, não há para onde mandar o dinheiro dele.
+
+Ambas são atrito conhecido e aceito no MVP. **Risco a medir:** se a aprovação da subconta pelo gateway for demorada, ela **colide com "cadastra e roda na hora"** e o onboarding muda — o motoboy passaria a poder aceitar corridas antes de poder receber. Prazo e exigências documentais ainda não são conhecidos (seção 17, item 11).
 
 **Um aparelho por conta:** o identificador do aparelho fica amarrado à conta. Segundo aparelho é **recusado**. Troca de aparelho existe, mas é **ação da operação**, registrada como evento — nunca automática. Trocar aparelho e bloquear conta **revogam as sessões vivas na hora**, e toda requisição revalida a sessão contra a conta viva.
 
@@ -344,8 +351,14 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 
 ## 17. Pontos ainda em aberto
 
-1. **Escolha do gateway.** Precisa ter Pix com preço percentual e split por subconta. **Gateway com Pix percentual é requisito de seleção: se um gateway cobrar fixo por transação, ele é descartado — a comissão de 5% não se ajusta ao fornecedor.** A interface de pagamento do código permanece fee-agnostic. Conta da Lei 7 com gateway percentual: frete R$ 10 → comissão R$ 0,50 → gateway ~R$ 0,10 → **líquido ~R$ 0,40 (~4% do frete)**.
-   *Levantamento de 2026-08-09 (ver `PORTAO-C.md`):* **Asaas está descartado** por esta regra — Pix **fixo de R$ 1,99** por transação (19,9% de um frete de R$ 10, ~4× a comissão), e a tarifa não volta em estorno. Passam no Portão A com preço público e percentual: **Efí** (1,19%, Pix enviado grátis) e **PagBank** (percentual com teto de 1,89%). A maioria dos BaaS e white-labels **não publica preço** — e sem a conta escrita a Lei 7 impede integrar.
+1. ~~**Escolha do gateway.**~~ **DECIDIDO em 2026-08-09: PagBank, com o recurso "Custódia".** Ver `PORTAO-C.md`.
+   **Os dois critérios de seleção, permanentes:**
+   - **(A) Pix percentual.** Gateway que cobra **fixo por transação é descartado** — a comissão de 5% não se ajusta ao fornecedor. *(Foi o que descartou o **Asaas**: Pix fixo de R$ 1,99, 19,9% de um frete de R$ 10, ~4× a comissão, e a tarifa não volta em estorno — apesar de ele ter o escrow que a spec pede.)*
+   - **(C) O dinheiro nunca encosta na conta do Corre.** Não é taxa, é **Res. BCB 494/2025**: guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. *(Foi o que descartou os caminhos "recebe 100% e transfere depois" e "BaaS com conta da plataforma", que eram os mais baratos.)*
+
+   **Por que o PagBank e não o Efí:** o Efí é mais barato (1,19% e Pix enviado grátis) mas **divide no ato** — sem retenção, o estorno de "sem motoboy", cancelamento e disputa não teria de onde sair. **Preço melhor não compra arquitetura quebrada.** O PagBank é o único que passa nos dois portões: retenção com liberação por API (`POST /splits/{id}/custody/release`, 90 dias padrão / 365 agendado) **e** preço percentual (teto 1,89%).
+
+   **A implementação real do PagBank fica para depois da Etapa 4.** A Etapa 4 é construída **gateway-agnóstica**, atrás de interface com implementação falsa nos testes — como foi feito com o SMS. **Nenhuma credencial, nenhuma chamada real.**
 2. **Valor do adicional por km** fora de zona
 3. **Transcrição da tabela de zonas** de Sobral
 4. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
@@ -353,7 +366,9 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 6. **Revisão jurídica** das três cláusulas de controle
 7. **Registro da marca** CORRE (mista) nas classes 39 e 42, e domínio
 8. **Provedor real de SMS** para o re-login por código, e seu custo. O mecanismo de re-login já está definido e implementado (seção 10); falta só escolher o provedor — nenhum provedor real no MVP
-9. **Portão C — quando o split ocorre.** A spec exige retenção do estado 2 ao 6 e split só na entrega; os gateways brasileiros tipicamente fazem split na confirmação do pagamento. Decisão pendente do dono. Ver `PORTAO-C.md`
+9. ~~**Portão C — quando o split ocorre.**~~ **RESOLVIDO em 2026-08-09:** PagBank com Custódia — retenção no gateway do estado 2 ao 6, liberação por comando de API na transição para Entregue. Ver `PORTAO-C.md` e o item 1 acima
+10. **Custo do saque para o motoboy.** Quanto ele paga para transferir da subconta PagBank para o banco dele. O que se sabe hoje: o PagBank anuncia Pix **ilimitado e gratuito para pessoa física**, mas isso é da conta pessoal — **não está documentado** se vale igual para conta **vendedor/empresa**, que é o tipo exigido para receber split. Como o custo é dele e não nosso (seção 9), isso afeta **a atratividade da plataforma para o motoboy**, não a nossa margem. **A confirmar com o comercial antes do lançamento**
+11. **Exigências e prazo para aprovar a subconta do motoboy.** O que se sabe hoje: o PagBank exige que todo recebedor de split tenha **conta Avançada, tipo vendedor ou empresa, tokenizada e validada pelo processo KYP**, e que a integração passe por **homologação da equipe de integração** antes de ir a produção. **Prazo de aprovação não documentado.** Se for demorado, **colide com "cadastra e roda na hora"** (seção 10) e o onboarding muda — o motoboy poderia aceitar corrida antes de poder receber. **A confirmar com o comercial antes do lançamento**
 
 ## 18. Números de referência
 
