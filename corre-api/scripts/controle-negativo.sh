@@ -212,27 +212,40 @@ sabota_sql "operador_sem_evento_no_banco" "
 
 # Expiração removida: código vencido passa a ser aceito.
 sabota_codigo "otp_sem_expiracao" src/dominio/otp.js \
-  's|if (new Date(registro.expira_em).getTime() <= Date.now()) {|if (false) {|' \
+  's|if (registro.expirado) {|if (false) {|' \
   test/otp.test.js "código expirado é recusado"
 
-# Uso único removido: código reusado passa (o UPDATE atômico é o alvo).
+# Uso único removido: código reusado passa. Uso único é defesa em camadas
+# (guard inicial + claim + consumo) — a sabotagem remove as TRÊS.
 sabota_codigo "otp_reuso_liberado" src/dominio/otp.js \
-  's|WHERE id = \$1 AND usado_em IS NULL|WHERE id = \$1|' \
+  's#registro.usado_em || ##; s#AND usado_em IS NULL AND morto_em IS NULL#AND morto_em IS NULL#; s#SET usado_em = now() WHERE id = $1 AND usado_em IS NULL#SET usado_em = now() WHERE id = $1#' \
   test/otp.test.js "código reusado é recusado"
 
-# Limite de tentativas removido: o código nunca morre.
+# Limite de tentativas removido: defesa em camadas (cap no claim + morte do
+# código) — a sabotagem remove as duas, senão uma mascara a outra.
 sabota_codigo "otp_sem_limite_de_tentativas" src/dominio/otp.js \
-  's|const morre = novasTentativas >= registro.max_tentativas;|const morre = false;|' \
+  's|AND tentativas < max_tentativas|AND tentativas < 100000000|; s|if (slot.tentativas >= slot.max_tentativas) {|if (false) {|' \
   test/otp.test.js "mata o código"
+
+# Cap de tentativas não-atômico sob concorrência: só o claim (cap) cai, e a
+# rajada concorrente fura o teto — o teste de concorrência acusa.
+sabota_codigo "otp_cap_nao_atomico" src/dominio/otp.js \
+  's|AND tentativas < max_tentativas|AND tentativas < 100000000|' \
+  test/otp.test.js "concorrência não fura o teto"
 
 # Limite de envio por telefone removido: vira torneira de SMS.
 sabota_codigo "otp_sem_limite_de_envio" src/dominio/otp.js \
-  's|if (porTelefone.n >= config.otpMaxEnviosPorTelefone()) {|if (false) {|' \
+  's|if (contaTelefone.n >= config.otpMaxEnviosPorTelefone()) {|if (false) {|' \
   test/otp.test.js "limite de envios por telefone"
+
+# Limite de envio por IP removido.
+sabota_codigo "otp_sem_limite_de_envio_ip" src/dominio/otp.js \
+  's|if (contaIp.n >= config.otpMaxEnviosPorIp()) {|if (false) {|' \
+  test/otp.test.js "limite de envios por IP"
 
 # Código gravado em claro: o hash deixa de proteger.
 sabota_codigo "otp_codigo_em_claro" src/dominio/otp.js \
-  's|hashDoCodigo(telefone, codigo), config.otpMaxTentativas|codigo, config.otpMaxTentativas|; s|const confere = hashDoCodigo(telefone, codigo) === registro.codigo_hash;|const confere = codigo === registro.codigo_hash;|' \
+  's|hashDoCodigo(telefone, codigo), config.otpMaxTentativas|codigo, config.otpMaxTentativas|; s|const confere = hashDoCodigo(telefone, codigo) === slot.codigo_hash;|const confere = codigo === slot.codigo_hash;|' \
   test/otp.test.js "código nunca em claro"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.

@@ -7,6 +7,8 @@ Versão 1.0 · Documento único: instruções de construção + especificação
 
 > **Fonte oficial (decisão do dono, 2026-08-09):** este arquivo, dentro do repositório, é a fonte **única e oficial** da especificação. Toda decisão tomada em sessão entra aqui **no mesmo PR**, com data e motivo; e o relatório de cada etapa lista, em seção própria, toda alteração feita na especificação naquela etapa, com o texto de antes e o de depois.
 
+> **Correção de etapa já mesclada vai em PR próprio, sempre (decisão do dono, 2026-08-09):** um defeito encontrado em código que já está na `main` nunca viaja junto com a obra de uma etapa nova — abre-se um PR só dele. E **correção de segurança em etapa já mesclada fura a fila**: entra e é mesclada antes de qualquer obra em andamento, porque enquanto não entra a `main` está quebrada em produção.
+
 ---
 ---
 
@@ -29,7 +31,7 @@ Se algo não está na especificação, **não está no escopo**. A seção 16 li
 - **Infra:** VPS dedicada, separada de qualquer outro sistema
 - **Repositórios:** monorepo único com os diretórios `corre-api/` e `corre-app/` *(decisão do dono, 2026-08-09: quando o contrato da API mudar, o app Kotlin muda no mesmo PR — substitui os dois repositórios separados da versão 1.0)*
 
-## As 8 leis inegociáveis
+## As 9 leis inegociáveis
 
 Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
@@ -48,6 +50,8 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 **Lei 7 — Custo de transação é premissa, não detalhe.** A comissão é 5% do frete e o gateway consome parte disso. Antes de integrar qualquer gateway, escreva a conta do custo real por corrida em R$ e mostre. Se o Pix tiver custo **fixo** por transação em vez de percentual, **pare e avise** — a comissão não fecha.
 
 **Lei 8 — Teste que não falha quando deveria não é teste.** Toda regra crítica precisa de controle negativo: sabote a regra no código, rode a bateria e prove que ela fica **vermelha**. Bateria verde com a regra quebrada é falso positivo e precisa ser corrigido antes de seguir.
+
+**Lei 9 — Toda escrita nasce com teste de concorrência.** *(acrescentada pelo dono em 2026-08-09)* Todo caminho que grava tem teste de concorrência real, sem precisar ser pedido. Leitura-e-depois-escrita é sempre suspeita de lost update: contador, limite, cap de tentativas, reserva de vaga, saldo. Prove com processos concorrentes de verdade contra o servidor rodando, nunca com cliente de teste single-thread. Se a garantia depende de ordem de execução, ela não existe — a garantia mora no banco (`UNIQUE`, constraint, `UPDATE` condicional atômico, advisory lock).
 
 ## Como testar
 
