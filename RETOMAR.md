@@ -39,7 +39,7 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 
 | # | Pendência | Trava o quê |
 |---|---|---|
-| **C** | **Portão C — quando o split ocorre.** A spec exige reter do estado 2 ao 6 e dividir só na entrega; gateways brasileiros tipicamente fazem split na confirmação do Pix. As opções levantadas estão em `PORTAO-C.md` | **Etapa 4 inteira** |
+| **C** | **Portão C — quando o split ocorre.** Investigação **concluída**; 8 caminhos levantados com fonte em [`PORTAO-C.md`](PORTAO-C.md). Falta a **escolha do dono**. Achados que mudam a decisão: split postergado existe mas é raro (PagBank "Custódia", Zoop/Barte "a posteriori"); **o Asaas está descartado** (Pix fixo R$ 1,99); e a promessa "1 saque grátis/dia" da seção 9 **não é nossa para prometer** na maioria dos caminhos | **Etapa 4 inteira** |
 | 1 | Escolha do gateway (Pix percentual é requisito; fixo por transação é descartado) | Integração real (pós-Etapa 4) |
 | 2 | Valor do adicional por km fora de zona | Preço real; hoje roda com valor de exemplo |
 | 3 | Transcrição da tabela de zonas de Sobral | Preço real; hoje roda com tabela de exemplo |

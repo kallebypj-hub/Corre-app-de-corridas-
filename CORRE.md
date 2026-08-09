@@ -345,6 +345,7 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 ## 17. Pontos ainda em aberto
 
 1. **Escolha do gateway.** Precisa ter Pix com preço percentual e split por subconta. **Gateway com Pix percentual é requisito de seleção: se um gateway cobrar fixo por transação, ele é descartado — a comissão de 5% não se ajusta ao fornecedor.** A interface de pagamento do código permanece fee-agnostic. Conta da Lei 7 com gateway percentual: frete R$ 10 → comissão R$ 0,50 → gateway ~R$ 0,10 → **líquido ~R$ 0,40 (~4% do frete)**.
+   *Levantamento de 2026-08-09 (ver `PORTAO-C.md`):* **Asaas está descartado** por esta regra — Pix **fixo de R$ 1,99** por transação (19,9% de um frete de R$ 10, ~4× a comissão), e a tarifa não volta em estorno. Passam no Portão A com preço público e percentual: **Efí** (1,19%, Pix enviado grátis) e **PagBank** (percentual com teto de 1,89%). A maioria dos BaaS e white-labels **não publica preço** — e sem a conta escrita a Lei 7 impede integrar.
 2. **Valor do adicional por km** fora de zona
 3. **Transcrição da tabela de zonas** de Sobral
 4. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
