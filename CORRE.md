@@ -320,7 +320,8 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 
 ## 17. Pontos ainda em aberto
 
-1. **Escolha do gateway.** Precisa ter Pix com preço percentual (não fixo por transação) e split por subconta
+1. **Escolha do gateway.** Precisa ter Pix com preço percentual (não fixo por transação) e split por subconta.
+   *(Decisão do dono, 2026-08-09 — Portão A da Etapa 4:* **gateway com Pix percentual é requisito de seleção. Se um gateway cobrar fixo por transação, ele é descartado — a comissão de 5% não se ajusta ao fornecedor.** *A interface de pagamento do código permanece fee-agnostic. Conta da Lei 7 com gateway percentual: frete R$ 10 → comissão R$ 0,50 → gateway ~R$ 0,10 → líquido ~R$ 0,40, ou ~4% do frete.)*
 2. **Valor do adicional por km** fora de zona
 3. **Transcrição da tabela de zonas** de Sobral
 4. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
