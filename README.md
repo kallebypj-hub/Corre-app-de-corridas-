@@ -21,8 +21,9 @@ aceitos ficam registrados em [`DEFEITOS_ABERTOS.md`](DEFEITOS_ABERTOS.md).
 |---|---|
 | 0 — Fundação: migrations, tabela de eventos, CI | **Aprovada pelo dono em 2026-08-09** — entregue à `main` pelo PR #1; condição registrada no critério de aceite da Etapa 1 |
 | 1 — Máquina de estados + log de eventos | **Aprovada pelo dono em 2026-08-09** — mesclada pelo PR #2 |
-| 2 — Cadastro e sessão | **Concluída — em PR contra `main`, aguardando aprovação** |
-| 3 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
+| 2 — Cadastro e sessão (com re-login OTP) | **Aprovada pelo dono em 2026-08-09** — mesclada pelo PR #3 |
+| 3 — Zonas e preço | **Concluída — em PR contra `main`, aguardando aprovação** |
+| 4 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
 
 ## Rodando a bateria da Etapa 0
 
@@ -74,3 +75,18 @@ migrations — nunca rode apontando para um banco que importa.
   vencer é consulta (`src/bin/expira-vencidas.js`), reinício não perde nada.
 - Tempo é do servidor: payload com `vence_em`/`criado_em` do cliente é
   recusado.
+
+## Garantias do motor de preço (Etapa 3)
+
+- Tabela de zonas **versionada** (`tabelas_preco`/`zonas`): alterar preço
+  cria versão nova; corrida guarda a versão usada. Aplicação só lê;
+  publicar é ato de dono (`scripts/importar-tabela-preco.js`).
+- **Determinismo**: mesmo endereço, mesmo centavo, sempre — sem relógio,
+  sem aleatório, sem parâmetro de tempo no cálculo.
+- **Sem API de mapa**: fora de zona por distância em linha reta a partir do
+  centro, com fatores metros/grau gravados como dado inteiro.
+- **Centavos inteiros (Lei 1)**: cálculo todo em `BigInt`; arredondamento
+  declarado num lugar só (`preco.js`) — km sempre para cima (teto).
+- Fronteira entre zonas resolve pela de **menor `ordem`** — determinística.
+- Tabela real de Sobral ainda não existe: usa-se
+  `dados/tabela-preco-exemplo.json`, marcada como exemplo.

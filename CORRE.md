@@ -222,6 +222,13 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 
 *Consequência conhecida e aceita: em chuva forte a oferta cai e corridas morrem em "sem motoboy".*
 
+> **Decisões registradas (dono aprovará no PR da Etapa 3, 2026-08-09):**
+> 1. **Tabela de zonas é dado versionado no banco** (`tabelas_preco` + `zonas`). Alterar preço **cria uma versão nova**, nunca sobrescreve; versão publicada é imutável (só `SELECT` para a aplicação — publicar é ato de dono, via `scripts/importar-tabela-preco.js`). Toda corrida guarda `tabela_preco_id` + `frete_centavos` + `zona_nome` — auditável anos depois.
+> 2. **Geometria do MVP: retângulo em lat/lng** (graus × 1e6, inteiro). Resolução por contenção, sem API externa.
+> 3. **Regra de fronteira/sobreposição declarada:** as zonas têm `ordem`; vence a de **menor ordem** que contém o ponto. Retângulos inclusivos nas duas bordas ⇒ ponto exatamente na fronteira cai sempre na de menor ordem — determinístico, nunca aleatório.
+> 4. **Regra de arredondamento declarada (num lugar só, `preco.js`):** a distância em metros vira km **para cima (teto)**; o resto é inteiro em centavos por construção. Distância em linha reta por aproximação planar com fatores metros/grau gravados como **dado inteiro** na versão da tabela — nenhum `cos`/float no caminho do cálculo.
+> 5. **Tabela real de Sobral ainda não existe (ponto em aberto 3):** trabalha-se com `dados/tabela-preco-exemplo.json`, **marcada como exemplo** (`exemplo=true`, valores fictícios). O adicional por km de exemplo (R$ 1,50/km) e os preços de exemplo não são valores reais.
+
 ## 9. Dinheiro
 
 **Comissão: 5% do frete.** Num frete de R$ 10, R$ 0,50. Gateway consome ~1%, sobrando ~4% líquidos.

@@ -29,6 +29,19 @@ corrigir. Entrada só sai daqui por decisão registrada — nunca por apagamento
   migrations; em produção, senha própria e fora do ambiente da aplicação.
 - **Estado:** aberto, aceito.
 
+## 2026-08-09 — Provedor real de SMS não decidido (até o lançamento)
+
+- **Descrição:** o re-login por OTP (fechamento da Etapa 2) manda o código
+  por uma interface de SMS (`corre-api/src/http/sms.js`). No MVP não há
+  provedor real: a implementação padrão (`smsNaoConfigurado`) recusa envio,
+  e os testes usam a falsa (`smsFake`).
+- **Risco:** sem provedor, o re-login por SMS não funciona em produção — mas
+  produção é decisão do dono e não há deploy. Não bloqueia nenhuma etapa.
+- **Motivo de não corrigir agora:** escolher e integrar provedor de SMS
+  (custo, cobertura, contrato) é decisão de negócio fora do escopo técnico
+  das etapas atuais.
+- **Estado:** aberto, aceito até o lançamento (ponto em aberto 8 da seção 17).
+
 ## 2026-08-09 — Estados 3, 4 e 5 ainda não têm prazo (até a Etapa 7)
 
 - **Descrição:** a regra do projeto diz que "nenhuma corrida fica presa em

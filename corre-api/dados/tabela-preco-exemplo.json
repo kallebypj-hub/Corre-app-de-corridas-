@@ -1,0 +1,31 @@
+{
+  "_aviso": "TABELA DE EXEMPLO — NAO E A TABELA REAL DE SOBRAL. Valores fictícios, só para desenvolvimento e teste. A tabela real (regra 7 da Etapa 3) ainda não existe; será transcrita da tabela que já opera na cidade e importada por este mesmo formato.",
+  "rotulo": "exemplo-v1",
+  "exemplo": true,
+  "metros_por_grau_lat": 111320,
+  "metros_por_grau_lng": 111100,
+  "adicional_km_centavos": 150,
+  "zonas": [
+    {
+      "nome": "Centro (exemplo)",
+      "ordem": 0,
+      "preco_centavos": 500,
+      "lat_min_e6": -3690000, "lat_max_e6": -3682000,
+      "lng_min_e6": -40353000, "lng_max_e6": -40345000
+    },
+    {
+      "nome": "Anel 1 (exemplo)",
+      "ordem": 1,
+      "preco_centavos": 700,
+      "lat_min_e6": -3700000, "lat_max_e6": -3672000,
+      "lng_min_e6": -40363000, "lng_max_e6": -40335000
+    },
+    {
+      "nome": "Anel 2 (exemplo)",
+      "ordem": 2,
+      "preco_centavos": 900,
+      "lat_min_e6": -3720000, "lat_max_e6": -3652000,
+      "lng_min_e6": -40383000, "lng_max_e6": -40315000
+    }
+  ]
+}
