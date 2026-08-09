@@ -2,18 +2,29 @@
 
 Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`CORRE.md`](CORRE.md), e trabalha a partir da `main`. A conversa anterior **não** faz parte da verdade do projeto. Registro histórico (por que as coisas são como são): [`HISTORICO.md`](HISTORICO.md).
 
-**Regime:** uma sessão por etapa — abre no prompt da etapa, fecha no merge. Raciocínio máximo só em auditoria adversarial e nas etapas de dinheiro (4, 7, 8).
+**Regime:** uma sessão por etapa — abre no prompt da etapa, fecha no merge. Raciocínio máximo só em auditoria adversarial e nas etapas de dinheiro (7 e 9).
 
 ---
+
+> ## ⚠️ A especificação mudou em 2026-08-09
+>
+> **O pagamento saiu do começo do fluxo e foi para a porta do cliente**, por QR Pix dinâmico no app do motoboy, com a **mercadoria dentro da cobrança** e **split triplo**. O motivo: o cliente que compra pela primeira vez não tem app nenhum, e cobrar antes travava a primeira compra.
+>
+> **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
+> **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
+>
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 64.
 
 ## Onde o projeto está
 
 | | |
 |---|---|
 | **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço) |
-| **Etapa atual** | **4 — Pedido, link do cliente, Pix e split** |
-| **Situação da Etapa 4** | **LIBERADA.** Portão C decidido em 2026-08-09: **PagBank com Custódia**, construída **gateway-agnóstica** (interface + implementação falsa, como o SMS; nenhuma credencial, nenhuma chamada real). Ver [`PORTAO-C.md`](PORTAO-C.md) |
-| **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis), não propriedade do destino. **PR próprio, bloqueado**: falta a tabela real de Sobral no repositório |
+| **O que a revisão invalidou** | **Etapa 1:** o motor vale, **a tabela de estados não** — é reescrita na Etapa 5. **Etapa 2:** vale, falta o cliente como ator. **Etapas 0 e 3:** valem |
+| **Próxima etapa** | **4 — Multi-cidade e o cliente como ator** |
+| **Situação da Etapa 4** | **liberada** — não depende de gateway nem da tabela real |
+| **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa* (seção 17, itens 1 e 2) |
+| **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
 | **Última bateria verde** | 152 testes, 0 falhas · controle negativo: 34 sabotagens, todas vermelhas no teste certo |
 | **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 |
 
@@ -21,7 +32,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 **Migrations** (`corre-api/migrations/`): `0001` domínio centavos · `0002` eventos append-only · `0003` corridas + sequência + idempotência · `0004` log sem buraco · `0005` cadastro e sessão · `0006` travas no banco · `0007` re-login OTP · `0008` zonas e preço.
 
-**Domínio** (`corre-api/src/dominio/`): `transicoes.js` (tabela declarativa, 13 arestas) · `corridas.js` (motor de estados, prazos, `corridasParadas`) · `contas.js` (motoboy, lojista, operador, painel) · `otp.js` (re-login) · `preco.js` (motor de preço) · `nucleo.js` (transação, replay, disputa de posição) · `estados.js`, `cpf.js`, `erros.js`.
+**Domínio** (`corre-api/src/dominio/`): `transicoes.js` (tabela declarativa — **será reescrita na Etapa 5**) · `corridas.js` (motor de estados, prazos, `corridasParadas`) · `contas.js` (motoboy, lojista, operador, painel) · `otp.js` (re-login) · `preco.js` (motor de preço) · `nucleo.js` (transação, replay, disputa de posição) · `estados.js`, `cpf.js`, `erros.js`.
 
 **HTTP** (`corre-api/src/http/`): `api.js` (cadastro, sessão, painel) · `sessoes.js` (token, revalidação contra conta viva) · `sms.js` (interface, sem provedor real). Ponto de entrada: `src/servidor.js` (recusa subir com credencial de dono/superusuário).
 
@@ -40,24 +51,30 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 
 | # | Pendência | Trava o quê |
 |---|---|---|
-| ~~C~~ | ~~Portão C~~ **RESOLVIDO** — PagBank com Custódia | — |
-| ~~1~~ | ~~Escolha do gateway~~ **RESOLVIDO** — PagBank | — |
-| **T** | **Tabela real de Sobral não está no repositório.** É o insumo da correção da Etapa 3 (matriz 6×6 de anéis) e do preço real | **Correção da Etapa 3**; a Etapa 4 roda sem ela |
-| 10 | Custo do saque para o motoboy (subconta → banco dele) — é custo dele, não nosso, mas afeta a atratividade | Lançamento |
-| 11 | Documentos e prazo para o PagBank aprovar a subconta do motoboy — se for demorado, colide com "cadastra e roda na hora" | Lançamento |
-| 2 | Valor do adicional por km fora de zona | Preço real; hoje roda com valor de exemplo |
-| 3 | Transcrição da tabela de zonas de Sobral | Preço real; hoje roda com tabela de exemplo |
-| 4 | Taxa zero nos primeiros 90 dias | Lançamento |
-| 5 | Teto de R$ 500 de valor declarado | Etapa 11 (antifraude) |
-| 6 | Revisão jurídica das três cláusulas de controle | Lançamento |
-| 7 | Registro da marca e domínio | Lançamento |
-| 8 | Provedor real de SMS (mecanismo já implementado) | Lançamento |
+| **1** | **Escolha do gateway — reaberta.** Três critérios: Pix percentual; o dinheiro nunca encosta na conta do Corre; **de quem sai a taxa tem que ser declarável**. Mais: QR dinâmico por API, split de 3 recebedores, subconta para lojista e motoboy | **Etapa 7** |
+| **2** | **Quem paga a taxa do gateway.** A taxa incide sobre mercadoria + frete; a receita é 5% do frete. Se sair da comissão, cada entrega dá prejuízo | **Etapa 7** — e a viabilidade do modelo |
+| **T** | **Tabela real de Sobral não está no repositório** — agora com duas colunas: preço por anel **e minutos por anel** | **Correção da Etapa 3** e o prazo estimado da Etapa 5 |
+| 5 | Tempo base de coleta (o outro número do prazo estimado) | Etapa 5 |
+| 13 | Teto de faltas de pagamento que bloqueia um cliente | Etapa 12 |
+| 14 | Confirmar que o retorno por cliente que não pagou sai do cartão do lojista | Etapa 8 |
+| 9 | Provedor real de SMS — **virou pré-requisito do produto**: sem ele o cliente novo não recebe o link para pagar | Etapa 14 e lançamento |
+| 8 | Registro da marca e do domínio `corre.com.br` — **pré-requisito de publicação**, porque `br.com.corre.*` é definitivo | Publicação nas lojas |
+| 12 | Redação da frase de posicionamento (a antiga ficou falsa) | Lançamento |
+| 3 | Valor do adicional por km fora de zona | Preço real |
+| 6 | Taxa zero nos primeiros 90 dias | Lançamento |
+| 7 | Teto de R$ 500 de valor de mercadoria | Etapa 16 |
+| 10, 11 | Custo do saque e prazo de aprovação da subconta — agora para **motoboy e lojista** | Lançamento |
+| 15 | Revisão jurídica das cláusulas de controle + risco novo da seção 15 | Lançamento |
 
-**Limites aceitos que ainda constrangem obra** (detalhe no `HISTORICO.md`, capítulo 3): estados 3, 4 e 5 sem prazo até a **Etapa 7** (mitigado por `corridasParadas`); nenhum provedor real de SMS nem de pagamento no MVP.
+**Limites aceitos que ainda constrangem obra** (detalhe no `HISTORICO.md`, capítulo 3): estados 2, 3 e 6 sem prazo até a **Etapa 8** (mitigado por `corridasParadas`); a confirmação de pagamento não prova a entrega física; o motoboy pode exibir um QR próprio; nenhum provedor real de SMS nem de pagamento.
 
 ## Próximo passo exato
 
-1. **Correção da Etapa 3** (PR próprio, antes ou em paralelo à Etapa 4 — são arquivos diferentes, mas *nunca* na mesma sessão): preço deixa de ser propriedade do destino e vira **matriz 6×6 de anel de origem × anel de destino**, com a regra `preço = tabela_anel1[max(anel_origem, anel_destino)]`. **Bloqueada até a tabela real de Sobral entrar no repositório.**
-2. **Etapa 4**, em **sessão nova** com o prompt da etapa: pedido do lojista → link do cliente → confirmação de Pix idempotente e assíncrona (com conciliação ativa) → **retenção em custódia no gateway** → **liberação do split na transição para Entregue** → estornos. **Sem provedor real de pagamento**: tudo atrás de interface, com implementação falsa nos testes, como foi feito com o SMS. PagBank é o alvo da implementação real, que fica **para depois** da Etapa 4.
-4. Exigências da etapa: 6 controles negativos (confirmação não-idempotente, recálculo de preço pós-pagamento, split fora da transição para Entregue, estorno virando apagamento, par estorno/split não atômico, confirmação fora de ordem aceita em silêncio); teste de 10.000 corridas fechando ao centavo; Lei 9 nos três pontos onde dinheiro nasce ou some duas vezes (confirmação, split, estorno×split).
-5. Auditoria adversarial é **obrigatória** nesta etapa (caminho de dinheiro), depois da obra e nunca em paralelo.
+**Etapa 4 — Multi-cidade e o cliente como ator**, em sessão nova, com o prompt da etapa.
+
+1. `cidades` como entidade de primeira classe; `cidade_id` em lojista, motoboy, corrida, tabela de preço e zona. **O cliente não tem cidade** — é da plataforma.
+2. `clientes`: nasce pelo telefone que o lojista digita, vira dele pelo código de 6 dígitos por SMS. Sem subconta, não recebe dinheiro.
+3. **A trava mora no banco:** corrida cujo lojista, motoboy ou zona sejam de outra cidade é recusada por constraint — provada pelo efeito, não pelo nome.
+4. Lei 9 em todo caminho novo de escrita; controles negativos próprios; sem auditoria adversarial obrigatória nesta etapa (não é dinheiro nem autenticação — mas ela mexe em cadastro, então vale a recomendada).
+
+Depois dela: **Etapa 5** (máquina de estados nova + prazo estimado) e **Etapa 6** (despacho). A **Etapa 7** (cobrança na porta) não começa antes das decisões 1 e 2 acima.

@@ -7,6 +7,8 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções 1 a 12, 14 a 17, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1.
+
 ---
 
 ## Regime de trabalho
@@ -19,9 +21,9 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 
 **Uma etapa por vez, PR separado por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
 
-**Regime de esforço:** raciocínio máximo **apenas** em auditoria adversarial e em caminho de dinheiro (**Etapas 4, 7 e 8**). Nas demais, esforço normal.
+**Regime de esforço:** raciocínio máximo **apenas** em auditoria adversarial e em caminho de dinheiro (**Etapas 7 e 9**). Nas demais, esforço normal.
 
-**Auditoria adversarial é obrigatória** nas etapas de **dinheiro e de segurança** (4, 7, 8 e qualquer etapa que mexa em autenticação ou autorização), e recomendada nas demais. Ela custa caro e continua obrigatória porque encontra o que a bateria comum não encontra — o registro do que ela pegou está no `HISTORICO.md`. O que se corta para economizar é conversa longa, nunca auditoria.
+**Auditoria adversarial é obrigatória** nas etapas de **dinheiro e de segurança** (7, 9, 11 e qualquer etapa que mexa em autenticação ou autorização), e recomendada nas demais. Ela custa caro e continua obrigatória porque encontra o que a bateria comum não encontra — o registro do que ela pegou está no `HISTORICO.md`. O que se corta para economizar é conversa longa, nunca auditoria.
 
 ---
 
@@ -39,9 +41,9 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 **Lei 5 — Idempotência com chave real.** Todo endpoint que grava aceita um token de idempotência e tem `UNIQUE` sobre ele. Rede de motoboy cai na rua; a retentativa não pode criar corrida dobrada nem pagar duas vezes.
 
-**Lei 6 — Dinheiro só se move em transição de estado registrada.** Retenção, split, estorno e saque são consequência de evento, nunca de chamada avulsa. Não existe endpoint que "só transfere".
+**Lei 6 — Dinheiro só se move em transição de estado registrada.** Cobrança, split e estorno são consequência de evento, nunca de chamada avulsa. Não existe endpoint que "só transfere".
 
-**Lei 7 — Custo de transação é premissa, não detalhe.** A comissão é 5% do frete e o gateway consome parte disso. Antes de integrar qualquer gateway, escreva a conta do custo real por corrida em R$ e mostre. Se o Pix tiver custo **fixo** por transação em vez de percentual, **pare e avise** — a comissão não fecha.
+**Lei 7 — Custo de transação é premissa, não detalhe.** A comissão é 5% do frete e o gateway consome parte disso. Antes de integrar qualquer gateway, escreva a conta do custo real por corrida em R$ e mostre. Se o Pix tiver custo **fixo** por transação em vez de percentual, **pare e avise** — a comissão não fecha. **Desde a revisão de 2026-08-09 a conta mudou de forma:** a taxa incide sobre **mercadoria + frete**, e a receita do Corre é só 5% do frete. A conta só fecha se ficar declarado **de quem sai a taxa** — ver seção 9.
 
 **Lei 8 — Teste que não falha quando deveria não é teste.** Toda regra crítica precisa de controle negativo: sabote a regra, rode a bateria e prove que ela fica **vermelha** — e vermelha **no teste que vigia aquela regra**, não por motivo alheio. Bateria verde com a regra quebrada é falso positivo e precisa ser corrigido antes de seguir.
 
@@ -59,7 +61,7 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 ## Além do funcionamento
 
-**Usabilidade para leigo.** O motoboy usa de capacete, na chuva, com uma mão. Botão grande, uma ação por tela, nada escondido. Teste: pessoa ruim de celular bate o olho e sabe onde tocar sem ler nada.
+**Usabilidade para leigo.** O motoboy usa de capacete, na chuva, com uma mão. Botão grande, uma ação por tela, nada escondido. Teste: pessoa ruim de celular bate o olho e sabe onde tocar sem ler nada. O mesmo vale, agora, para o cliente que nunca usou o app e vai pagar na porta com o motoboy esperando.
 
 **O sistema se levanta sozinho.** Queda de servidor, banco ou gateway — ao voltar, o estado está coerente sem conserto manual. Nenhuma corrida fica presa em estado vivo para sempre: todo estado vivo tem prazo e destino.
 
@@ -72,6 +74,7 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 - Não crie bônus, meta ou gamificação para motoboy
 - Não integre API de mapa paga sem perguntar
 - Não aceite cartão de crédito do cliente final no MVP
+- Não exponha telefone de ninguém para ninguém (seção 19)
 - Não suba nada para produção — deploy é decisão do dono
 
 ## Como reportar
@@ -90,12 +93,18 @@ Sem relatório longo. Sem adjetivo. Número e fato.
 
 ## Stack
 
-- **Backend + web do lojista + painel:** Node.js + Express, WebSocket para despacho e rastreio em tempo real
-- **App do motoboy:** Kotlin nativo, Android. Foreground service para GPS, FCM para push
+- **Backend:** Node.js + Express, WebSocket para despacho, rastreio e chat em tempo real. **Um backend só** serve os três apps, a ponte web e o painel
+- **App do motoboy:** Kotlin nativo, Android. Foreground service para GPS, FCM para push. Pacote **`br.com.corre.motoboy`**
+- **App do lojista:** Flutter (Android e iOS). Pacote **`br.com.corre.lojista`**
+- **App do cliente:** Flutter (Android e iOS). Pacote **`br.com.corre.cliente`**
+- **Ponte web:** página mínima servida pelo backend, sem app, para a primeira compra (seção 2)
+- **Painel da operação:** web
 - **Banco:** PostgreSQL
-- **Pagamento:** gateway com Pix e split por subconta (a definir — ver Lei 7 e seção 17)
+- **Pagamento:** gateway com Pix, QR dinâmico por API e split de 3 recebedores (**escolha reaberta** — ver Lei 7 e seção 17, item 1)
 - **Infra:** VPS dedicada, separada de qualquer outro sistema
-- **Repositório:** monorepo único com os diretórios `corre-api/` e `corre-app/`
+- **Repositório:** monorepo único com os diretórios `corre-api/`, `corre-app-motoboy/`, `corre-app-lojista/` e `corre-app-cliente/`
+
+**Nome de pacote é definitivo.** Pacote de app publicado em loja **não se troca** — trocar é publicar outro app e perder a base instalada. Os três acima ficam fixos. Eles pressupõem o domínio `corre.com.br` registrado (seção 17, item 8): **registrar o domínio e a marca é pré-requisito da primeira publicação**, não do primeiro código.
 
 **Credenciais de banco:** a aplicação conecta **sempre** como `corre_app` (papel restrito). `corre_dono` é reservado a migrations e nunca vira credencial de aplicação ou de painel. O ponto de entrada recusa subir com credencial de dono ou de superusuário.
 
@@ -103,21 +112,30 @@ Sem relatório longo. Sem adjetivo. Número e fato.
 
 ## Ordem de construção e estado das etapas
 
+As etapas 0 a 3 estão na `main`. A revisão de 2026-08-09 **invalidou parte do que elas entregaram** — a coluna "Estado" diz o quê.
+
 | # | Etapa | Critério de aceite (executável) | Estado |
 |---|---|---|---|
-| 0 | Fundação: repos, migrations, tabela de eventos, CI | CI roda a bateria em banco criado do zero. `UPDATE`/`DELETE` em `eventos` falha por permissão | **na `main`** (PR #1) |
-| 1 | Máquina de estados + log de eventos | As transições cobertas. Transição inválida recusada. Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. O servidor sobe de verdade com credencial de dono e encerra antes de servir a primeira requisição | **na `main`** (PR #2) |
-| 2 | Cadastro e sessão (lojista, motoboy, painel) | Chave Pix de CPF diferente é recusada. Segundo aparelho na mesma conta é recusado. Primeiro saque nasce travado. Atendimento recebe 403 em estorno e bloqueio | **na `main`** (PR #3 + correção #5) |
-| 3 | Zonas e preço | Tabela carregada. Mesmo endereço dá sempre o mesmo preço. Fora de zona calcula por linha reta sem API externa | **na `main`** (PR #4) |
-| 4 | Pedido + link do cliente + Pix + split | Pix confirmado leva ao estado 2 e retém o valor. Link expira em 15 min. Mudança de pino recalcula antes do pagamento e nunca depois | **bloqueada no Portão C** — ver `PORTAO-C.md` |
-| 5 | Despacho: cascata, timer de 30s, regras de recusa | 50 aparelhos disputando a mesma corrida resultam em exatamente 1 aceite. Cascata de 5 min sem aceite gera estorno automático integral | não iniciada |
-| 6 | App Kotlin do motoboy | GPS reporta com tela apagada e app em background por 30 min contínuos. Push chega em menos de 5s. Perda de rede não duplica aceite | não iniciada |
-| 7 | Entrega: PIN, espera, retorno | PIN errado não fecha corrida. 5 min + 1 ligação registrada habilita retorno. Retorno cobra o cartão do lojista e credita o motoboy | não iniciada |
-| 8 | Saldo e saque | Soma dos saldos + retido + sacado = soma dos splits, ao centavo, em 10.000 corridas. 1 saque grátis/dia, extras com taxa | não iniciada |
-| 9 | Reputação | Nota só desempata dentro da janela de 2 min. Falha por endereço errado conta contra a loja, nunca contra o motoboy | não iniciada |
-| 10 | Painel + níveis de acesso | Atendimento recebe 403 em estorno e bloqueio. Toda ação do painel gera evento com autor | não iniciada |
-| 11 | Antifraude | Localização simulada é detectada e bloqueia. Par lojista+motoboy repetido em cancelamento é sinalizado. Corrida sem lojista real é impossível por construção | não iniciada |
-| 12 | Blindagem final | Caos: queda no meio de cada transição, duplo clique em tudo, relógio errado, rede oscilando. Caixa fecha ao centavo em todos os cenários | não iniciada |
+| 0 | Fundação: repos, migrations, tabela de eventos, CI | CI roda a bateria em banco criado do zero. `UPDATE`/`DELETE` em `eventos` falha por permissão | **na `main`** (PR #1) — vale inteira |
+| 1 | Máquina de estados + log de eventos | As transições cobertas. Transição inválida recusada. Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. O servidor sobe de verdade com credencial de dono e encerra antes de servir a primeira requisição | **na `main`** (PR #2) — o **motor** vale; a **tabela de estados foi invalidada** e é reescrita na Etapa 5 |
+| 2 | Cadastro e sessão (lojista, motoboy, painel) | Chave Pix de CPF diferente é recusada. Segundo aparelho na mesma conta é recusado. Primeiro saque nasce travado. Atendimento recebe 403 em estorno e bloqueio | **na `main`** (PR #3 + correção #5) — vale; falta o **cliente** como ator (Etapa 4) |
+| 3 | Zonas e preço | Tabela carregada. Mesmo endereço dá sempre o mesmo preço. Fora de zona calcula por linha reta sem API externa | **na `main`** (PR #4) — vale; tem **correção pendente** (matriz 6×6, PR próprio, travada na tabela real) |
+| 4 | Multi-cidade e o cliente como ator | Corrida com lojista da cidade A e zona da cidade B é recusada **pelo banco**. Duas cidades com tabelas de preço diferentes coexistem sem se misturar. Cliente nasce por telefone, é da plataforma e não da cidade. Nenhuma consulta devolve dado de outra cidade | não iniciada |
+| 5 | Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado | As **14 arestas** cobertas; par fora da tabela é recusado. **Nenhum caminho chega a Entregue sem passar por Pago.** Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. Prazo estimado é gravado na criação com a versão da tabela; mesma corrida, mesmo prazo | não iniciada |
+| 6 | Despacho: cascata, timer de 30s, regras de recusa | 50 aparelhos disputando a mesma corrida resultam em exatamente 1 aceite. Cascata de 5 min sem aceite leva a Sem motoboy **sem nenhum movimento de dinheiro**. 4 recusas seguidas → offline por 15 min. Teto de 2 corridas ativas | não iniciada |
+| 7 | **Cobrança na porta: QR dinâmico, confirmação e split triplo** | A cobrança nasce com os **três recebedores declarados** e a soma bate com o total ao centavo. Webhook duplicado + consulta ativa simultânea produzem **um único** Pago. Entrega é impossível antes da confirmação. 10.000 corridas: mercadoria + frete = soma das três parcelas + taxa, ao centavo. Lei 9 na geração da cobrança, na confirmação e no par confirmação/expiração | não iniciada — **dinheiro; auditoria obrigatória; travada na seção 17, itens 1 e 2** |
+| 8 | Entrega, espera na porta e retorno | Sem pagamento confirmado não existe transição para Entregue. 5 min de espera + 1 aviso registrado habilita o retorno. Retorno cobra o cartão do lojista e credita o motoboy. **Corrida em retorno nunca carrega dinheiro pago** | não iniciada |
+| 9 | Saldo e saque | Soma dos saldos das subcontas + sacado = soma dos splits, ao centavo, em 10.000 corridas. Primeiro saque nasce travado. O Corre não move saldo de ninguém — o app espelha | não iniciada — **dinheiro; auditoria obrigatória** |
+| 10 | Chat interno nas três pontas | **Nenhuma resposta da API contém telefone de ninguém.** Mensagem é evento: não edita, não apaga. Cada ponta só lê as conversas das corridas de que participa. Chat de corrida encerrada continua legível e imutável | não iniciada |
+| 11 | Painel, níveis de acesso e disputa | Atendimento recebe 403 em estorno e bloqueio. Toda ação gera evento com autor. Disputa abre e resolve por evento compensatório, **sem reabrir estado final** | não iniciada — **auditoria obrigatória** |
+| 12 | Reputação nas três pontas | Nota do motoboy só desempata dentro da janela de 2 min. Falha por endereço errado conta contra a loja. **Não pagamento conta contra o cliente e contra mais ninguém.** Cliente acima do teto de faltas é recusado como destino até a operação liberar | não iniciada |
+| 13 | App do motoboy (Kotlin) | GPS reporta com tela apagada e app em background por 30 min contínuos. Push chega em menos de 5s. Perda de rede não duplica aceite. O QR aparece na tela e some sozinho quando a confirmação chega | não iniciada |
+| 14 | Ponte web mínima + app do cliente (Flutter) | O SMS chega e o link abre **sem instalar nada**; paga e rastreia, e nada além disso. O link morre com a corrida. O app do cliente mostra a **mesma** cobrança que o motoboy exibe, buscada no backend | não iniciada |
+| 15 | App do lojista (Flutter) | Cria corrida, acompanha, conversa. Sem cartão de garantia **e** sem subconta aprovada, a criação é recusada com a razão certa | não iniciada |
+| 16 | Antifraude | Localização simulada é detectada e bloqueia. Par lojista+motoboy repetido em cancelamento é sinalizado. Corrida sem lojista real é impossível por construção. **Cobrança que não nasceu no backend não fecha corrida nenhuma** | não iniciada |
+| 17 | Blindagem final | Caos: queda no meio de cada transição, duplo clique em tudo, relógio errado, rede oscilando, webhook fora de ordem e repetido. Caixa fecha ao centavo em todos os cenários | não iniciada |
+
+**Fora da fila, em PR próprio:** correção da Etapa 3 — o preço é **par origem-destino** (matriz 6×6 de anéis), não propriedade do destino. Travada até a tabela real de Sobral entrar no repositório (seção 17, item 4).
 
 Ao terminar cada etapa: pare, mostre o que fez, mostre a bateria verde, mostre o controle negativo funcionando, e **espere aprovação**.
 
@@ -132,9 +150,13 @@ Plataforma de despacho de entregas para o comércio de uma cidade. Substitui os 
 
 **Modelo:** Uber copiado e colado, aplicado a varejo e comércio (não a restaurante).
 
-**O que NÃO é:** não é marketplace. O cliente final não tem conta, não tem login, não vê catálogo, não compara lojas. Ele só vê a entrega que já contratou. Sem descoberta, não existe iFood.
+**O que NÃO é:** não é marketplace. **Não existe catálogo, vitrine, busca de loja nem comparação de preço.** O cliente entra por uma compra que já fez com uma loja que já escolheu, fora daqui. Sem descoberta, não existe iFood.
 
-**Frase de posicionamento para o lojista:** *"o cliente continua sendo seu — eu nem sei o nome dele."*
+**O que mudou em 2026-08-09:** o cliente **passou a ter conta, app, histórico e chat**, porque é ele quem paga, e paga na porta. Antes ele era um link anônimo. A frase antiga de posicionamento — *"o cliente continua sendo seu — eu nem sei o nome dele"* — **ficou falsa e foi retirada**. A verdadeira é mais estreita e continua valendo comercialmente:
+
+> **"Eu não tenho vitrine. Ninguém descobre outra loja aqui."**
+
+O Corre sabe o nome do cliente porque cobra dele. O que ele nunca faz é mostrar a esse cliente uma segunda loja. *(A redação comercial dessa frase é decisão do dono — seção 17, item 12.)*
 
 **Vocabulário da marca:** o lojista *manda um corre*; o motoboy *pega um corre*; os entregadores são *os corres*.
 
@@ -142,73 +164,101 @@ Plataforma de despacho de entregas para o comércio de uma cidade. Substitui os 
 
 | Ator | Onde usa | Instala app? |
 |---|---|---|
-| Lojista | Web (navegador) | Não |
-| Motoboy | App Android | Sim — GPS em background e push |
-| Cliente final | Link no navegador | Não |
+| Lojista | App Flutter (`br.com.corre.lojista`) | Sim |
+| Motoboy | App Kotlin Android (`br.com.corre.motoboy`) | Sim — GPS em background e push |
+| Cliente final | App Flutter (`br.com.corre.cliente`) **ou** a ponte web, na primeira compra | Não é obrigatório |
 | Operação (dono/atendimento) | Painel web | Não |
 
-O app do motoboy é o único app da operação.
+**Três apps, um backend só.** Regra de contrato, regra de preço e máquina de estados vivem no backend; app é tela. Nenhuma das três interfaces decide preço, prazo, transição ou split.
+
+### A ponte para a primeira compra
+
+O cliente que compra pela primeira vez **não tem app nenhum e não vai instalar um com o motoboy na porta**. Para ele existe a ponte:
+
+1. O sistema manda um **SMS** com um link, no telefone que o lojista digitou.
+2. O link abre uma página no navegador que faz **duas coisas e só duas**: **pagar** e **acompanhar**.
+3. A ponte **não tem** conta, não tem login, não tem histórico, não tem chat, não tem nenhuma outra loja. Ela **morre com a corrida**.
+4. A página convida a instalar o app do cliente, mas nunca exige.
+
+**Motivo:** a primeira compra não pode depender de instalação. Quem gosta instala na segunda.
+
+**Consequência registrada:** o provedor real de SMS deixou de ser detalhe de re-login e virou **pré-requisito da primeira compra de todo cliente novo** (seção 17, item 9).
 
 ## 3. Fluxo principal
 
-1. Lojista abre a web, digita endereço do cliente + telefone + valor declarado da mercadoria. Endereço de coleta é fixo (a loja).
-2. Sistema identifica a zona e crava o preço pela tabela.
-3. Sistema gera um link. Lojista manda no WhatsApp, onde já está falando com o cliente.
-4. Cliente abre o link, confere a loja e o valor, confirma o pino do endereço e paga por Pix. Se o pino mudar de zona, o preço recalcula **antes** do pagamento.
-5. Pix confirmado → despacho.
-6. Motoboy aceita, coleta, entrega, valida PIN.
-7. Split: motoboy recebe sua parte, o Corre retém 5%.
+1. **Lojista** abre o app, digita endereço do cliente + telefone + **valor da mercadoria**. O endereço de coleta é fixo (a loja).
+2. O sistema identifica a zona, crava o **frete** pela tabela e o **prazo estimado** (seção 8).
+3. A corrida **nasce procurando motoboy**. Não existe espera por pagamento: nada foi cobrado ainda.
+4. O sistema manda **SMS** ao cliente com o link de acompanhamento (ou notifica o app dele, se tiver).
+5. **Motoboy** aceita, vai à loja, confirma a coleta, sai com a mercadoria.
+6. Motoboy chega na porta e declara a chegada. **O backend gera um QR Pix dinâmico do total (mercadoria + frete)** e o app do motoboy o exibe.
+7. **Cliente paga** — pelo app dele, pelo link do SMS, ou lendo o QR na tela do motoboy com o banco que ele já usa.
+8. **A confirmação chega ao backend** (webhook do gateway **e** consulta ativa). Só então o app do motoboy libera a entrega.
+9. Motoboy entrega e confirma. Corrida → **Entregue**.
 
-O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
+**A entrega é consignada ao pagamento.** A mercadoria só troca de mão depois que o backend disse que o Pix caiu. **O dinheiro nunca passa pela mão do motoboy** — ele carrega a mercadoria, não o caixa.
 
-**Exceção prevista:** o link pode ser pago pelo próprio lojista (cliente idoso, sem celular na hora). Ele embute no preço do produto.
+**Split, já na confirmação:** mercadoria integral ao lojista, frete menos 5% ao motoboy, 5% do frete ao Corre (seção 9).
+
+**Exceção prevista — mercadoria já acertada fora do Corre** (cliente idoso, venda paga antes, fiado da loja): o lojista cria a corrida com **valor de mercadoria zero**. O QR cobra só o frete e o split vira de dois recebedores. É o mesmo caminho, com uma parcela a menos — não existe um segundo caminho de dinheiro.
+
+**O cliente não paga na porta.** Não vira desconto, não vira crédito, não vira depois: a mercadoria volta com o motoboy (estado 6 → 11) e o retorno é cobrado do **cartão de garantia do lojista** e repassado integral ao motoboy, exatamente como já valia para cliente ausente (seções 5 e 9). Do lado do cliente, a falta entra na reputação dele (seção 12).
 
 ## 4. Máquina de estados da corrida
 
 Estado só muda por evento registrado. Evento nunca é apagado nem editado — só compensado por outro evento.
 
+> **Esta tabela substitui integralmente a de antes.** A tabela antiga começava em "Aguardando pagamento" e retinha dinheiro do estado 2 ao 6. Com o pagamento na porta, **não existe dinheiro retido em lugar nenhum** — ou nada foi pago, ou já foi dividido. A reescrita é a Etapa 5.
+
 ### Estados vivos
 
 | # | Estado | Como entra | Dinheiro | Prazo |
 |---|---|---|---|---|
-| 1 | Aguardando pagamento | Lojista cria | Nenhum | Expira em 15 min |
-| 2 | Procurando motoboy | Pix confirmado | **Retido**, sem split | Cascata roda 5 min |
-| 3 | A caminho da loja | Motoboy aceitou | Retido | — *(ver medida provisória abaixo)* |
-| 4 | Com a mercadoria | Coleta confirmada | Retido | — *(idem)* |
-| 5 | Em retorno | Entrega falhou | Retido | — *(idem)* |
-| 6 | Em disputa | Alguém contestou | **Congelado** | Até decisão no painel |
+| 1 | Procurando motoboy | Lojista cria | Nenhum | Cascata roda 5 min |
+| 2 | A caminho da loja | Motoboy aceitou | Nenhum | Etapa 8 |
+| 3 | Com a mercadoria | Coleta confirmada | Nenhum | Etapa 8 |
+| 4 | Na porta, cobrando | Motoboy declarou chegada; o QR nasce na entrada | Cobrança viva; **nada moveu** | Espera na porta: 5 min (seção 7) |
+| 5 | Pago | Confirmação do gateway | **Split liquidado** | Motoboy confirma a entrega |
+| 6 | Em retorno | Cliente ausente ou não pagou | Nenhum — **nunca carrega dinheiro pago** | Etapa 8 |
+| 7 | Em disputa | Alguém contestou | Congelado | Até decisão no painel |
 
 ### Estados finais
 
 | # | Estado | Destino do dinheiro |
 |---|---|---|
-| 7 | Entregue | PIN validado → **split dispara** |
-| 8 | Expirada | Ninguém pagou. Nada aconteceu |
-| 9 | Sem motoboy | **Estorno automático integral**, sem o cliente pedir |
+| 8 | Entregue | O split já ocorreu no estado 5. Nada mais se move |
+| 9 | Sem motoboy | Nada aconteceu. **Ninguém pagou nada — não há o que estornar** |
 | 10 | Cancelada | Conforme seção 5 |
-| 11 | Devolvida | Frete da ida fica com o motoboy; retorno cobrado do lojista |
+| 11 | Devolvida | Mercadoria volta à loja. O retorno é cobrado do cartão do lojista e repassado ao motoboy |
 
-### Arestas legais (implementadas na Etapa 1)
+**Sumiu o estado "Expirada".** Ele existia para a corrida que ninguém pagava em 15 minutos. Sem cobrança no início, corrida sem motoboy morre em "Sem motoboy" e ponto.
 
-**13 arestas** além da criação (∅→1): 1→2, 1→8, 1→10, 2→3, 2→9, 2→10, 3→4, 3→10, 4→5, 4→7, 4→10, 5→10, 5→11.
+### Arestas legais
+
+**14 arestas** além da criação (∅→1):
+
+`1→2` · `1→9` · `1→10` · `2→3` · `2→10` · `3→4` · `3→6` · `3→10` · `4→5` · `4→6` · `4→10` · `5→8` · `6→11` · `6→10`
 
 A tabela de transições é **declarativa e vive num lugar só** (`corre-api/src/dominio/transicoes.js`). Nunca `if` de legalidade espalhado pelo código.
 
-### Estado 6 (Em disputa)
+**Invariante que a Etapa 5 tem que provar:** **não existe caminho até 8 (Entregue) que não passe por 5 (Pago).** Entregar sem receber é impossível por construção, não por disciplina.
 
-Fica **sem transições até a Etapa 10** (painel), que definirá abertura e resolução por migration própria; até lá a máquina recusa qualquer par envolvendo o estado 6. A disputa pós-entrega (prazo de 24h da seção 11) **não reabre corrida** — estado final é final; será fluxo compensatório do painel.
+### Estado 7 (Em disputa)
+
+Fica **sem transições até a Etapa 11** (painel), que definirá abertura e resolução por migration própria; até lá a máquina recusa qualquer par envolvendo o estado 7. A disputa pós-entrega (prazo de 24h da seção 11) **não reabre corrida** — estado final é final; será fluxo compensatório do painel.
 
 ### Prazos
 
 Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai no evento e na projeção, e vencer é consulta ao banco. Reinício de processo não perde vencimento. Tempo é **sempre do servidor** — instante vindo do cliente é recusado.
 
-**Medida provisória até a Etapa 7:** os estados 3, 4 e 5 retêm dinheiro de terceiro e ainda não têm prazo. Até a Etapa 7 definir os prazos operacionais, a consulta `corridasParadas` (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda corrida em estado vivo há mais de 24 horas — dinheiro preso nunca fica invisível. Sem tela, sem alerta, sem job: só a consulta.
+**Medida provisória até a Etapa 8:** os estados 2, 3 e 6 ainda não têm prazo. A consulta `corridasParadas` (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda corrida em estado vivo há mais de 24 horas. O risco encolheu com a revisão — nesses estados **não há mais dinheiro de terceiro retido** —, mas continua havendo **mercadoria de terceiro** na mão do motoboy, que é pior de perder de vista. A consulta continua obrigatória.
 
 ## 5. Cancelamento
 
-- **Livre e sem custo** até o estado 2, para qualquer parte (lojista, cliente ou operação).
-- **Dos estados 3, 4 e 5**, só a operação cancela, sempre com **motivo registrado** (motivo em branco é recusado).
+- **Livre e sem custo** no **estado 1**, para qualquer parte (lojista, cliente ou operação): ninguém saiu do lugar.
+- **Dos estados 2, 3, 4 e 6**, só a operação cancela, sempre com **motivo registrado** (motivo em branco é recusado).
 - **Cancelamento pós-aceite causado pelo lojista:** cobrado do **cartão de garantia do lojista** e repassado ao motoboy.
+- **Depois do estado 5 (Pago) não se cancela.** O dinheiro já foi dividido em três contas que não são nossas. O que existe dali em diante é **disputa** (estado 7), resolvida no painel por evento compensatório.
 
 > Princípio: **quem causa paga.** Não existe custo sem dono. O Corre nunca banca do próprio bolso.
 
@@ -219,16 +269,23 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 - **Nota desempata apenas em empate técnico** (chegada com até ~2 min de diferença). Fora disso, distância manda.
 - Recusar é **livre e sem punição**. 4 recusas seguidas → offline por 15 min.
 - Cascata roda **5 minutos**. Ninguém aceitou → estado 9.
-- Motoboy pode aceitar uma segunda corrida estando ocupado. **Teto: 2 ativas.** Cada corrida permanece independente (PIN próprio, preço próprio, estado próprio) — o app não roteiriza nem rateia.
-- O rastreio mostra ao lojista quando o motoboy tem outra parada antes.
+- Motoboy pode aceitar uma segunda corrida estando ocupado. **Teto: 2 ativas.** Cada corrida permanece independente (cobrança própria, preço próprio, estado próprio) — o app não roteiriza nem rateia.
+- O rastreio mostra ao lojista e ao cliente quando o motoboy tem outra parada antes.
+
+**O despacho passou a ser a primeira coisa que acontece.** Antes ele só começava depois do Pix confirmado; agora a corrida nasce nele. Consequência: o motoboy pode gastar a viagem e não receber nada se o cliente não pagar — e é por isso que o retorno é pago pelo cartão do lojista (seções 3 e 5) e que a reputação do cliente existe (seção 12).
 
 ## 7. Entrega
 
-- **Prova: PIN de 4 dígitos** informado pelo cliente. Sem foto no MVP.
-- **Espera na porta:** 5 minutos, com 1 ligação registrada no app. Depois vira retorno (estado 5).
+- **A prova de entrega é o pagamento.** O cliente só paga quando o motoboy está na porta com a mercadoria; a confirmação vem do banco, com valor e horário, e não de um número que alguém digita. **O PIN de 4 dígitos saiu da especificação.**
+- **Ordem obrigatória:** chegada declarada → QR exibido → **confirmação do backend** → mercadoria entregue → motoboy confirma. O app do motoboy **não mostra o botão de entregar** antes da confirmação.
+- **Espera na porta:** 5 minutos, com **1 aviso registrado** (mensagem no chat para quem tem app, SMS para quem não tem). Depois vira retorno (estado 6). *Antes era "1 ligação registrada"; sem telefone exposto (seção 19), a ligação deixou de ser possível.*
 - **Espera na loja:** grátis, sem taxa. Controlada por reputação, não por cobrança.
 
-## 8. Preço
+**O que o fim do PIN custou e o que ganhou.** Ganhou: a prova virou um fato bancário com horário, que o cliente não consegue passar por telefone para outra pessoa, e sumiu o atrito de ditar número na porta. Custou: o pagamento prova que o cliente estava lá e pagou, **não prova que a mercadoria mudou de mão**. Essa fresta dura segundos e é coberta pela disputa de 24h (seção 11), tendo o chat como prova (seção 19).
+
+## 8. Preço e prazo
+
+### Preço do frete
 
 - Tabela por zona, transcrita da tabela que já opera na cidade. **Não alterar valores no lançamento** — o motoboy tem que ver o preço que já sabe de cor.
 - **Fora de zona:** zona mais cara + adicional por km, com distância em **linha reta** a partir do centro da última zona (evita custo de API de mapa).
@@ -241,52 +298,101 @@ Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai
 1. **Tabela de zonas é dado versionado no banco** (`tabelas_preco` + `zonas`). Alterar preço **cria uma versão nova**, nunca sobrescreve; versão publicada é imutável — a aplicação só tem `SELECT`, e publicar é ato de dono via `corre-api/scripts/importar-tabela-preco.js`. Toda corrida guarda `tabela_preco_id` + `frete_centavos` + `zona_nome`, para auditar um preço cobrado anos depois.
 2. **Geometria:** retângulo em lat/lng (graus × 1e6, inteiro). Resolução por contenção, sem API externa.
 3. **Fronteira e sobreposição:** as zonas têm `ordem`; vence a de **menor ordem** que contém o ponto. Retângulos inclusivos nas duas bordas ⇒ ponto exatamente na fronteira cai sempre na de menor ordem — determinístico, nunca aleatório.
-4. **Arredondamento (num lugar só, `corre-api/src/dominio/preco.js`):** a distância vira km **para cima (teto)**, e esse é o **único** arredondamento do caminho — não há piso por eixo antes dele (piso antes do teto cobraria por menos distância do que a real). Tudo em `BigInt`, centavos inteiros; fatores metros/grau gravados como dado inteiro na versão da tabela, sem `cos`/float.
-5. **Tabela real de Sobral ainda não existe** (seção 17, item 3): trabalha-se com `corre-api/dados/tabela-preco-exemplo.json`, **marcada como exemplo** (`exemplo=true`). Os valores de exemplo (inclusive o adicional de R$ 1,50/km) **não são reais**.
+4. **Arredondamento (num lugar só, `corre-api/src/dominio/preco.js`):** a distância vira km **para cima (teto)**, e esse é o **único** arredondamento do caminho — não há piso por eixo antes dele. Tudo em `BigInt`, centavos inteiros; fatores metros/grau gravados como dado inteiro na versão da tabela, sem `cos`/float.
+5. **Correção pendente (PR próprio):** o preço é **par origem-destino** — matriz 6×6 de anéis, `preço = tabela_anel1[max(anel_origem, anel_destino)]` —, não propriedade do destino. Travada na tabela real.
+6. **Tabela real de Sobral ainda não existe** (seção 17, item 4): trabalha-se com `corre-api/dados/tabela-preco-exemplo.json`, **marcada como exemplo** (`exemplo=true`). Os valores de exemplo (inclusive o adicional de R$ 1,50/km) **não são reais**.
+
+### Preço da mercadoria
+
+O valor da mercadoria é **digitado pelo lojista e cobrado integral**. O Corre **não tem comissão nenhuma sobre mercadoria** (seção 9), não conferе preço, não tabela produto e não guarda catálogo — a mercadoria é um número que atravessa a cobrança e cai inteiro na subconta do lojista.
+
+Ele **substituiu o "valor declarado"** da versão anterior: antes era uma declaração para limitar responsabilidade em caso de perda; agora é o valor efetivamente cobrado. O teto da seção 11 passa a incidir sobre um número real, e não sobre uma estimativa de quem tem interesse nela.
+
+### Prazo estimado de entrega
+
+- **Fórmula:** `prazo = tempo base de coleta + tempo do anel de destino`. Dois números, nenhuma API de mapa, nenhuma rota.
+- **Onde os números moram:** os minutos por anel são **coluna da tabela de preço versionada** — mesma versão, mesma imutabilidade, mesma auditoria. O tempo base de coleta é dado da cidade (e, se a operação quiser, da loja).
+- **É estimativa, e o texto na tela diz isso.** Não é SLA, não é promessa, não gera multa, não gera desconto, não entra na reputação de ninguém. Corrida atrasada não é corrida com defeito.
+- **Gravado na criação** junto com a versão da tabela: a mesma corrida mostra o mesmo prazo para lojista, motoboy e cliente, para sempre.
 
 ## 9. Dinheiro
 
-**Comissão: 5% do frete.** Num frete de R$ 10, R$ 0,50.
+**Comissão: 5% do frete. Zero sobre a mercadoria.** Num frete de R$ 10, R$ 0,50 — o mesmo em uma entrega de R$ 20 de mercadoria e em uma de R$ 400.
 
-**Critério permanente: o dinheiro nunca encosta na conta do Corre.** Não é questão de taxa — é a **Res. BCB 494/2025**: guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. Qualquer desenho em que o frete transite pela conta da plataforma está **descartado por construção**, por mais barato que seja.
+**Por que zero sobre a mercadoria** (decisão de 2026-08-09, três motivos):
+1. **Nosso serviço é o frete.** Cobrar percentual da mercadoria é cobrar por um valor que não produzimos.
+2. **Fiscal.** A NFS-e sai só sobre a comissão de 5% (seção 15). No instante em que o Corre tira percentual da mercadoria, ele vira revendedor, e a mercadoria entra na base tributária dele.
+3. **Adoção.** Percentual sobre mercadoria o lojista embute no produto e o cliente paga — e ele descobre isso na primeira conta. Frete é caro de vender uma vez; mercadoria é caro de vender todo dia.
 
-- Split com conta-pai (Corre) e subcontas (motoboys), **dentro do gateway**. O valor **nasce dividido** — o Corre nunca recebe o frete inteiro.
-- **Retenção até a entrega:** o valor fica **em custódia no gateway** do estado 2 ao 6 e só é liberado na transição para Entregue (PIN validado). Estorno de "sem motoboy", cancelamento e disputa acontecem enquanto o dinheiro ainda está retido — é isso que dá lastro ao estorno.
-- **O saldo exibido no app é espelho da subconta do motoboy no gateway, não conta nossa.** O saque é ato dele, feito pelos canais do gateway, e **o custo da transferência é dele**. O Corre **não intermedeia saque nem promete gratuidade**.
-- **Primeiro saque travado** até conferência dos documentos. É **estado gravado** da conta (`primeiro_saque`), nasce `travado` por padrão do banco, e só a operação libera.
+### Como o dinheiro anda
 
-**Cartão de garantia do lojista:** fica no cadastro, **nunca é cobrado no fluxo normal**. Cobre apenas cancelamento pós-aceite causado pelo lojista e custo de retorno por cliente ausente (repassado integral ao motoboy).
+**Uma cobrança só, na porta, com três recebedores declarados desde o nascimento:**
 
-**Conta da Lei 7 com o fornecedor escolhido (PagBank):** frete R$ 10 → comissão R$ 0,50 → PagBank a 1,89% = **R$ 0,19** → **líquido R$ 0,31 por corrida (3,1% do frete)**. O teto de 1,89% é **preço de tabela** e será negociado antes da contratação.
+| Parcela | Vai para | Quanto |
+|---|---|---|
+| Mercadoria | Subconta do **lojista** | Integral |
+| Frete − 5% | Subconta do **motoboy** | 95% do frete |
+| Comissão | Conta do **Corre** | 5% do frete |
+
+**O split é declarado quando a cobrança nasce e liquidado pelo gateway no pagamento.** A transição 4→5 é o **registro** desse fato, não a ordem que o dispara — o Corre não manda transferir nada, e é exatamente por isso que não existe endpoint que "só transfere" (Lei 6).
+
+**Não existe mais retenção, custódia ou escrow.** Ela existia para dar lastro ao estorno de "sem motoboy", de cancelamento e de disputa, quando o pagamento vinha **antes** da entrega. Com o pagamento **na** entrega, esses três casos acontecem quando ninguém pagou nada: não há o que reter e não há o que estornar. **O Portão C morreu com o problema que ele resolvia.**
+
+**O dinheiro nunca encosta na conta do Corre — critério permanente.** Não é questão de taxa, é a **Res. BCB 494/2025**: guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. Com a mercadoria dentro da cobrança isso ficou **mais** severo, não menos: o valor que atravessa a plataforma deixou de ser R$ 10 de frete e virou R$ 10 + o preço da mercadoria. Qualquer desenho em que esse valor transite pela conta da plataforma está **descartado por construção**, por mais barato que seja.
+
+**O saldo exibido nos apps é espelho da subconta do titular no gateway, não conta nossa.** O saque é ato dele, pelos canais do gateway, e o custo da transferência é dele. O Corre **não intermedeia saque nem promete gratuidade**. **Primeiro saque travado** até conferência dos documentos: é estado gravado da conta (`primeiro_saque`), nasce `travado` por padrão do banco, e só a operação libera.
+
+**Cartão de garantia do lojista:** fica no cadastro, **nunca é cobrado no fluxo normal**. Cobre cancelamento pós-aceite causado pelo lojista e **o retorno** — por cliente ausente ou por cliente que não pagou —, repassado integral ao motoboy. **Com o pagamento na porta ele deixou de ser exceção rara e virou a rede de proteção do modelo**: é ele que garante que o motoboy nunca faz viagem de graça. O lojista precisa saber disso antes de aceitar o cadastro.
+
+### A conta da Lei 7 e o problema novo
+
+A taxa do gateway incide sobre o **total** (mercadoria + frete). A receita do Corre é **5% do frete**. Numa entrega de mercadoria R$ 100 + frete R$ 10, a 1,19%:
+
+| | |
+|---|---|
+| Total cobrado | R$ 110,00 |
+| Taxa do gateway (1,19%) | **R$ 1,31** |
+| Comissão do Corre (5% de R$ 10) | **R$ 0,50** |
+
+**Se a taxa sair da comissão, cada entrega dá prejuízo — e o prejuízo cresce com o preço da mercadoria, que não é nosso.** Uma mercadoria de R$ 400 com frete de R$ 10 custaria R$ 4,88 de taxa contra R$ 0,50 de receita.
+
+Portanto a especificação exige, do gateway e do contrato: **a taxa da parcela de mercadoria é debitada da parcela de mercadoria**, e a comissão de 5% do frete chega inteira. Fornecedor que não permita dizer **de quem sai a taxa** não serve, ainda que seja o mais barato. Isso virou o **terceiro critério eliminatório** (seção 17, item 1) e a conta final só fecha depois de decidido **quem paga** (seção 17, item 2).
 
 ## 10. Cadastro
 
 ### Motoboy
 - CNH + CRLV da moto + selfie
 - **Chave Pix obrigatoriamente do mesmo CPF do cadastro**
-- **Subconta no gateway** (é para lá que o split cai; sem ela o motoboy não tem onde receber)
+- **Subconta no gateway** (é para lá que a parcela do frete cai)
 - Um aparelho por conta
 - Aprovação automática — roda na hora. O **primeiro saque** fica travado até conferência
 
-**Chave Pix = o próprio CPF do cadastro**, verificada no ato (validação dos dígitos verificadores no código **e** `CHECK` no banco). Motivo: sem consulta DICT no MVP, chave de outro tipo (e-mail, telefone, aleatória) não é verificável quanto ao dono — seria brecha de conta laranja. Quando o gateway (Etapa 4) trouxer consulta de titularidade, ampliar é decisão nova.
-
-**Nota de operação (onboarding):** o motoboy precisa de **duas coisas prontas antes de rodar**:
-1. **Chave Pix igual ao seu CPF**, cadastrada antes no banco dele.
-2. **Subconta aberta e aprovada no gateway** — é onde o split cai. Sem subconta aprovada, não há para onde mandar o dinheiro dele.
-
-Ambas são atrito conhecido e aceito no MVP. **Risco a medir:** se a aprovação da subconta pelo gateway for demorada, ela **colide com "cadastra e roda na hora"** e o onboarding muda — o motoboy passaria a poder aceitar corridas antes de poder receber. Prazo e exigências documentais ainda não são conhecidos (seção 17, item 11).
+**Chave Pix = o próprio CPF do cadastro**, verificada no ato (dígitos verificadores no código **e** `CHECK` no banco). Motivo: sem consulta DICT no MVP, chave de outro tipo (e-mail, telefone, aleatória) não é verificável quanto ao dono — seria brecha de conta laranja. Quando o gateway trouxer consulta de titularidade, ampliar é decisão nova.
 
 **Um aparelho por conta:** o identificador do aparelho fica amarrado à conta. Segundo aparelho é **recusado**. Troca de aparelho existe, mas é **ação da operação**, registrada como evento — nunca automática. Trocar aparelho e bloquear conta **revogam as sessões vivas na hora**, e toda requisição revalida a sessão contra a conta viva.
 
 ### Lojista
-- Cadastro em 1 minuto: nome e telefone. Entra, olha, mexe
-- **Cartão de garantia exigido antes do primeiro pedido**, não no cadastro
-- São duas condições separadas: **pode entrar** (cadastro ativo) ≠ **pode pedir** (cartão registrado). Sem cartão, a criação de corrida é recusada — no domínio e por trigger no banco.
+
+- Nome e telefone para **entrar**
+- **Cartão de garantia** antes do primeiro pedido
+- **Subconta no gateway** antes do primeiro pedido — é para lá que a mercadoria cai
+
+**São três condições separadas, e a terceira é nova:** **pode entrar** (cadastro ativo) ≠ **pode pedir** (cartão registrado) ≠ **pode receber** (subconta aprovada). Sem cartão **ou** sem subconta, a criação de corrida é recusada — no domínio e por trigger no banco, com a razão certa em cada caso.
+
+**"Cadastro em 1 minuto: entra, olha, mexe" continua verdade — e agora só até o primeiro pedido.** Com a mercadoria dentro da cobrança, o lojista virou recebedor, e recebedor precisa de KYC. Ele entra e olha em um minuto; para vender, precisa da subconta aprovada. **Isso é uma piora real de onboarding e está registrada como risco** (seção 17, item 11).
+
+### Cliente
+
+- **Telefone.** Só isso para receber e pagar.
+- **Não precisa de app**: na primeira compra existe a ponte web (seção 2).
+- A conta do cliente **nasce sozinha** quando o primeiro lojista digita o telefone dele, e passa a ser dele quando ele entra pelo código de 6 dígitos por SMS.
+- **O cliente é da plataforma, não da cidade.** Ele recebe entrega onde estiver; quem pertence a uma cidade é o lojista, o motoboy e a corrida (seção 20).
+- Cliente **não tem subconta e não recebe dinheiro** — ele só paga.
 
 ### Sessão e re-login
 - Sessão nasce no cadastro: token opaco, **só o hash fica no banco**, validade 30 dias.
 - **Motoboy** re-entra por **CPF + aparelho vinculado** (posse do aparelho é a credencial).
-- **Lojista e operador** re-entram por **código de 6 dígitos via SMS**: expira em 10 min, uso único, no máximo 5 tentativas erradas (ao estourar, o código morre e é preciso pedir outro), com limite de envios por telefone e por IP para o endpoint não virar torneira de SMS pago. O código **nunca é gravado em claro** — só o hash. O envio fica atrás de uma interface; **nenhum provedor real no MVP** (implementação falsa nos testes; provedor é ponto em aberto 8).
+- **Lojista, cliente e operador** re-entram por **código de 6 dígitos via SMS**: expira em 10 min, uso único, no máximo 5 tentativas erradas (ao estourar, o código morre e é preciso pedir outro), com limite de envios por telefone e por IP para o endpoint não virar torneira de SMS pago. O código **nunca é gravado em claro** — só o hash. O envio fica atrás de uma interface; **nenhum provedor real no MVP**.
 - **Sessão não confia no cliente:** papel e identidade saem sempre do servidor. Nada de identidade vinda do corpo da requisição.
 - Todo login bem-sucedido gera evento.
 
@@ -294,20 +400,34 @@ Ambas são atrito conhecido e aceito no MVP. **Risco a medir:** se a aprovação
 
 ## 11. Disputa
 
-- **PIN validado = entregue. Encerra a discussão.**
-- Mercadoria quebrada ou sumida: **responsabilidade do motoboy**, limitada ao **valor declarado**
-- **Teto de valor declarado no MVP: R$ 500.** Acima disso o app recusa a corrida
-- **Prazo para abrir disputa: 24h** após a entrega
+- **Pagamento confirmado = cliente presente e cobrança quitada, com horário do banco.** É o que substituiu o PIN.
+- **Prazo para abrir disputa: 24h** após a entrega. O chat da corrida (seção 19) é a prova de as duas partes: ele não se edita nem se apaga.
+- Mercadoria quebrada ou sumida: **responsabilidade do motoboy**, limitada ao **valor da mercadoria cobrado** — que agora é um número real, não uma declaração de parte interessada.
+- **Teto de valor de mercadoria no MVP: R$ 500.** Acima disso o app recusa a corrida.
+- Disputa **não reabre estado final**: resolve por evento compensatório no painel (Etapa 11).
 
-> A regra do PIN é política operacional, não escudo jurídico. Não afasta CDC.
+> A regra do pagamento é política operacional, não escudo jurídico. Não afasta CDC.
 
 ## 12. Reputação
 
-- **Nota da loja é visível.** Loja lenta é despachada por último — é a alavanca que substitui a taxa de espera
-- **Nota do motoboy** só desempata dentro da janela de ~2 min. Nunca fura a distância
-- Entrega falhada por endereço errado conta **contra a loja**, nunca contra o motoboy
-- **Desempenho:** 3 avisos antes de qualquer bloqueio
-- **Fraude:** bloqueio imediato, sem aviso
+**Três notas, e cada uma muda uma coisa concreta.** Nota que não muda nada é enfeite.
+
+| Quem é avaliado | Quem avalia | Como se forma | O que muda |
+|---|---|---|---|
+| **Loja** | Motoboy e cliente | Tempo real de espera na loja + nota do motoboy + nota do cliente | **É visível.** Loja lenta é despachada por último — é a alavanca que substitui a taxa de espera |
+| **Motoboy** | Lojista e cliente | Nota das duas pontas depois da entrega | **Só desempata dentro da janela de ~2 min.** Nunca fura a distância |
+| **Cliente** *(novo)* | Lojista e motoboy | **Dois fatos objetivos** — pagou na porta, estava presente — mais a nota das duas pontas | Acima do teto de faltas, **é recusado como destino de nova corrida em toda a plataforma** até a operação liberar |
+
+**Por que o cliente passou a ter nota:** com o pagamento na porta, é ele quem pode fazer a viagem inteira virar prejuízo. Quem não paga tem que ficar visível **antes** do próximo motoboy sair da loja.
+
+**Regras de atribuição:**
+- Entrega falhada por **endereço errado** conta **contra a loja**, nunca contra o motoboy.
+- **Não pagamento** conta **contra o cliente**, nunca contra o motoboy nem contra a loja.
+- **Atraso não conta contra ninguém** — o prazo é estimativa (seção 8).
+- **Desempenho:** 3 avisos antes de qualquer bloqueio.
+- **Fraude:** bloqueio imediato, sem aviso.
+
+O **teto de faltas de pagamento** que bloqueia um cliente ainda não tem número (seção 17, item 13).
 
 ## 13. Painel da operação
 
@@ -315,60 +435,73 @@ Ambas são atrito conhecido e aceito no MVP. **Risco a medir:** se a aprovação
 - **Acesso por níveis:** atendimento resolve o dia a dia; **só o dono estorna e bloqueia**. Atendimento recebe **403**, não uma tela escondida
 - **Nada se apaga nem se edita.** Correção só por evento compensatório
 - Toda ação do painel gera evento **com autor identificado**
-- **Estorno:** a autorização (exclusiva do dono) e o registro do ato existem desde a Etapa 2; o **efeito financeiro só existe a partir da Etapa 4**. Até lá o evento é gravado no agregado do operador com `efeito: nenhum_ate_a_etapa_4`, sem tocar o log da corrida, que é só de transições
+- **Estorno:** a autorização (exclusiva do dono) e o registro do ato existem desde a Etapa 2; o **efeito financeiro só existe a partir da Etapa 7**. Até lá o evento é gravado no agregado do operador sem tocar o log da corrida, que é só de transições
+- **Estorno depois do split é diferente do que era.** O dinheiro está em três contas que não são nossas: a devolução depende do que o gateway permite desfazer de um split já liquidado (seção 17, item 1). O que o Corre pode devolver sozinho é a própria comissão
 
 ## 14. Antifraude
 
 | Golpe | Trava no MVP | Custo |
 |---|---|---|
+| **Motoboy exibe um QR próprio no lugar do da plataforma** | O QR **nasce no backend** e a corrida só anda com a confirmação que o backend recebe. Cliente com app ou com o link do SMS vê a cobrança **vinda do backend**, com valor e recebedor, e é essa a via recomendada na tela. Motoboy que cobra por fora não fecha corrida: ela vira retorno, o cartão do lojista paga a viagem e o padrão aparece na operação | Zero |
 | Corrida fantasma com GPS falso | Corrida só existe se um lojista real criou e confirmou coleta. Flag de localização simulada do Android | Zero |
 | Bônus fraudado | **Não existe bônus por número de entregas no MVP** | Zero |
 | Conta laranja | Chave Pix do mesmo CPF + selfie + 1 aparelho por conta | Zero |
-| Estorno de cartão | **Só Pix no MVP.** Pix não tem chargeback | Zero |
+| Estorno de cartão | **Só Pix no MVP.** Pix não tem chargeback — a devolução é ato de quem recebeu, não de quem pagou | Zero |
 | Conluio lojista+motoboy | Contador do par em cancelamentos pós-aceite | Zero |
-| "Entreguei" vs "não recebi" | PIN de 4 dígitos | Zero |
+| **Cliente que não paga na porta** | Cartão do lojista paga o retorno; a falta entra na reputação do cliente e, no teto, bloqueia | Zero |
+| "Entreguei" vs "não recebi" | Pagamento confirmado pelo banco com horário + chat imutável como prova + disputa de 24h | Zero |
+
+**Risco residual registrado:** o pagamento prova presença e quitação, **não prova a entrega física**. É uma fresta de segundos, entre a confirmação e a mercadoria mudar de mão, coberta só por disputa. Foi o preço de tirar o PIN, e está aceito.
 
 ## 15. Jurídico
 
 - O Corre se posiciona como **intermediação de tecnologia**. Motoboy é autônomo
-- **NFS-e emitida somente sobre a comissão de 5%**, nunca sobre o frete cheio. O split garante que o valor cheio não passa pela conta da empresa
+- **NFS-e emitida somente sobre a comissão de 5% do frete**, nunca sobre o frete cheio e **nunca sobre a mercadoria**. É o split que garante isso: a mercadoria nasce endereçada à subconta do lojista e não passa pela nossa conta em momento nenhum. **É essa mecânica que impede o Corre de ser revendedor** — não uma cláusula de contrato
 - **MEI não é exigido** do motoboy
 
 > **Risco a monitorar:** três regras apontam para controle e aparecem em ação de vínculo — offline por 4 recusas, nota influenciando despacho, e bloqueio por desempenho. Todas existem em iFood e Uber. Revisar com advogado antes do lançamento.
+>
+> **Risco novo (2026-08-09):** com a mercadoria dentro da cobrança, o valor que atravessa a plataforma multiplicou. A separação entre "intermediar tecnologia" e "processar pagamento de terceiro" ficou mais fina, e é o critério do dinheiro nunca encostar na conta do Corre (seção 9) que a mantém. Entra na revisão jurídica do lançamento.
 
 ## 16. Fora de escopo do MVP
 
-- Pagamento da mercadoria dentro do app (só o frete entra)
-- Carteira do lojista / lojista pagando frete
+- Catálogo, vitrine ou qualquer descoberta de loja
+- Carteira dentro do app — saldo é espelho da subconta no gateway
 - Cartão de crédito como meio de pagamento do cliente
+- **Pagamento antes da entrega** — não existe pré-pago no MVP
+- **Entrega entre cidades** — origem e destino na mesma cidade (seção 20)
 - Roteirização e rateio de entregas agrupadas
 - Pedido agendado
 - Foto como prova de entrega
+- Anexo, foto ou áudio no chat — **texto e nada mais** (seção 19)
+- Integração com WhatsApp, oficial ou não
 - Preço dinâmico / surge
 - Bônus e metas para motoboy
-- App para o cliente final
-- Catálogo, vitrine ou qualquer descoberta de loja
+
+**Saíram desta lista em 2026-08-09** (viraram escopo): pagamento da mercadoria dentro do app, e app para o cliente final.
 
 ## 17. Pontos ainda em aberto
 
-1. ~~**Escolha do gateway.**~~ **DECIDIDO em 2026-08-09: PagBank, com o recurso "Custódia".** Ver `PORTAO-C.md`.
-   **Os dois critérios de seleção, permanentes:**
-   - **(A) Pix percentual.** Gateway que cobra **fixo por transação é descartado** — a comissão de 5% não se ajusta ao fornecedor. *(Foi o que descartou o **Asaas**: Pix fixo de R$ 1,99, 19,9% de um frete de R$ 10, ~4× a comissão, e a tarifa não volta em estorno — apesar de ele ter o escrow que a spec pede.)*
-   - **(C) O dinheiro nunca encosta na conta do Corre.** Não é taxa, é **Res. BCB 494/2025**: guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. *(Foi o que descartou os caminhos "recebe 100% e transfere depois" e "BaaS com conta da plataforma", que eram os mais baratos.)*
+1. **Escolha do gateway — REABERTA.** A decisão anterior (PagBank com Custódia) **caiu junto com o Portão C**: ela existia para reter dinheiro pago antes da entrega, e não se paga mais antes da entrega. **Três critérios eliminatórios:**
+   - **(A) Pix percentual.** Custo **fixo** por transação descarta o fornecedor — a comissão de 5% não se ajusta a ele. *(Foi o que descartou o Asaas: Pix fixo de R$ 1,99.)*
+   - **(C) O dinheiro nunca encosta na conta do Corre.** **Res. BCB 494/2025.** Desenho em que o valor cheio cai na plataforma e ela repassa está descartado por construção.
+   - **(D) *(novo)* De quem sai a taxa tem que ser declarável.** A taxa incide sobre mercadoria + frete e a receita é 5% do frete; se a taxa não puder ser debitada da parcela de mercadoria, o modelo dá prejuízo (seção 9).
 
-   **Por que o PagBank e não o Efí:** o Efí é mais barato (1,19% e Pix enviado grátis) mas **divide no ato** — sem retenção, o estorno de "sem motoboy", cancelamento e disputa não teria de onde sair. **Preço melhor não compra arquitetura quebrada.** O PagBank é o único que passa nos dois portões: retenção com liberação por API (`POST /splits/{id}/custody/release`, 90 dias padrão / 365 agendado) **e** preço percentual (teto 1,89%).
-
-   **A implementação real do PagBank fica para depois da Etapa 4.** A Etapa 4 é construída **gateway-agnóstica**, atrás de interface com implementação falsa nos testes — como foi feito com o SMS. **Nenhuma credencial, nenhuma chamada real.**
-2. **Valor do adicional por km** fora de zona
-3. **Transcrição da tabela de zonas** de Sobral
-4. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
-5. **Teto de R$ 500** de valor declarado — sugerido, não confirmado
-6. **Revisão jurídica** das três cláusulas de controle
-7. **Registro da marca** CORRE (mista) nas classes 39 e 42, e domínio
-8. **Provedor real de SMS** para o re-login por código, e seu custo. O mecanismo de re-login já está definido e implementado (seção 10); falta só escolher o provedor — nenhum provedor real no MVP
-9. ~~**Portão C — quando o split ocorre.**~~ **RESOLVIDO em 2026-08-09:** PagBank com Custódia — retenção no gateway do estado 2 ao 6, liberação por comando de API na transição para Entregue. Ver `PORTAO-C.md` e o item 1 acima
-10. **Custo do saque para o motoboy.** Quanto ele paga para transferir da subconta PagBank para o banco dele. O que se sabe hoje: o PagBank anuncia Pix **ilimitado e gratuito para pessoa física**, mas isso é da conta pessoal — **não está documentado** se vale igual para conta **vendedor/empresa**, que é o tipo exigido para receber split. Como o custo é dele e não nosso (seção 9), isso afeta **a atratividade da plataforma para o motoboy**, não a nossa margem. **A confirmar com o comercial antes do lançamento**
-11. **Exigências e prazo para aprovar a subconta do motoboy.** O que se sabe hoje: o PagBank exige que todo recebedor de split tenha **conta Avançada, tipo vendedor ou empresa, tokenizada e validada pelo processo KYP**, e que a integração passe por **homologação da equipe de integração** antes de ir a produção. **Prazo de aprovação não documentado.** Se for demorado, **colide com "cadastra e roda na hora"** (seção 10) e o onboarding muda — o motoboy poderia aceitar corrida antes de poder receber. **A confirmar com o comercial antes do lançamento**
+   Além dos três, o fornecedor precisa de: **QR Pix dinâmico por API**, confirmação por **webhook e consulta ativa**, **split de 3 recebedores** na mesma cobrança, e subconta para **lojista e motoboy**. **Nada se implementa antes desta escolha.**
+2. **Quem paga a taxa do gateway.** Decisão do dono, não do fornecedor: a taxa da mercadoria sai do lojista (e ele precisa saber disso antes de assinar) ou o modelo muda. **Trava a Etapa 7 junto com o item 1**
+3. **Valor do adicional por km** fora de zona
+4. **Transcrição da tabela de zonas de Sobral** — agora com **duas colunas**: preço por anel **e minutos por anel** (seção 8)
+5. **Tempo base de coleta** — o outro número do prazo estimado
+6. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
+7. **Teto de R$ 500** de valor de mercadoria — sugerido, não confirmado, e agora incide sobre valor cobrado de verdade
+8. **Registro da marca CORRE** (mista, classes 39 e 42) e do **domínio `corre.com.br`** — virou **pré-requisito de publicação**: os pacotes `br.com.corre.*` são definitivos e não se trocam depois de publicados
+9. **Provedor real de SMS.** Deixou de ser detalhe de re-login: **sem SMS não existe primeira compra**, porque é por ele que o cliente novo recebe o link para pagar. Escalou de "falta para o lançamento" para "falta para o produto funcionar"
+10. **Custo do saque** da subconta para o banco do titular — agora para **motoboy e lojista**. É custo deles, não nosso, mas afeta a atratividade dos dois lados
+11. **Exigências e prazo de aprovação da subconta** — agora para **motoboy e lojista**. Se for demorado, colide com "cadastra e roda na hora" do motoboy **e** com "entra e vende" do lojista. Do lado do lojista é pior: ele não vende nada até aprovar
+12. **Frase de posicionamento para o lojista.** A antiga ficou falsa (seção 1). A substituta proposta — *"eu não tenho vitrine; ninguém descobre outra loja aqui"* — é decisão comercial do dono
+13. **Teto de faltas de pagamento** que bloqueia um cliente (seção 12) — e se o bloqueio é da plataforma toda ou só daquela loja
+14. **Confirmar que o retorno por cliente que não pagou é do cartão do lojista.** É o que a regra "quem causa paga" e a regra de cliente ausente já implicam, mas deixou de ser caso raro e virou o principal modo de falha do modelo
+15. **Revisão jurídica** das três cláusulas de controle, mais o risco novo da seção 15
 
 ## 18. Números de referência
 
@@ -378,9 +511,43 @@ Estimativa a partir do grupo de 66 motoboys que já opera em Sobral:
 |---|---|
 | Corridas/mês (66 × 20/dia × 26 dias) | ~34.300 |
 | Frete médio | R$ 10 |
-| Comissão bruta (5%) | ~R$ 17.100/mês |
-| Líquido após gateway (~1%) | ~R$ 13.700/mês |
+| Comissão bruta (5% do frete) | ~R$ 17.100/mês |
 | Projeção com os 3 grupos da cidade | ~R$ 40.000/mês |
 | Custo para o motoboy (20 corridas/dia) | R$ 260/mês |
 
+**A linha "líquido após gateway" saiu da tabela.** Ela pressupunha taxa sobre o frete. Com a mercadoria dentro da cobrança, o líquido depende inteiramente de **quem paga a taxa** (seção 17, item 2): se a taxa da mercadoria sair da comissão, o líquido é **negativo**; se sair da parcela do lojista, a comissão chega quase inteira. A linha volta quando o item 2 for decidido.
+
 **Premissa mais frágil de todo o modelo:** entregas por dia por motoboy. A 8/dia o negócio é outro. Medir isso é a prioridade número 1 do piloto.
+
+**Premissa nova a medir no piloto:** **quantos clientes não pagam na porta.** É o número que decide se o cartão de garantia do lojista aguenta o modelo.
+
+## 19. Chat interno
+
+**Ninguém vê o telefone de ninguém.** Nem o motoboy vê o do cliente, nem o cliente vê o do motoboy, nem o lojista vê o do motoboy. O telefone existe no cadastro e para o SMS do sistema, e **nunca sai numa resposta da API**.
+
+**Três conversas, todas amarradas a uma corrida:**
+
+| Conversa | Abre | Fecha |
+|---|---|---|
+| Lojista ↔ Cliente | Na criação da corrida | Estado final |
+| Lojista ↔ Motoboy | No aceite | Estado final |
+| Motoboy ↔ Cliente | No aceite | Estado final |
+
+- **Não existe chat fora de corrida.** Sem lista de contatos, sem conversa avulsa, sem grupo.
+- **Mensagem é evento** (Leis 2 e 3): não se edita, não se apaga, nem pelo painel. Por isso **serve de prova em disputa** (seção 11) — inclusive o combinado de endereço, ponto de referência e "deixa com o vizinho".
+- **Texto e nada mais** no MVP: sem foto, sem áudio, sem anexo, sem localização.
+- **Depois do estado final o chat fica legível e imutável**, para a janela de disputa de 24h e para a auditoria. Ele não some quando a corrida acaba.
+- A **operação lê tudo** pelo painel, e escreve na conversa quando há disputa aberta. Leitura do painel também é evento.
+- **Nenhuma API de WhatsApp**, oficial ou não. O único canal que sai da plataforma é o **SMS do sistema** (seção 2), que não é conversa: ele avisa e manda link.
+
+## 20. Multi-cidade
+
+**Cidade é entidade de primeira classe desde a primeira migration**, não uma coluna acrescentada quando a segunda cidade aparecer. Retrofit de escopo geográfico em base com dinheiro dentro é o tipo de mudança que ninguém faz com segurança depois.
+
+- **Pertencem a uma cidade:** lojista, motoboy, corrida, tabela de preço, zona, tempo base de coleta.
+- **Não pertence a cidade:** o **cliente**. Ele é da plataforma e recebe entrega onde estiver.
+- **A corrida acontece dentro de uma cidade só.** Origem e destino na mesma cidade — entrega intermunicipal está fora do MVP (seção 16).
+- **O banco impõe, não o código:** corrida cujo lojista, motoboy ou zona sejam de outra cidade é **recusada por constraint**. É critério de aceite da Etapa 4, provado pelo efeito.
+- **Cada cidade tem a sua tabela de preço versionada.** Publicar em uma não toca a outra.
+- **A operação enxerga por cidade.** Consulta sem cidade não vaza dado de cidade alheia.
+- **Sobral é a cidade 1.** Nenhuma segunda cidade se abre no MVP — o que se constrói é o **lugar** dela, não a operação dela.

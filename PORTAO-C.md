@@ -1,18 +1,28 @@
 # PORTÃO C — quando o split ocorre
 
-## ✅ DECIDIDO em 2026-08-09 — **Caminho A: PagBank com Custódia**
+## ⚰️ MORTO em 2026-08-09, no mesmo dia em que foi decidido
 
-> **Escolha do dono:** PagBank com o recurso **Custódia**. É o único que passa nos dois portões — retenção com liberação por API, que é o que a máquina de estados exige, e preço percentual.
+> **O Portão C perguntava:** como reter o dinheiro que o cliente pagou **antes** da entrega, para que o estorno de "sem motoboy", de cancelamento e de disputa tivesse lastro.
 >
-> **O Efí foi descartado** apesar de mais barato: divide no ato, e sem retenção o estorno de "sem motoboy", cancelamento e disputa não tem de onde sair. **Preço melhor não compra arquitetura quebrada.**
+> **A pergunta deixou de existir.** Na revisão do mesmo dia, o pagamento passou para a **porta do cliente** (`CORRE.md`, seções 3, 4 e 9). Não se paga mais antes da entrega — logo não há o que reter, e os três casos de estorno acontecem quando **ninguém pagou nada**.
 >
-> **Critério permanente acrescentado:** *o dinheiro nunca encosta na conta do Corre.* O motivo não é taxa, é a **Res. BCB 494/2025** — guardar dinheiro de terceiro é ser instituição de pagamento, com autorização e responsabilidade que este negócio não comporta. Isso descarta por construção os caminhos **B** e **H**, que eram os mais baratos.
+> **A decisão que estava aqui — PagBank com Custódia — caiu junto.** Ela foi tomada por um requisito (retenção com liberação por API) que virou peso morto. **A escolha de gateway está reaberta** com três critérios eliminatórios: Pix percentual; o dinheiro nunca encosta na conta do Corre; e **de quem sai a taxa tem que ser declarável**. Ver `CORRE.md`, seção 17, item 1, e o `HISTORICO.md`, decisões 37 a 41.
 >
-> **Consequências registradas no `CORRE.md`:** a promessa "1 saque grátis por dia" **caiu** (seção 9); o onboarding do motoboy passa a exigir **subconta no gateway** (seção 10); a conta da Lei 7 foi atualizada com o número real (**líquido R$ 0,31 por corrida, 3,1%**); e a Etapa 4 é construída **gateway-agnóstica**, com a implementação real do PagBank para depois.
->
-> **Continuam desconhecidos** (seção 17, itens 10 e 11): quanto custa ao motoboy sacar da subconta, e o que o PagBank exige de documento e prazo para aprovar a subconta.
+> **Ironia registrada:** o **Efí**, descartado aqui por "dividir no ato", faz **exatamente** o que a especificação passou a pedir.
 
-**O restante deste documento é o levantamento que embasou a decisão.** Fica como registro — não precisa ser lido para trabalhar.
+### O que deste documento continua valendo
+
+- O levantamento dos **24 fornecedores** e o mapa de quem divide no ato × quem posterga — como dado de mercado.
+- A **desclassificação do Asaas** pelo Portão A (Pix fixo de R$ 1,99), que independe de quando o split ocorre.
+- A **Res. BCB 494/2025** como critério permanente: guardar dinheiro de terceiro é ser instituição de pagamento. Com a mercadoria dentro da cobrança, isso ficou **mais** severo, não menos.
+
+### O que NÃO vale mais
+
+- A escolha do PagBank e a conta da Lei 7 que a acompanhava (R$ 0,19 de taxa sobre um frete de R$ 10). A taxa agora incide sobre **mercadoria + frete**.
+- Os oito caminhos, que eram todos desenhos de **retenção**.
+- A Etapa 4 "gateway-agnóstica" — a Etapa 4 planejada não existe mais.
+
+**O restante deste documento é o levantamento que embasou uma decisão revogada.** Fica como registro — não precisa ser lido para trabalhar, e **não deve ser usado para escolher fornecedor**.
 
 Levantamento feito em 2026-08-09 por 11 agentes de pesquisa (5 de busca + 5 verificadores céticos + 1 consolidador), 518 consultas, com verificação em documentação oficial de 24 fornecedores. Cada afirmação abaixo foi aberta na fonte por um segundo agente antes de ser aceita; o que não se confirmou está marcado.
 
