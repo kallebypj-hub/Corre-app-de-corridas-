@@ -19,6 +19,8 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 
 **Correção de etapa já mesclada vai em PR próprio, sempre.** Um defeito em código que já está na `main` nunca viaja junto com a obra de uma etapa nova. E **correção de segurança fura a fila**: entra e é mesclada antes de qualquer obra em andamento, porque enquanto não entra a `main` está quebrada.
 
+**O critério por trás dessa regra é o destino compartilhado, não o tipo de arquivo.** Coisas que podem ser rejeitadas separadamente vão em PRs separados. Quando um código **só faz sentido se a outra metade for aprovada**, separá-lo cria um PR que não pode ser mesclado sozinho — e aí o acoplamento é honesto. Isso é **exceção que se pede e se registra**, com o motivo, nunca conveniência: houve uma em 2026-08-09 (`HISTORICO.md`, decisão 96) e ela não abre a regra.
+
 **Uma etapa por vez, PR separado por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
 
 **Regime de esforço:** raciocínio máximo **apenas** em auditoria adversarial e em caminho de dinheiro (**Etapas 7 e 9**). Nas demais, esforço normal.
@@ -58,6 +60,7 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 - **Volume, não amostra.** Milhares de corridas sintéticas, não dez.
 - **Prove a trava pelo EFEITO, não pelo nome.** Conferir que a constraint existe não prova nada: tente a operação proibida e exija o erro.
 - **Nunca escreva em banco de produção.**
+- **NUNCA rode o controle negativo com código não commitado.** Ele sabota o arquivo e restaura com `git checkout` — e `git checkout` **não devolve arquivo que o git não conhece**. Arquivo novo fica com a sabotagem dentro; arquivo alterado e não commitado **volta para o HEAD e perde o trabalho da sessão**. Commite antes, sempre. *(Aconteceu em 2026-08-09: a trava de configuração de taxa foi apagada pelo próprio controle negativo que ia prová-la.)*
 
 ## Além do funcionamento
 
@@ -360,9 +363,19 @@ Ele **substituiu o "valor declarado"** da versão anterior: antes era uma declar
 
 5% de um frete ímpar não é centavo inteiro, e a soma das três parcelas tem que bater com o total **ao centavo, sempre**. A regra é fechada, não deixada ao acaso — **três arredondamentos, cada um com um princípio**:
 
-1. **Comissão: PISO.** `comissão = piso(frete × 5%)`, e `parcela do motoboy = frete − comissão`. **O centavo de arredondamento vai para o motoboy, nunca para a plataforma.**
+1. **Comissão: PISO.** `comissão = piso(frete × 5%)`, e `parcela do motoboy = frete − comissão`.
 2. **Taxa: TETO.** A taxa é estimada **para cima**. Nunca subestimar custo.
-3. **Rateio: ninguém paga taxa maior que a própria parcela, e toda sobra cai na plataforma.** O arredondamento nunca cai em quem não escolheu o gateway — e é a parcela da plataforma que a trava vigia (abaixo), então é nela que a sobra tem que doer.
+3. **Rateio: ninguém paga taxa maior que a própria parcela, e toda sobra cai na plataforma.**
+
+Os três saem de um princípio só, e o princípio vale mais que as regras:
+
+> ### **O centavo do arredondamento é sempre do parceiro, nunca da plataforma.**
+>
+> Toda vez que uma conta não fecha em centavo inteiro, quem fica com a sobra é **o motoboy ou o lojista** — nunca o Corre. Quando o Corre é o único que pode absorver (a taxa fixa, o resto do rateio), ele absorve.
+
+Isto **não é detalhe de implementação: é cláusula de contrato e argumento de venda.** Diz-se ao motoboy e ao lojista com estas palavras, e escreve-se no contrato de adesão dos dois. Uma plataforma que arredonda a favor de si mesma ganha centavos e perde a frase que a vende; e num volume de 34 mil corridas por mês, "só um centavo" é a diferença entre ser sócio e ser cobrador.
+
+Corolário para quem for construir: **numa dúvida de arredondamento não escolhida por esta seção, arredonde contra a plataforma.** Se isso quebrar a conta, a conta estava errada.
 
 **Mercadoria entre zero e o valor da taxa** (venda quase toda acertada fora) cai na mesma regra: o lojista paga no máximo a própria parcela e o resto da taxa é da plataforma. Não existe faixa em que alguém receba valor negativo.
 
@@ -571,6 +584,8 @@ O **teto de faltas de pagamento** que bloqueia um cliente ainda não tem número
    - **(D) *(novo)* De quem sai a taxa tem que ser declarável.** *(É o que separa o 1º do 2º e do 3º lugar.)*
 
    Além dos três, o fornecedor precisa de: **QR Pix dinâmico por API** com **cancelamento da cobrança**, confirmação por **webhook e consulta ativa**, **split de 3 recebedores** na mesma cobrança, **estorno parcial com split reenviável**, subconta para **lojista e motoboy** — e **cobrança de cartão do lojista com repasse direto à subconta do motoboy**, sem passar pela conta do Corre (é o meio do retorno, seção 9, e o critério (C) vale igual para ele).
+
+   **Regra de triagem permanente — KYC fraco não é facilidade.** Fornecedor que abre subconta pedindo pouco ou nada do titular **não está sendo prático: está dizendo que o risco ficou com a plataforma.** Quem não pede documento de ninguém **não está abrindo conta de terceiro — está guardando o dinheiro dele mesmo**, e isso reprova no critério (C) por construção, por mais barato que seja. *(Foi assim com a Woovi: menor percentual do mercado, 0,80%, e subconta que se cria com nome e chave Pix e nada mais.)* Vale para qualquer fornecedor que apareça depois: **antes de olhar o preço, pergunte o que ele exige de quem vai receber.** Se a resposta for "quase nada", o dinheiro não é de quem parece.
 
    **O mais barato que atende, em 2026-08-09: Pagar.me** (Pix 1,19%; `options.charge_processing_fee` por recebedor concentra a taxa no lojista; único do grupo com **estorno parcial de Pix com split reenviável**). **Não é escolha feita** — depende de duas respostas comerciais por escrito, e o critério (A) fica **formalmente em aberto** enquanto não vierem: o contrato do Pagar.me também pode ser Pix **fixo**. Ranking, conta e perguntas em [`GATEWAY.md`](GATEWAY.md). **Nada se implementa antes desta escolha.**
 2. **Quem paga a taxa do gateway.** É decisão do dono, não do fornecedor. A recomendação da spec é **debitar da parcela de mercadoria** — o Corre continua com comissão zero sobre ela e o motoboy recebe o frete inteiro, mas **o lojista recebe R$ 98,69 num pedido de R$ 100** e precisa saber disso **antes de assinar**. Alternativa a considerar: **embutir a taxa no total cobrado do cliente**, elevando o QR — muda o preço na ponta. **Trava a Etapa 7 junto com o item 1**
