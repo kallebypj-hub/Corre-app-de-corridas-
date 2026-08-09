@@ -6,7 +6,9 @@ const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 
 const { criaCorrida, reconstroiEstado } = require('../src/dominio/corridas');
-const { poolApp, aplica, emParalelo } = require('./ajuda-maquina');
+const {
+  poolApp, aplica, emParalelo, lojistaApto,
+} = require('./ajuda-maquina');
 
 const TOTAL = 5000;
 
@@ -50,10 +52,11 @@ test(`reconstrução: ${TOTAL} corridas sintéticas, estado derivado dos eventos
   const pool = poolApp(16);
   t.after(() => pool.end());
 
+  const lojistaId = await lojistaApto(pool);
   const ids = await emParalelo(Array.from({ length: TOTAL }, (v, i) => i), 16, async () => {
     let { corrida } = await criaCorrida(pool, {
       autorTipo: 'lojista',
-      autorId: randomUUID(),
+      autorId: lojistaId,
       payload: { origem: 'reconstrucao_5000' },
     });
     for (;;) {
@@ -100,7 +103,7 @@ test('controle interno da reconstrução: projeção adulterada por fora é dete
 
   const { corrida } = await criaCorrida(pool, {
     autorTipo: 'lojista',
-    autorId: randomUUID(),
+    autorId: await lojistaApto(pool),
     payload: { origem: 'controle_interno_reconstrucao' },
   });
   await dono.query('UPDATE corridas SET estado = 7 WHERE id = $1', [corrida.id]);

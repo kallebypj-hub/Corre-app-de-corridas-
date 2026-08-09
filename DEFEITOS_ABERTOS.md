@@ -49,6 +49,21 @@ corrigir. Entrada só sai daqui por decisão registrada — nunca por apagamento
   invisível (medida provisória exigida pelo dono em 2026-08-09).
 - **Estado:** aberto, aceito até a Etapa 7.
 
+## 2026-08-09 — sessoes.ator_id sem chave estrangeira (menor, mitigado)
+
+- **Descrição:** `sessoes.ator_id` referencia motoboy/lojista/operador em
+  três tabelas distintas, então não há uma FK única possível. Uma linha de
+  sessão forjada apontando ator inexistente é aceita pelo banco.
+- **Risco:** baixo. `resolveSessao` faz JOIN com a tabela do ator e devolve
+  `null` se a conta não existir ou não estiver ativa — uma sessão órfã é
+  inútil na prática. Forjar linha em `sessoes` exige a credencial
+  `corre_app` (a própria aplicação).
+- **Motivo de não corrigir agora:** a correção fiel (três colunas anuláveis
+  com FK + `CHECK` de exatamente uma preenchida) mexe no schema e no código
+  de sessão sem ganho de segurança observável além do que a revalidação já
+  dá. Fica para quando a tabela de sessões for revista.
+- **Estado:** aberto, aceito (menor).
+
 ## 2026-08-09 — Monorepo em vez de dois repositórios (8º achado da revisão da Etapa 0)
 
 - **Descrição:** a especificação (seção Stack) pedia os repositórios

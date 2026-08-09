@@ -237,6 +237,15 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 - Um aparelho por conta
 - Aprovação automática — roda na hora. O **primeiro saque** fica travado até conferência
 
+> **Decisões registradas (dono aprovará no PR da Etapa 2, 2026-08-09):**
+> 1. **Chave Pix = o próprio CPF do cadastro**, verificado no ato (validação de dígitos + `CHECK` no banco). Motivo: sem gateway/consulta DICT no MVP, chave de outro tipo (e-mail, telefone, aleatória) não é verificável quanto ao dono — seria brecha de conta laranja. Quando o gateway (Etapa 4) trouxer consulta de titularidade, ampliar é decisão nova.
+> 2. **Sessão nasce no cadastro** (token opaco; só o hash fica no banco; validade 30 dias). Re-entrada do motoboy: **posse do aparelho vinculado** (CPF + aparelho). Re-login de lojista e de operador: **código de 6 dígitos por SMS** (ver item de operação abaixo e seção 17, item 8, resolvido).
+>
+> **Re-login por código de 6 dígitos (SMS) — lojista e operador (dono, 2026-08-09):** entram informando o telefone já cadastrado e recebem um código de 6 dígitos por SMS (sem senha, sem e-mail). Código expira em 10 min, é de uso único, no máximo 5 tentativas erradas (ao estourar, morre e é preciso pedir outro). Limite de envios por telefone e por IP, para o endpoint não virar torneira de SMS pago. O código nunca é gravado em claro — só o hash, como o token de sessão. O envio de SMS fica atrás de uma interface; **nenhum provedor real neste MVP** (implementação falsa nos testes). O motoboy continua entrando por CPF + aparelho. Todo login bem-sucedido gera evento.
+>
+> **Nota de operação (onboarding do motoboy):** no cadastro, o motoboy precisa ser instruído a **cadastrar antes, no banco dele, a chave Pix igual ao seu CPF**. É atrito conhecido e aceito no MVP (consequência da trava anti-laranja: sem consulta DICT, a única chave verificável é o próprio CPF).
+> 3. **Estorno no painel**: a autorização (exclusiva do dono) e o registro do ato com autor existem desde a Etapa 2; o efeito financeiro só existe a partir da Etapa 4 — o evento é gravado no agregado do operador com `efeito: nenhum_ate_a_etapa_4`, sem tocar o log da corrida, que é só de transições.
+
 > Princípio: trava o dinheiro, não a porta. Fraude só compensa se o dinheiro sai.
 
 ### Lojista
@@ -307,6 +316,7 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 5. **Teto de R$ 500** de valor declarado — sugerido, não confirmado
 6. **Revisão jurídica** das três cláusulas de controle
 7. **Registro da marca** CORRE (mista) nas classes 39 e 42, e domínio
+8. ~~**Re-autenticação (login) de lojista e operador**~~ *(acrescentado e **resolvido** em 2026-08-09, fechamento da Etapa 2)*: **antes** — a spec definia o cadastro mas nenhum mecanismo de login; sessão de 30 dias sem forma de voltar deixava o lojista fora no dia 31. **depois** — re-login por código de 6 dígitos via SMS para lojista e operador (detalhado na seção 10); motoboy segue por CPF + aparelho. Fica em aberto apenas a escolha do **provedor real de SMS** e seu custo (nenhum provedor real no MVP)
 
 ## 18. Números de referência
 

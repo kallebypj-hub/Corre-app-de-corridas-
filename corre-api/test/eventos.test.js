@@ -145,26 +145,29 @@ test('eventos append-only', async (t) => {
   });
 
   await t.test('volume: 5.000 eventos sintéticos inseridos e íntegros', async () => {
-    // As contagens são por tipo próprio deste teste: os arquivos da bateria
-    // rodam em paralelo e o total global de eventos não é estável.
+    // Marcador único por execução: a bateria roda arquivos em paralelo e
+    // pode rerodar sem reset — a contagem é relativa a ESTA rodada, não ao
+    // total global (senão o verde depende de banco recém-nascido).
+    const marcador = randomUUID();
     await app.query(`
       INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo)
       SELECT 'corrida_sintetica', 'corrida', gen_random_uuid(), 1,
-             jsonb_build_object('n', g, 'frete_centavos', 1000), 'sistema'
+             jsonb_build_object('n', g, 'frete_centavos', 1000, 'marcador', $1::text), 'sistema'
       FROM generate_series(1, 5000) g
-    `);
+    `, [marcador]);
 
     // id é IDENTITY (nunca duplica por construção); a integridade que importa
-    // é nenhum payload perdido nem duplicado.
+    // é nenhum payload perdido nem duplicado nesta rodada.
     const { rows } = await app.query(`
       SELECT count(*) AS n, count(DISTINCT (payload->>'n')) AS distintos
-      FROM eventos WHERE tipo = 'corrida_sintetica'
-    `);
+      FROM eventos WHERE tipo = 'corrida_sintetica' AND payload->>'marcador' = $1
+    `, [marcador]);
     assert.equal(rows[0].n, '5000');
     assert.equal(rows[0].distintos, '5000');
   });
 
   await t.test('concorrência: 10 conexões x 200 inserts, nada se perde nem duplica', async () => {
+    const marcador = randomUUID();
     const conexoes = await Promise.all(
       Array.from({ length: 10 }, async () => {
         const c = new Client({ connectionString: process.env.DATABASE_URL_APP });
@@ -178,7 +181,7 @@ test('eventos append-only', async (t) => {
           for (let j = 0; j < 200; j += 1) {
             await insereEvento(c, eventoSintetico({
               tipo: 'evento_concorrente',
-              payload: { conexao: i, sequencia: j },
+              payload: { conexao: i, sequencia: j, marcador },
             }));
           }
         }),
@@ -190,8 +193,8 @@ test('eventos append-only', async (t) => {
     const { rows } = await app.query(`
       SELECT count(*) AS n,
              count(DISTINCT ((payload->>'conexao') || ':' || (payload->>'sequencia'))) AS distintos
-      FROM eventos WHERE tipo = 'evento_concorrente'
-    `);
+      FROM eventos WHERE tipo = 'evento_concorrente' AND payload->>'marcador' = $1
+    `, [marcador]);
     assert.equal(rows[0].n, '2000');
     assert.equal(rows[0].distintos, '2000');
   });

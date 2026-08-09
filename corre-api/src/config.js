@@ -19,4 +19,11 @@ module.exports = {
   prazoPagamentoMs: () => inteiroDeEnv('CORRE_PRAZO_PAGAMENTO_MS', 15 * 60 * 1000),
   // Estado 2 (procurando motoboy): cascata roda 5 minutos.
   prazoCascataMs: () => inteiroDeEnv('CORRE_PRAZO_CASCATA_MS', 5 * 60 * 1000),
+
+  // Re-login OTP (fechamento da Etapa 2).
+  otpExpiraMs: () => inteiroDeEnv('CORRE_OTP_EXPIRA_MS', 10 * 60 * 1000),
+  otpMaxTentativas: () => inteiroDeEnv('CORRE_OTP_MAX_TENTATIVAS', 5),
+  otpJanelaEnviosMs: () => inteiroDeEnv('CORRE_OTP_JANELA_ENVIOS_MS', 60 * 60 * 1000),
+  otpMaxEnviosPorTelefone: () => inteiroDeEnv('CORRE_OTP_MAX_ENVIOS_TELEFONE', 5),
+  otpMaxEnviosPorIp: () => inteiroDeEnv('CORRE_OTP_MAX_ENVIOS_IP', 20),
 };

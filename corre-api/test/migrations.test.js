@@ -8,6 +8,7 @@ const { readdirSync, readFileSync, mkdtempSync, cpSync, appendFileSync } = requi
 const os = require('node:os');
 const path = require('node:path');
 
+const { randomUUID } = require('node:crypto');
 const { conectaDono, conectaApp, esperaErro } = require('./ajuda');
 
 const RAIZ = path.join(__dirname, '..');
@@ -104,7 +105,117 @@ test('migrations', async (t) => {
       { column_name: 'vence_em', data_type: 'timestamp with time zone', is_nullable: 'YES' },
       { column_name: 'criado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
       { column_name: 'atualizado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
+      { column_name: 'lojista_id', data_type: 'uuid', is_nullable: 'NO' },
     ]);
+  });
+
+  await t.test('travas de cadastro no banco: chave Pix igual ao CPF, CPF único, gênese única', async () => {
+    const { rows } = await dono.query(`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'motoboys'::regclass AND conname IN ('motoboys_chave_pix_igual_cpf', 'motoboys_cpf_unico')
+      ORDER BY conname
+    `);
+    assert.deepEqual(rows.map((r) => r.conname), ['motoboys_chave_pix_igual_cpf', 'motoboys_cpf_unico']);
+
+    const { rows: indices } = await dono.query(`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'operadores' AND indexname = 'operadores_genese_unica'
+    `);
+    assert.equal(indices.length, 1);
+  });
+
+  // As travas do banco precisam ser provadas pelo EFEITO, não pelo nome:
+  // constraint neutralizada com o mesmo nome passaria num teste de nome.
+  await t.test('EFEITO — corre_app não insere motoboy com chave Pix diferente do CPF (23514)', async () => {
+    const app = await conectaApp();
+    try {
+      // Dois CPFs de dígitos válidos, para isolar o CHECK chave_pix=cpf.
+      const erro = await esperaErro(
+        app,
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao)
+         VALUES (1, 'x', '1', '52998224725', '11144477735', 'c', 'r', 's', 'ap', 'ativa')`,
+      );
+      assert.equal(erro.code, '23514');
+    } finally {
+      await app.end();
+    }
+  });
+
+  await t.test('EFEITO — o banco recusa CPF de dígito inválido (23514)', async () => {
+    const app = await conectaApp();
+    try {
+      // 11111111111 passa no regex ^[0-9]{11}$ mas é dígito repetido.
+      const erro = await esperaErro(
+        app,
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao)
+         VALUES (1, 'x', '1', '11111111111', '11111111111', 'c', 'r', 's', 'ap', 'ativa')`,
+      );
+      assert.equal(erro.code, '23514');
+    } finally {
+      await app.end();
+    }
+  });
+
+  await t.test('EFEITO — corre_app não escolhe primeiro_saque no INSERT; nasce travado pelo DEFAULT', async () => {
+    const app = await conectaApp();
+    try {
+      // corre_app não tem INSERT na coluna primeiro_saque (migration 0006).
+      const erro = await esperaErro(
+        app,
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao, primeiro_saque)
+         VALUES (1, 'x', '1', '52998224725', '52998224725', 'c', 'r', 's', 'ap', 'ativa', 'liberado')`,
+      );
+      assert.equal(erro.code, '42501');
+    } finally {
+      await app.end();
+    }
+  });
+
+  await t.test('EFEITO — o banco recusa corrida para lojista sem cartão e para lojista bloqueado (CR002)', async () => {
+    const app = await conectaApp();
+    try {
+      const { rows: [semCartao] } = await app.query(
+        "INSERT INTO lojistas (seq, nome, telefone, situacao) VALUES (1, 'sem cartão', $1, 'ativa') RETURNING id",
+        [`t-${randomUUID()}`],
+      );
+      const erroSemCartao = await esperaErro(
+        app,
+        'INSERT INTO corridas (estado, seq, vence_em, lojista_id) VALUES (1, 1, now(), $1)',
+        [semCartao.id],
+      );
+      assert.equal(erroSemCartao.code, 'CR002');
+
+      const { rows: [bloqueado] } = await app.query(
+        "INSERT INTO lojistas (seq, nome, telefone, situacao) VALUES (1, 'bloqueado', $1, 'bloqueada') RETURNING id",
+        [`t-${randomUUID()}`],
+      );
+      const erroBloqueado = await esperaErro(
+        app,
+        'INSERT INTO corridas (estado, seq, vence_em, lojista_id) VALUES (1, 1, now(), $1)',
+        [bloqueado.id],
+      );
+      assert.equal(erroBloqueado.code, 'CR002');
+    } finally {
+      await app.end();
+    }
+  });
+
+  await t.test('EFEITO — operador forjado por INSERT direto sem evento é recusado no commit (CR003)', async () => {
+    const app = await conectaApp();
+    try {
+      await app.query('BEGIN');
+      await app.query(
+        `INSERT INTO operadores (seq, nome, telefone, papel, situacao, genese)
+         VALUES (1, 'intruso', $1, 'dono', 'ativa', false)`,
+        [`forjado-${randomUUID()}`],
+      );
+      // Sem o evento operador_cadastrado, o trigger deferido derruba o commit.
+      const erro = await esperaErro(app, 'COMMIT');
+      assert.equal(erro.code, 'CR003');
+    } finally {
+      try { await app.query('ROLLBACK'); } catch { /* já abortada */ }
+      await app.end();
+    }
   });
 
   await t.test('corridas: corre_app com SELECT na tabela; INSERT e UPDATE só nas colunas de projeção', async () => {
@@ -123,7 +234,7 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'INSERT'
       ORDER BY column_name
     `);
-    assert.deepEqual(inserir.rows.map((r) => r.column_name), ['estado', 'seq', 'vence_em']);
+    assert.deepEqual(inserir.rows.map((r) => r.column_name), ['estado', 'lojista_id', 'seq', 'vence_em']);
 
     const atualizar = await dono.query(`
       SELECT column_name

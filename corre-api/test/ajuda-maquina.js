@@ -4,6 +4,7 @@ const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
+const { cadastraLojista, registraCartao } = require('../src/dominio/contas');
 
 function poolApp(max = 10) {
   if (!process.env.DATABASE_URL_APP) {
@@ -57,6 +58,23 @@ async function aplica(pool, corridaId, tipo, sobrescreve = {}) {
   });
 }
 
+// Corrida exige lojista real com cartão (Etapa 2): um por processo, criado
+// sob demanda e compartilhado por todos os testes do arquivo.
+let promessaLojista = null;
+function lojistaApto(pool) {
+  if (!promessaLojista) {
+    promessaLojista = (async () => {
+      const { conta } = await cadastraLojista(pool, {
+        nome: 'Loja da Bateria',
+        telefone: `88 8${String(process.pid % 1e7).padStart(7, '0')}-${randomUUID().slice(0, 8)}`,
+      });
+      await registraCartao(pool, { lojistaId: conta.id, cartaoRef: 'cartao-de-teste' });
+      return conta.id;
+    })();
+  }
+  return promessaLojista;
+}
+
 // Cria uma corrida nova e a leva até o estado pedido pelo caminho legal.
 async function levaAte(pool, estadoAlvo, payloadInicial) {
   const caminho = CAMINHOS[estadoAlvo];
@@ -65,7 +83,7 @@ async function levaAte(pool, estadoAlvo, payloadInicial) {
   }
   let { corrida } = await criaCorrida(pool, {
     autorTipo: 'lojista',
-    autorId: randomUUID(),
+    autorId: await lojistaApto(pool),
     payload: payloadInicial || { origem: 'bateria_etapa_1' },
   });
   for (const tipo of caminho) {
@@ -97,5 +115,6 @@ module.exports = {
   autorIdPara,
   aplica,
   levaAte,
+  lojistaApto,
   emParalelo,
 };
