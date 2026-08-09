@@ -178,6 +178,11 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 | 10 | Cancelada | Conforme seção 5 |
 | 11 | Devolvida | Frete da ida fica com o motoboy; retorno cobrado do lojista |
 
+> **Decisões registradas (dono, 2026-08-09 — Etapa 1):**
+> 1. O estado 6 (Em disputa) fica **sem transições até a Etapa 10** (painel), que definirá abertura e resolução por migration própria; até lá a máquina recusa qualquer par envolvendo o estado 6. A disputa pós-entrega (prazo de 24h da seção 11) **não reabre corrida** — estado final é final; será fluxo compensatório do painel.
+> 2. Cancelamento pela operação vale para os estados **3, 4 e 5** ("do estado 3 em diante", seção 5), sempre com motivo registrado.
+> 3. A máquina da Etapa 1 fica com **13 arestas legais** além da criação (∅→1): 1→2, 1→8, 1→10, 2→3, 2→9, 2→10, 3→4, 3→10, 4→5, 4→7, 4→10, 5→10, 5→11.
+
 ## 5. Cancelamento
 
 - **Livre e sem custo** até o estado 2, para qualquer parte.

@@ -55,13 +55,14 @@ function eventoSintetico(extra = {}) {
 
 async function insereEvento(client, evento) {
   const { rows } = await client.query(
-    `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, payload, autor_tipo, autor_id)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id`,
     [
       evento.tipo,
       evento.agregado_tipo,
       evento.agregado_id,
+      evento.seq === undefined ? 1 : evento.seq,
       JSON.stringify(evento.payload),
       evento.autor_tipo,
       evento.autor_id,

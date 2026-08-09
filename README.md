@@ -20,7 +20,8 @@ aceitos ficam registrados em [`DEFEITOS_ABERTOS.md`](DEFEITOS_ABERTOS.md).
 | Etapa | Situação |
 |---|---|
 | 0 — Fundação: migrations, tabela de eventos, CI | **Aprovada pelo dono em 2026-08-09** — entregue à `main` pelo PR #1; condição registrada no critério de aceite da Etapa 1 |
-| 1 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
+| 1 — Máquina de estados + log de eventos | **Concluída — em PR contra `main`, aguardando aprovação** |
+| 2 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
 
 ## Rodando a bateria da Etapa 0
 
@@ -56,4 +57,19 @@ migrations — nunca rode apontando para um banco que importa.
 - Trava de boot: a aplicação se recusa a iniciar se a credencial da conexão
   for superusuário, dono de `eventos` ou tiver qualquer escrita em
   `eventos` (`corre-api/src/db/boot.js`) — a regra "app conecta só como
-  `corre_app`" é verificada em execução, não prometida em texto.
+  `corre_app`" é verificada em execução, não prometida em texto. O ponto de
+  entrada (`corre-api/src/servidor.js`) chama a trava antes do `listen`.
+
+## Garantias da máquina de estados (Etapa 1)
+
+- Transições legais num lugar só: `corre-api/src/dominio/transicoes.js`
+  (tabela declarativa; 13 arestas + criação). O motor não tem `if` de
+  legalidade fora dela, e a reconstrução usa a mesma tabela.
+- Ordem do log por `UNIQUE (agregado_tipo, agregado_id, seq)` — vencedor
+  único em disputa concorrente decidido pelo banco, não por código.
+- Idempotência por `UNIQUE (chave_idempotencia)` — retentativa com a mesma
+  chave é operação nula que devolve o resultado original.
+- Prazo é dado, não timer: `vence_em` gravado no evento e na projeção;
+  vencer é consulta (`src/bin/expira-vencidas.js`), reinício não perde nada.
+- Tempo é do servidor: payload com `vence_em`/`criado_em` do cliente é
+  recusado.

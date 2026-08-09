@@ -73,7 +73,69 @@ test('migrations', async (t) => {
       { column_name: 'autor_tipo', data_type: 'text', is_nullable: 'NO' },
       { column_name: 'autor_id', data_type: 'uuid', is_nullable: 'YES' },
       { column_name: 'criado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
+      { column_name: 'seq', data_type: 'integer', is_nullable: 'NO' },
+      { column_name: 'chave_idempotencia', data_type: 'text', is_nullable: 'YES' },
     ]);
+  });
+
+  await t.test('UNIQUE de sequência e de idempotência existem em eventos (Leis 4 e 5)', async () => {
+    const { rows } = await dono.query(`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'eventos'::regclass AND contype = 'u'
+      ORDER BY conname
+    `);
+    assert.deepEqual(
+      rows.map((r) => r.conname),
+      ['eventos_agregado_seq_unico', 'eventos_chave_idempotencia_unica'],
+    );
+  });
+
+  await t.test('corridas tem exatamente as colunas esperadas', async () => {
+    const { rows } = await dono.query(`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'corridas'
+      ORDER BY ordinal_position
+    `);
+    assert.deepEqual(rows, [
+      { column_name: 'id', data_type: 'uuid', is_nullable: 'NO' },
+      { column_name: 'estado', data_type: 'smallint', is_nullable: 'NO' },
+      { column_name: 'seq', data_type: 'integer', is_nullable: 'NO' },
+      { column_name: 'vence_em', data_type: 'timestamp with time zone', is_nullable: 'YES' },
+      { column_name: 'criado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
+      { column_name: 'atualizado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
+    ]);
+  });
+
+  await t.test('corridas: corre_app com SELECT na tabela; INSERT e UPDATE só nas colunas de projeção', async () => {
+    const tabela = await dono.query(`
+      SELECT privilege_type
+      FROM information_schema.role_table_grants
+      WHERE table_schema = 'public' AND table_name = 'corridas' AND grantee = 'corre_app'
+      ORDER BY privilege_type
+    `);
+    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), ['SELECT']);
+
+    const inserir = await dono.query(`
+      SELECT column_name
+      FROM information_schema.role_column_grants
+      WHERE table_schema = 'public' AND table_name = 'corridas'
+        AND grantee = 'corre_app' AND privilege_type = 'INSERT'
+      ORDER BY column_name
+    `);
+    assert.deepEqual(inserir.rows.map((r) => r.column_name), ['estado', 'seq', 'vence_em']);
+
+    const atualizar = await dono.query(`
+      SELECT column_name
+      FROM information_schema.role_column_grants
+      WHERE table_schema = 'public' AND table_name = 'corridas'
+        AND grantee = 'corre_app' AND privilege_type = 'UPDATE'
+      ORDER BY column_name
+    `);
+    assert.deepEqual(
+      atualizar.rows.map((r) => r.column_name),
+      ['atualizado_em', 'estado', 'seq', 'vence_em'],
+    );
   });
 
   await t.test('domínio centavos existe e é inteiro de 64 bits (Lei 1)', async () => {
@@ -105,7 +167,7 @@ test('migrations', async (t) => {
     `);
     assert.deepEqual(
       colunas.rows.map((r) => r.column_name),
-      ['agregado_id', 'agregado_tipo', 'autor_id', 'autor_tipo', 'payload', 'tipo'],
+      ['agregado_id', 'agregado_tipo', 'autor_id', 'autor_tipo', 'chave_idempotencia', 'payload', 'seq', 'tipo'],
     );
   });
 
