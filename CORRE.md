@@ -7,7 +7,7 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
-> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 73.
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 92.
 
 ---
 
@@ -432,7 +432,11 @@ O levantamento completo, o ranking e as perguntas que faltam estão em [`GATEWAY
 - Um aparelho por conta
 - Aprovação automática — roda na hora. O **primeiro saque** fica travado até conferência
 
-**Ele roda antes de poder sacar, e a tela tem que dizer isso.** Nos gateways pesquisados a subconta nasce apta a **receber** antes de estar apta a **movimentar**: o KYC (documento, biometria) corre em paralelo e leva até 24h. O app **mostra o estado do KYC** e **não promete saque** antes de a subconta estar ativa. Prometer é fazer o motoboy trabalhar, ver saldo e não conseguir tirar — que é o jeito mais rápido de perder um motoboy.
+**MEI continua não sendo exigido — isso foi verificado, não presumido.** Os quatro gateways candidatos abrem subconta de recebedor para **pessoa física com CPF** (`GATEWAY.md`, seção 8). A regra da seção 15 sobrevive inteira.
+
+**Ele roda antes de poder sacar, e a tela tem que dizer isso.** No candidato melhor colocado a subconta nasce apta a **receber** antes de estar apta a **movimentar** — ele participa do split na primeira corrida, no mesmo dia do cadastro, e o KYC (documento, biometria) corre em paralelo em até 24h. O app **mostra o estado do KYC** e **não promete saque** antes de a subconta estar ativa. Prometer é fazer o motoboy trabalhar, ver saldo e não conseguir tirar — que é o jeito mais rápido de perder um motoboy. *(Nem todo fornecedor tem esse estado intermediário: em dois deles a conta só transaciona depois de aprovada, e aí "cadastra e roda na hora" morre. Isso virou critério de escolha — seção 17, item 1.)*
+
+**O cadastro precisa de mais do que a lista acima, e o app coleta tudo antes de criar a subconta:** data de nascimento, ocupação profissional, renda mensal declarada, endereço completo **com ponto de referência**, e os **dados bancários no mesmo ato** — não existe recebedor sem conta. **A conta de saque tem que ser do CPF dele**, o que casa com a regra "chave Pix = CPF" que já existe. A prova de vida é por link que **expira em 20 minutos** e precisa ser regerado; a lista exata de artefatos que ela pede **não está documentada** e não pode ser prometida na tela.
 
 **Saque agregado, não por corrida.** A tarifa de saque é fixa e sai do bolso dele; com R$ 9,50 líquidos por corrida, sacar a cada corrida come o ganho. A configuração padrão da subconta é **transferência periódica agregada**, e o app explica por quê.
 
@@ -578,7 +582,9 @@ O **teto de faltas de pagamento** que bloqueia um cliente ainda não tem número
 8. **Registro da marca CORRE** (mista, classes 39 e 42) e do **domínio `corre.com.br`** — virou **pré-requisito de publicação**: os pacotes `br.com.corre.*` são definitivos e não se trocam depois de publicados
 9. **Provedor real de SMS.** Deixou de ser detalhe de re-login: **sem SMS não existe primeira compra**, porque é por ele que o cliente novo recebe o link para pagar. Escalou de "falta para o lançamento" para "falta para o produto funcionar"
 10. **Custo do saque** da subconta para o banco do titular — agora para **motoboy e lojista**. É custo deles, não nosso, mas afeta a atratividade dos dois lados
-11. **Exigências e prazo de aprovação da subconta** — agora para **motoboy e lojista**. Se for demorado, colide com "cadastra e roda na hora" do motoboy **e** com "entra e vende" do lojista. Do lado do lojista é pior: ele não vende nada até aprovar
+11. **Exigências e prazo de aprovação da subconta.** **Resolvido em parte:** todos os candidatos aceitam **pessoa física** — a regra "MEI não é exigido" sobrevive —, e o melhor colocado deixa o motoboy **receber antes de o KYC terminar**, preservando "cadastra e roda na hora" (`GATEWAY.md`, seção 8). **Continua aberto:** (a) como se cadastra um **lojista MEI**, que não tem quadro de sócios, e a documentação não diz; (b) o prazo real de aprovação, que só o contrato confirma. Do lado do lojista é pior que do motoboy: ele **não vende nada** até aprovar
+18. **Saldo global do marketplace prende o saque de todo mundo.** No candidato melhor colocado, o teto de saque de **qualquer** recebedor é o saldo global da plataforma: um recebedor negativo trava o saque dos outros. É vigilância operacional, não código — mas precisa de dono
+19. **KYC reprovado depois de o motoboy já ter recebido.** O dinheiro **não volta nem sai sozinho**: fica travado e a ação é nossa. Precisa de fluxo no painel (Etapa 11) e de decisão sobre para onde vai esse saldo
 12. **Frase de posicionamento para o lojista.** A antiga ficou falsa (seção 1). A substituta proposta — *"eu não tenho vitrine; ninguém descobre outra loja aqui"* — é decisão comercial do dono
 13. **Teto de faltas de pagamento** que bloqueia um cliente (seção 12) — e se o bloqueio é da plataforma toda ou só daquela loja
 14. **Confirmar que o retorno por cliente que não pagou é do cartão do lojista.** É o que a regra "quem causa paga" e a regra de cliente ausente já implicam, mas deixou de ser caso raro e virou o principal modo de falha do modelo

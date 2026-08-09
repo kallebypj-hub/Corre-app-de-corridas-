@@ -130,6 +130,42 @@ Não são sobre o fornecedor — são sobre como o Corre tem que se comportar, c
 4. **Saque agregado é obrigatório, não opcional.** A tarifa de saque é fixa e sai do titular; com R$ 9,50 líquidos por corrida, sacar a cada corrida come o ganho. Armadilha a monitorar: recebedor sem movimento por 60 dias **tem a transferência automática desabilitada sem aviso**.
 5. **Lojista PJ precisa do sócio do QSA, não do gerente.** O `managing_partner` *"deve ser um sócio registrado no Quadro de Sócios e devidamente qualificado no QSA"*; administradores e procuradores não são aceitos (Circular BCB 3.978/20). Em Sobral isso significa **o dono da loja em pessoa** — planeje o esforço de campo.
 
-## 8. Pendência jurídica
+## 8. Subconta de pessoa física e de MEI
+
+**A pergunta era eliminatória: se o gateway só abrisse subconta para CNPJ, "MEI não é exigido do motoboy" (seção 10) cairia — e a decisão voltaria para o dono.**
+
+> ### Não caiu. **Os quatro candidatos abrem subconta para pessoa física com CPF.**
+>
+> E o melhor colocado é também **o único que preserva "cadastra e roda na hora"**: no Pagar.me o recebedor nasce em `registration` e *"estará apto a transacionar mesmo antes de enviar a prova de vida"* — o motoboy **recebe split na primeira corrida, no mesmo dia**, e só o **saque** espera o KYC (até 24h).
+
+| Gateway | PF? | MEI? | Colide com "cadastra e roda na hora"? |
+|---|---|---|---|
+| **Pagar.me** | **sim** (`type: "individual"`, CPF) | sim (é CNPJ, entra como `corporation`) | **Não.** Dois estados antes do KYC — `registration` e `affiliation` — e **em ambos o recebedor participa de split**. Saque só em `active` |
+| **PagBank** | **sim** (conta SELLER *"indicada para pessoas físicas, que não têm empresa aberta"*) | sim | **Parcialmente.** A conta nasce **simples** — *"pode possibilitar realizar transações"* — mas **movimentar saldo exige o "avanço de conta"**. Transaciona antes, saca depois |
+| **Efí** | **sim** (Efí Pro, *"para quem empreende e ainda não tem CNPJ"*) | sim | **Sim.** O fluxo oficial é sequencial: *"1 Você cria sua Conta Digital · 2 Aprovamos seus documentos · 3 Acesso liberado!"*. **Não existe estado "recebe mas não saca"**, e o prazo de aprovação é `nao_documentado` |
+| **iugu** | sim | `nao_documentado` | **Frontalmente.** Subconta não verificada **não transaciona em produção**: `live_api_token` e `user_token` devolvem **401**. Prazo documentado de **até 2 dias úteis** — quem se cadastra na sexta só roda na terça |
+
+*(Woovi e Mercado Pago ficam fora da tabela por já estarem eliminados no critério (C). Registro só um ponto, porque ele **confirma** a eliminação: a subconta da Woovi se cria com **nome e chave Pix, e nada mais** — zero KYC do titular. Isso não é generosidade, é o sintoma: **quem não pede documento de ninguém não está abrindo conta de terceiro, está guardando o dinheiro dele mesmo.*)*
+
+### O que isso muda no cadastro do motoboy — a seção 10 fica mais pesada
+
+A spec pedia CNH, CRLV, selfie e chave Pix. O contrato de criação de recebedor **exige mais**, e o app tem que coletar tudo antes de chamar a API:
+
+- **Dados pessoais:** nome, e-mail, CPF, **data de nascimento**, **ocupação profissional**, **renda mensal declarada**.
+- **Endereço completo**, incluindo **ponto de referência** (campo obrigatório, e é o tipo de coisa que trava um cadastro no meio).
+- **Dados bancários no mesmo ato** — não existe recebedor sem conta: *"Ao atrelar uma conta bancária a um recebedor, somente será possível trocar a conta se a nova tiver o mesmo número de documento."* **A conta de saque tem que ser do CPF dele**, o que casa exatamente com a regra "chave Pix = CPF" que a spec já tem.
+- **Prova de vida obrigatória** (Circular BCB 3.978/20), por link que **expira em 20 minutos** e precisa ser regerado. **A lista exata de artefatos que o webapp de KYC pede ao PF é `nao_documentado`** — não prometa "selfie e RG" no roteiro do app como se fosse contrato.
+
+### Três riscos operacionais que a pesquisa achou e que não são sobre PF
+
+1. **O teto de saque de qualquer recebedor é o saldo global do marketplace.** Exemplo oficial: recebedores com R$ 150, R$ 100 e **−R$ 110** dão saldo global de R$ 140, e **o de R$ 150 não consegue sacar os R$ 150**. Um recebedor negativo prende o saque dos outros. Isso precisa de vigilância operacional, não de código.
+2. **KYC reprovado depois de já ter recebido: o dinheiro não volta nem sai sozinho.** Fica travado, e **a ação é nossa**, não do gateway (`refused` / `fully_denied`: *"Não há mais ações possíveis para credenciar este cliente"*). Precisa de fluxo no painel.
+3. **Transferência automática desabilitada em silêncio.** Recebedor criado há mais de 60 dias, sem valores a receber e sem transacionar nem transferir no período, **perde a transferência automática** — três condições cumulativas. Motoboy sazonal para de receber sem aviso.
+
+### O caso do lojista MEI
+
+MEI é CNPJ, então entra como `corporation` e cai na exigência de `managing_partners` com **sócio qualificado no QSA**. **O MEI não tem QSA no sentido clássico, e a documentação não diz como preencher esse campo para ele** — `nao_documentado`. Vira a **pergunta comercial G** (seção 6): *"Como se cadastra um recebedor MEI, que não tem quadro de sócios?"* Em Sobral, lojista MEI é a maioria.
+
+## 9. Pendência jurídica
 
 Validar com advogado se o desenho escolhido mantém o Corre fora do papel de instituição de pagamento sob a **Res. BCB 494/2025**. No desenho Pagar.me o Corre é **um dos três recebedores** e recebe só os 5% do frete — o valor cheio nunca fica com ele, que é exatamente o que o critério (C) exige. Nos desenhos alternativos (Efí ou iugu com o **lojista** emitindo a cobrança), o Corre passa a **orquestrar emissão com credencial de terceiro**, o que é figura diferente e precisa de parecer próprio.
