@@ -49,30 +49,41 @@ async function solicitaCodigo(pool, {
   if (!['lojista', 'operador'].includes(atorTipo)) {
     throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista ou operador');
   }
-  const janela = config.otpJanelaEnviosMs();
+  const janelaSegs = config.otpJanelaEnviosMs() / 1000;
 
-  // Limite por telefone e por IP, na janela.
-  const { rows: [porTelefone] } = await pool.query(
-    `SELECT count(*)::int AS n FROM otp_envios
-     WHERE telefone = $1 AND criado_em > now() - make_interval(secs => $2)`,
-    [telefone, janela / 1000],
-  );
-  if (porTelefone.n >= config.otpMaxEnviosPorTelefone()) {
-    throw new ErroDeDominio(CODIGOS.LIMITE_DE_ENVIO, 'limite de envios por telefone atingido');
-  }
-  if (ip) {
-    const { rows: [porIp] } = await pool.query(
-      `SELECT count(*)::int AS n FROM otp_envios
-       WHERE ip = $1 AND criado_em > now() - make_interval(secs => $2)`,
-      [ip, janela / 1000],
-    );
-    if (porIp.n >= config.otpMaxEnviosPorIp()) {
-      throw new ErroDeDominio(CODIGOS.LIMITE_DE_ENVIO, 'limite de envios por IP atingido');
+  // Limite por telefone e por IP, ATÔMICO: check-then-insert serializado por
+  // advisory lock de transação (por telefone e por IP), senão N pedidos
+  // concorrentes leem a mesma contagem e furam o limite (torneira de SMS).
+  const veredito = await emTransacao(pool, async (conexao) => {
+    await conexao.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`otp-tel:${telefone}`]);
+    if (ip) {
+      await conexao.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`otp-ip:${ip}`]);
     }
+    const { rows: [contaTelefone] } = await conexao.query(
+      `SELECT count(*)::int AS n FROM otp_envios
+       WHERE telefone = $1 AND criado_em > now() - make_interval(secs => $2)`,
+      [telefone, janelaSegs],
+    );
+    if (contaTelefone.n >= config.otpMaxEnviosPorTelefone()) {
+      return { ok: false };
+    }
+    if (ip) {
+      const { rows: [contaIp] } = await conexao.query(
+        `SELECT count(*)::int AS n FROM otp_envios
+         WHERE ip = $1 AND criado_em > now() - make_interval(secs => $2)`,
+        [ip, janelaSegs],
+      );
+      if (contaIp.n >= config.otpMaxEnviosPorIp()) {
+        return { ok: false };
+      }
+    }
+    // A tentativa conta para o limite antes de qualquer envio.
+    await conexao.query('INSERT INTO otp_envios (telefone, ip) VALUES ($1, $2)', [telefone, ip || null]);
+    return { ok: true };
+  });
+  if (!veredito.ok) {
+    throw new ErroDeDominio(CODIGOS.LIMITE_DE_ENVIO, 'limite de envios atingido');
   }
-
-  // A tentativa conta para o limite antes de qualquer envio.
-  await pool.query('INSERT INTO otp_envios (telefone, ip) VALUES ($1, $2)', [telefone, ip || null]);
 
   const ator = await resolveAtor(pool, atorTipo, telefone);
   if (!ator || ator.situacao !== 'ativa') {
@@ -101,37 +112,54 @@ async function confirmaCodigo(pool, { telefone, atorTipo, codigo }) {
     throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista ou operador');
   }
 
-  // Só o código MAIS RECENTE do telefone vale; pedir outro invalida o anterior.
+  // Só o código MAIS RECENTE do telefone vale; pedir outro invalida o
+  // anterior. Expiração é julgada pelo relógio do BANCO (now()), não do
+  // processo — relógio de processo pode divergir.
   const { rows: [registro] } = await pool.query(
-    `SELECT id, ator_id, codigo_hash, tentativas, max_tentativas, expira_em, usado_em, morto_em
+    `SELECT id, ator_id, tentativas, max_tentativas,
+            (now() >= expira_em) AS expirado, usado_em, morto_em
      FROM codigos_otp
      WHERE ator_tipo = $1 AND telefone = $2
      ORDER BY criado_em DESC LIMIT 1`,
     [atorTipo, telefone],
   );
-  // Código morto (tentativas esgotadas) é inválido. O USO ÚNICO é enforçado
-  // num lugar só — o UPDATE atômico lá embaixo — para o controle negativo
-  // ter um alvo único.
-  if (!registro || registro.morto_em) {
+  if (!registro || registro.usado_em || registro.morto_em) {
     throw new ErroDeDominio(CODIGOS.CODIGO_INVALIDO, 'código inválido');
   }
-  if (new Date(registro.expira_em).getTime() <= Date.now()) {
+  if (registro.expirado) {
     throw new ErroDeDominio(CODIGOS.CODIGO_EXPIRADO, 'código expirado');
   }
 
-  const confere = hashDoCodigo(telefone, codigo) === registro.codigo_hash;
+  // CLAIM ATÔMICO de um slot de tentativa ANTES de comparar o hash: o
+  // incremento condicionado (tentativas < max) serializa no banco, então
+  // no máximo max_tentativas comparações contra o código vivo acontecem,
+  // mesmo sob N confirmações concorrentes (senão o cap de força bruta é
+  // furado por lost update). Relógio do banco no WHERE.
+  const { rows: [slot] } = await pool.query(
+    `UPDATE codigos_otp SET tentativas = tentativas + 1
+     WHERE id = $1 AND usado_em IS NULL AND morto_em IS NULL
+       AND now() < expira_em AND tentativas < max_tentativas
+     RETURNING tentativas, max_tentativas, codigo_hash, ator_id`,
+    [registro.id],
+  );
+  if (!slot) {
+    // Corrida: entre o SELECT e agora o código foi usado/morto/expirou ou
+    // esgotou as tentativas.
+    throw new ErroDeDominio(CODIGOS.CODIGO_INVALIDO, 'código inválido');
+  }
+
+  const confere = hashDoCodigo(telefone, codigo) === slot.codigo_hash;
   if (!confere) {
-    // Tentativa errada: incrementa e, ao estourar, mata o código.
-    const novasTentativas = registro.tentativas + 1;
-    const morre = novasTentativas >= registro.max_tentativas;
-    await pool.query(
-      `UPDATE codigos_otp SET tentativas = $2, morto_em = CASE WHEN $3 THEN now() ELSE morto_em END
-       WHERE id = $1`,
-      [registro.id, novasTentativas, morre],
-    );
+    if (slot.tentativas >= slot.max_tentativas) {
+      // Esgotou: o código morre (é preciso pedir outro).
+      await pool.query(
+        'UPDATE codigos_otp SET morto_em = now() WHERE id = $1 AND morto_em IS NULL',
+        [registro.id],
+      );
+    }
     throw new ErroDeDominio(
       CODIGOS.CODIGO_INCORRETO,
-      morre ? 'código incorreto; tentativas esgotadas, peça outro' : 'código incorreto',
+      slot.tentativas >= slot.max_tentativas ? 'código incorreto; tentativas esgotadas, peça outro' : 'código incorreto',
     );
   }
 
@@ -143,10 +171,10 @@ async function confirmaCodigo(pool, { telefone, atorTipo, codigo }) {
     );
     if (rowCount !== 1) {
       // Corrida: outro pedido consumiu o mesmo código primeiro.
-      throw new ErroDeDominio(CODIGOS.CODIGO_INVALIDO, 'código inválido ou já usado');
+      throw new ErroDeDominio(CODIGOS.CODIGO_INVALIDO, 'código inválido');
     }
-    await registraLogin(conexao, { atorTipo, atorId: registro.ator_id, via: 'otp' });
-    return { atorTipo, atorId: registro.ator_id };
+    await registraLogin(conexao, { atorTipo, atorId: slot.ator_id, via: 'otp' });
+    return { atorTipo, atorId: slot.ator_id };
   });
 }
 
