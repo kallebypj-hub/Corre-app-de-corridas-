@@ -14,6 +14,7 @@
     "controle-negativo": "scripts/controle-negativo.sh"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "pg": "^8.16.3"
   }
 }

@@ -29,6 +29,26 @@ corrigir. Entrada só sai daqui por decisão registrada — nunca por apagamento
   migrations; em produção, senha própria e fora do ambiente da aplicação.
 - **Estado:** aberto, aceito.
 
+## 2026-08-09 — Estados 3, 4 e 5 ainda não têm prazo (até a Etapa 7)
+
+- **Descrição:** a regra do projeto diz que "nenhuma corrida fica presa em
+  estado vivo para sempre: todo estado vivo tem prazo e destino", mas a
+  tabela da seção 4 marca prazo "—" para os estados 3 (a caminho da loja),
+  4 (com a mercadoria) e 5 (em retorno). Na Etapa 1, uma corrida nesses
+  estados só sai dali por ação do motoboy ou cancelamento da operação — se
+  o motoboy sumir, ela fica viva indefinidamente.
+- **Risco:** corrida órfã em estado vivo com dinheiro retido, dependendo de
+  intervenção manual do painel para fechar.
+- **Motivo de não corrigir agora:** os prazos operacionais desses estados
+  (espera na porta de 5 min + 1 ligação, retorno) são regra da Etapa 7 —
+  defini-los na Etapa 1 seria inventar valor sem especificação.
+- **Mitigação ativa:** cancelamento pela operação (3, 4, 5 → 10) já existe
+  e exige motivo registrado; e a consulta `corridasParadas`
+  (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda
+  corrida em estado vivo há mais de 24 horas — dinheiro preso nunca fica
+  invisível (medida provisória exigida pelo dono em 2026-08-09).
+- **Estado:** aberto, aceito até a Etapa 7.
+
 ## 2026-08-09 — Monorepo em vez de dois repositórios (8º achado da revisão da Etapa 0)
 
 - **Descrição:** a especificação (seção Stack) pedia os repositórios

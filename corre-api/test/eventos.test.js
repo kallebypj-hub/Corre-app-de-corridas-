@@ -82,7 +82,7 @@ test('eventos append-only', async (t) => {
     `);
     assert.deepEqual(
       rows.map((r) => r.tgname),
-      ['eventos_bloqueia_truncate', 'eventos_bloqueia_update_delete'],
+      ['eventos_bloqueia_buraco', 'eventos_bloqueia_truncate', 'eventos_bloqueia_update_delete'],
     );
   });
 
@@ -106,11 +106,29 @@ test('eventos append-only', async (t) => {
     assert.equal(erro.code, '42501');
   });
 
+  await t.test('corre_app não abre buraco no log: seq fora da próxima posição é recusado (CR001)', async () => {
+    const agregado = randomUUID();
+    await insereEvento(app, eventoSintetico({ agregado_id: agregado, seq: 1 }));
+
+    const erro = await esperaErro(
+      app,
+      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, autor_tipo)
+       VALUES ('pulo', 'corrida', $1, 5, 'sistema')`,
+      [agregado],
+    );
+    assert.equal(erro.code, 'CR001');
+    assert.match(erro.message, /log sem buraco/);
+
+    // A posição certa continua aceita — o trigger só recusa o pulo.
+    const id = await insereEvento(app, eventoSintetico({ agregado_id: agregado, seq: 2 }));
+    assert.ok(id);
+  });
+
   await t.test('evento de painel sem autor identificado é recusado (23514)', async () => {
     const erro = await esperaErro(
       app,
-      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, autor_tipo, autor_id)
-       VALUES ('estorno_forcado', 'corrida', $1, 'painel', NULL)`,
+      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, autor_tipo, autor_id)
+       VALUES ('estorno_forcado', 'corrida', $1, 1, 'painel', NULL)`,
       [randomUUID()],
     );
     assert.equal(erro.code, '23514');
@@ -119,23 +137,22 @@ test('eventos append-only', async (t) => {
   await t.test('autor_tipo fora da lista é recusado (23514)', async () => {
     const erro = await esperaErro(
       app,
-      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, autor_tipo, autor_id)
-       VALUES ('x', 'corrida', $1, 'hacker', $2)`,
+      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, autor_tipo, autor_id)
+       VALUES ('x', 'corrida', $1, 1, 'hacker', $2)`,
       [randomUUID(), randomUUID()],
     );
     assert.equal(erro.code, '23514');
   });
 
   await t.test('volume: 5.000 eventos sintéticos inseridos e íntegros', async () => {
-    const antes = BigInt((await app.query('SELECT count(*) AS n FROM eventos')).rows[0].n);
+    // As contagens são por tipo próprio deste teste: os arquivos da bateria
+    // rodam em paralelo e o total global de eventos não é estável.
     await app.query(`
-      INSERT INTO eventos (tipo, agregado_tipo, agregado_id, payload, autor_tipo)
-      SELECT 'corrida_sintetica', 'corrida', gen_random_uuid(),
+      INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo)
+      SELECT 'corrida_sintetica', 'corrida', gen_random_uuid(), 1,
              jsonb_build_object('n', g, 'frete_centavos', 1000), 'sistema'
       FROM generate_series(1, 5000) g
     `);
-    const depois = BigInt((await app.query('SELECT count(*) AS n FROM eventos')).rows[0].n);
-    assert.equal(depois - antes, 5000n);
 
     // id é IDENTITY (nunca duplica por construção); a integridade que importa
     // é nenhum payload perdido nem duplicado.
@@ -148,8 +165,6 @@ test('eventos append-only', async (t) => {
   });
 
   await t.test('concorrência: 10 conexões x 200 inserts, nada se perde nem duplica', async () => {
-    const antes = BigInt((await app.query('SELECT count(*) AS n FROM eventos')).rows[0].n);
-
     const conexoes = await Promise.all(
       Array.from({ length: 10 }, async () => {
         const c = new Client({ connectionString: process.env.DATABASE_URL_APP });
@@ -171,9 +186,6 @@ test('eventos append-only', async (t) => {
     } finally {
       await Promise.all(conexoes.map((c) => c.end()));
     }
-
-    const depois = BigInt((await app.query('SELECT count(*) AS n FROM eventos')).rows[0].n);
-    assert.equal(depois - antes, 2000n);
 
     const { rows } = await app.query(`
       SELECT count(*) AS n,

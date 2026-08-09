@@ -18,4 +18,5 @@ export DATABASE_URL_APP="postgresql://corre_app:${CORRE_APP_SENHA}@${PGHOST}:${P
 export DATABASE_URL_SUPER="postgresql://${PGSUPERUSER}:${PGSUPERPASSWORD}@${PGHOST}:${PGPORT}/${CORRE_DB}"
 
 node src/db/migrar.js
-node --test
+# Teste pendurado não é teste vermelho: tudo tem prazo para responder.
+node --test --test-timeout=120000
