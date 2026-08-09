@@ -237,6 +237,11 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 - Um aparelho por conta
 - Aprovação automática — roda na hora. O **primeiro saque** fica travado até conferência
 
+> **Decisões registradas (dono aprovará no PR da Etapa 2, 2026-08-09):**
+> 1. **Chave Pix = o próprio CPF do cadastro**, verificado no ato (validação de dígitos + `CHECK` no banco). Motivo: sem gateway/consulta DICT no MVP, chave de outro tipo (e-mail, telefone, aleatória) não é verificável quanto ao dono — seria brecha de conta laranja. Quando o gateway (Etapa 4) trouxer consulta de titularidade, ampliar é decisão nova.
+> 2. **Sessão nasce no cadastro** (token opaco; só o hash fica no banco; validade 30 dias). Re-entrada do motoboy: **posse do aparelho vinculado** (CPF + aparelho). Re-login de lojista e de operador **não tem mecanismo especificado na spec** — registrado como ponto em aberto (seção 17, item 8).
+> 3. **Estorno no painel**: a autorização (exclusiva do dono) e o registro do ato com autor existem desde a Etapa 2; o efeito financeiro só existe a partir da Etapa 4 — o evento é gravado no agregado do operador com `efeito: nenhum_ate_a_etapa_4`, sem tocar o log da corrida, que é só de transições.
+
 > Princípio: trava o dinheiro, não a porta. Fraude só compensa se o dinheiro sai.
 
 ### Lojista
@@ -307,6 +312,7 @@ O mesmo link vira tela de rastreio e, no fim, mostra o PIN ao cliente.
 5. **Teto de R$ 500** de valor declarado — sugerido, não confirmado
 6. **Revisão jurídica** das três cláusulas de controle
 7. **Registro da marca** CORRE (mista) nas classes 39 e 42, e domínio
+8. **Re-autenticação (login) de lojista e operador** *(acrescentado em 2026-08-09, Etapa 2)*: a spec define o cadastro mas nenhum mecanismo de login. Hoje a sessão nasce no cadastro (e, para operador, na criação pelo dono); motoboy re-entra por CPF + aparelho vinculado. Falta decidir o mecanismo de re-entrada de lojista e operador (senha? OTP por WhatsApp/SMS? custo?) e a validade de sessão (provisória: 30 dias)
 
 ## 18. Números de referência
 

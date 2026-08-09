@@ -10,7 +10,7 @@ const { TRANSICOES } = require('../src/dominio/transicoes');
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
 const {
-  poolApp, AUTOR_PADRAO, autorIdPara, aplica, levaAte,
+  poolApp, AUTOR_PADRAO, autorIdPara, aplica, levaAte, lojistaApto,
 } = require('./ajuda-maquina');
 
 // CÓPIA INDEPENDENTE das arestas legais (com autores permitidos), de
@@ -50,7 +50,7 @@ test('máquina de estados', async (t) => {
       if (aresta.de === null) {
         ({ corrida } = await criaCorrida(pool, {
           autorTipo: aresta.autor,
-          autorId: randomUUID(),
+          autorId: await lojistaApto(pool),
           payload: { origem: 'teste_arestas' },
         }));
         resultado = corrida;

@@ -8,6 +8,7 @@ const express = require('express');
 const { Pool } = require('pg');
 
 const { exigePapelDeAplicacao } = require('./db/boot');
+const { montaApi } = require('./http/api');
 
 async function main() {
   if (!process.env.DATABASE_URL_APP) {
@@ -23,9 +24,7 @@ async function main() {
   }
 
   const app = express();
-  app.get('/saude', (requisicao, resposta) => {
-    resposta.json({ ok: true });
-  });
+  app.use(montaApi(pool));
 
   const porta = process.env.PORTA === undefined ? 0 : Number(process.env.PORTA);
   const servidor = app.listen(porta, () => {

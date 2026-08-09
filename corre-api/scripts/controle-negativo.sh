@@ -151,6 +151,41 @@ sabota_codigo "tempo_do_cliente" src/dominio/corridas.js \
   's|if (chave in dado) {|if (false) {|' \
   test/prazos.test.js "tempo é do servidor"
 
+# ---------- Etapa 2: cadastro e sessão ----------
+
+# Chave Pix de CPF diferente aceita pelo código: o domínio deixa de recusar
+# no ato (o CHECK do banco vira a última linha, com erro cru — o teste que
+# exige a recusa de domínio fica vermelho).
+sabota_codigo "chave_pix_de_outro_cpf_aceita" src/dominio/contas.js \
+  's|if (chavePixLimpa !== cpfLimpo) {|if (false) {|' \
+  test/contas.test.js "chave Pix de CPF diferente"
+
+# Segundo aparelho aceito: a comparação com o aparelho vinculado some.
+sabota_codigo "segundo_aparelho_aceito" src/http/sessoes.js \
+  's|if (motoboy.aparelho_id !== aparelhoId) {|if (false) {|' \
+  test/api.test.js "segundo aparelho"
+
+# Primeiro saque nasce liberado: o dinheiro deixa de nascer travado.
+sabota_codigo "primeiro_saque_nasce_liberado" src/dominio/contas.js \
+  "s|'travado'|'liberado'|g" \
+  test/contas.test.js "primeiro saque nasce travado"
+
+# Lojista pede sem cartão: a exigência da seção 10 some do domínio.
+sabota_codigo "pedido_sem_cartao_aceito" src/dominio/corridas.js \
+  's|if (!lojista.cartao_registrado_em) {|if (false) {|' \
+  test/contas.test.js "sem cartão de garantia"
+
+# Atendimento com poder de dono: estorno (e criação de operador) deixam de
+# ser exclusivos do dono.
+sabota_codigo "atendimento_com_poder_de_dono" src/dominio/contas.js \
+  "s|exigePapelDoOperador(autor, \['dono'\]);|exigePapelDoOperador(autor, ['dono', 'atendimento']);|" \
+  test/api.test.js "403 em estorno"
+
+# Papel lido do corpo da requisição: a identidade deixa de sair do servidor.
+sabota_codigo "papel_lido_do_corpo" src/http/api.js \
+  's|return operador;|return { ...operador, ...req.body };|' \
+  test/api.test.js "forjando papel"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 

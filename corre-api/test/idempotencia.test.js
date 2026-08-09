@@ -6,7 +6,7 @@ const { randomUUID } = require('node:crypto');
 
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
-const { poolApp, levaAte } = require('./ajuda-maquina');
+const { poolApp, levaAte, lojistaApto } = require('./ajuda-maquina');
 
 const REPETICOES = 50;
 
@@ -17,10 +17,11 @@ test('idempotência (Lei 5)', async (t) => {
   await t.test(`criação repetida ${REPETICOES}x com a mesma chave gera um único evento e uma única corrida`, async () => {
     const chave = `idem-criacao-${randomUUID()}`;
     // Tudo junto, em paralelo: é a retentativa de rede real, não uma fila educada.
+    const lojistaId = await lojistaApto(pool);
     const respostas = await Promise.all(
       Array.from({ length: REPETICOES }, () => criaCorrida(pool, {
         autorTipo: 'lojista',
-        autorId: randomUUID(),
+        autorId: lojistaId,
         payload: { origem: 'idempotencia' },
         chaveIdempotencia: chave,
       })),

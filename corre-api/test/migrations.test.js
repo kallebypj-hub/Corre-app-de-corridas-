@@ -104,7 +104,23 @@ test('migrations', async (t) => {
       { column_name: 'vence_em', data_type: 'timestamp with time zone', is_nullable: 'YES' },
       { column_name: 'criado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
       { column_name: 'atualizado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
+      { column_name: 'lojista_id', data_type: 'uuid', is_nullable: 'NO' },
     ]);
+  });
+
+  await t.test('travas de cadastro no banco: chave Pix igual ao CPF, CPF único, gênese única', async () => {
+    const { rows } = await dono.query(`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'motoboys'::regclass AND conname IN ('motoboys_chave_pix_igual_cpf', 'motoboys_cpf_unico')
+      ORDER BY conname
+    `);
+    assert.deepEqual(rows.map((r) => r.conname), ['motoboys_chave_pix_igual_cpf', 'motoboys_cpf_unico']);
+
+    const { rows: indices } = await dono.query(`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'operadores' AND indexname = 'operadores_genese_unica'
+    `);
+    assert.equal(indices.length, 1);
   });
 
   await t.test('corridas: corre_app com SELECT na tabela; INSERT e UPDATE só nas colunas de projeção', async () => {
@@ -123,7 +139,7 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'INSERT'
       ORDER BY column_name
     `);
-    assert.deepEqual(inserir.rows.map((r) => r.column_name), ['estado', 'seq', 'vence_em']);
+    assert.deepEqual(inserir.rows.map((r) => r.column_name), ['estado', 'lojista_id', 'seq', 'vence_em']);
 
     const atualizar = await dono.query(`
       SELECT column_name

@@ -13,7 +13,7 @@ const {
   criaCorrida, transiciona, expiraVencidas, corridasParadas,
 } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
-const { poolApp, levaAte } = require('./ajuda-maquina');
+const { poolApp, levaAte, lojistaApto } = require('./ajuda-maquina');
 const { randomUUID } = require('node:crypto');
 
 const executa = promisify(execFile);
@@ -26,7 +26,7 @@ test('prazos e tempo do servidor', async (t) => {
 
   await t.test('vence_em nasce do relógio do servidor: criação = agora + 15 min; cascata = agora + 5 min', async () => {
     const { corrida } = await criaCorrida(pool, {
-      autorTipo: 'lojista', autorId: randomUUID(), payload: {},
+      autorTipo: 'lojista', autorId: await lojistaApto(pool), payload: {},
     });
     const { rows: [{ agora }] } = await pool.query('SELECT now() AS agora');
     const esperado15 = agora.getTime() + 15 * 60 * 1000;
@@ -46,10 +46,11 @@ test('prazos e tempo do servidor', async (t) => {
   });
 
   await t.test('tempo é do servidor: payload do cliente com instante é recusado', async () => {
+    const lojistaId = await lojistaApto(pool);
     await assert.rejects(
       () => criaCorrida(pool, {
         autorTipo: 'lojista',
-        autorId: randomUUID(),
+        autorId: lojistaId,
         payload: { vence_em: '2099-01-01T00:00:00Z' },
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'tempo_do_cliente',

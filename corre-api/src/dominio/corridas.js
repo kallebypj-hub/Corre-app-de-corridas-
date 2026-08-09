@@ -11,12 +11,18 @@
 //   mesma operação com a mesma chave devolve o resultado original.
 // - Tempo: sempre do servidor de banco (now()); payload com instante do
 //   cliente é recusado (regra 3 da Etapa 1).
+// - Corrida sem lojista real é impossível por construção (seção 14): a
+//   criação valida o lojista e o cartão de garantia (Etapa 2) e grava o
+//   vínculo com FK.
 
 const { randomUUID } = require('node:crypto');
 
 const E = require('./estados');
 const { TRANSICOES } = require('./transicoes');
 const { ErroDeDominio, CODIGOS } = require('./erros');
+const {
+  emTransacao, agoraDoBanco, ehDisputaDePosicao, tentaReplayEvento,
+} = require('./nucleo');
 
 const AGREGADO = 'corrida';
 const CHAVES_DO_SERVIDOR = ['vence_em', 'criado_em'];
@@ -81,76 +87,50 @@ function calculaVenceEm(regra, agora) {
   return new Date(agora.getTime() + regra.prazoDoDestinoMs());
 }
 
-async function emTransacao(pool, trabalho) {
-  const conexao = await pool.connect();
-  try {
-    await conexao.query('BEGIN');
-    try {
-      const resultado = await trabalho(conexao);
-      await conexao.query('COMMIT');
-      return resultado;
-    } catch (erro) {
-      try {
-        await conexao.query('ROLLBACK');
-      } catch (erroRollback) {
-        console.error(`rollback falhou: ${erroRollback.message}`);
-      }
-      throw erro;
-    }
-  } finally {
-    conexao.release();
-  }
-}
-
-async function agoraDoBanco(conexao) {
-  const { rows } = await conexao.query('SELECT now() AS agora');
-  return rows[0].agora;
-}
-
-async function eventoPorChave(pool, chave) {
-  const { rows } = await pool.query(
-    `SELECT id, tipo, agregado_id, seq FROM eventos
-     WHERE chave_idempotencia = $1 AND agregado_tipo = $2`,
-    [chave, AGREGADO],
-  );
-  return rows[0] || null;
-}
-
 async function buscaCorrida(pool, corridaId) {
   const { rows } = await pool.query(
-    'SELECT id, estado, seq, vence_em, criado_em, atualizado_em FROM corridas WHERE id = $1',
+    'SELECT id, estado, seq, vence_em, lojista_id, criado_em, atualizado_em FROM corridas WHERE id = $1',
     [corridaId],
   );
   return rows[0] || null;
 }
 
-// Retentativa idempotente: se a chave já gravou evento, e foi para ESTA
-// mesma operação, é replay legítimo (operação nula). Se foi para outra
-// operação, é reuso indevido. Se a chave não gravou nada, devolve null e o
-// chamador decide o que o conflito significa.
-async function tentaReplay(pool, { chave, tipo, corridaId }) {
-  const evento = await eventoPorChave(pool, chave);
-  if (!evento) return null;
-  if (evento.tipo !== tipo || (corridaId && evento.agregado_id !== corridaId)) {
-    throw new ErroDeDominio(
-      CODIGOS.CHAVE_REUTILIZADA,
-      `chave de idempotência já usada em outra operação (${evento.tipo} na corrida ${evento.agregado_id})`,
-    );
-  }
+async function respostaDeReplay(pool, evento) {
   const corrida = await buscaCorrida(pool, evento.agregado_id);
   return { corrida, repetida: true };
 }
 
-const CONSTRAINTS_DE_CORRIDA = ['eventos_chave_idempotencia_unica', 'eventos_agregado_seq_unico'];
+async function tentaReplay(pool, { chave, tipo, corridaId }) {
+  const evento = await tentaReplayEvento(pool, {
+    chave, tipo, agregadoTipo: AGREGADO, agregadoId: corridaId,
+  });
+  if (!evento) return null;
+  return respostaDeReplay(pool, evento);
+}
 
-// Disputa pela posição do log: ou o UNIQUE de seq/chave (23505), ou o
-// trigger anti-buraco (CR001) quando o log já andou entre a leitura e o
-// INSERT. Nos dois casos a chave decide se é replay ou derrota.
-function ehDisputaDePosicao(erro) {
-  if (!erro) return false;
-  if (erro.code === '23505' && CONSTRAINTS_DE_CORRIDA.includes(erro.constraint)) return true;
-  if (erro.code === 'CR001') return true;
-  return false;
+// Pode ENTRAR é uma coisa; pode PEDIR é outra (seção 10). O pedido exige
+// lojista real, ativo e com cartão de garantia registrado.
+async function exigeLojistaApto(pool, lojistaId) {
+  if (!lojistaId) {
+    throw new ErroDeDominio(CODIGOS.LOJISTA_INEXISTENTE, 'corrida exige lojista identificado');
+  }
+  const { rows: [lojista] } = await pool.query(
+    'SELECT id, situacao, cartao_registrado_em FROM lojistas WHERE id = $1',
+    [lojistaId],
+  );
+  if (!lojista) {
+    throw new ErroDeDominio(CODIGOS.LOJISTA_INEXISTENTE, `lojista ${lojistaId} não existe`);
+  }
+  if (lojista.situacao !== 'ativa') {
+    throw new ErroDeDominio(CODIGOS.CONTA_BLOQUEADA, 'lojista bloqueado não cria corrida');
+  }
+  if (!lojista.cartao_registrado_em) {
+    throw new ErroDeDominio(
+      CODIGOS.CARTAO_DE_GARANTIA_AUSENTE,
+      'cartão de garantia é exigido antes do primeiro pedido (seção 10)',
+    );
+  }
+  return lojista;
 }
 
 // Cria a corrida (∅ → aguardando_pagamento). Toda escrita aceita chave de
@@ -168,15 +148,16 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
   }
 
   const regra = validaTransicao({ tipo: 'criada', estadoAtual: null, autorTipo, payload: dados });
+  const lojista = await exigeLojistaApto(pool, autorId);
 
   try {
     return await emTransacao(pool, async (conexao) => {
       const agora = await agoraDoBanco(conexao);
       const venceEm = calculaVenceEm(regra, agora);
       const { rows: [corrida] } = await conexao.query(
-        `INSERT INTO corridas (estado, seq, vence_em) VALUES ($1, 1, $2)
-         RETURNING id, estado, seq, vence_em, criado_em, atualizado_em`,
-        [regra.para, venceEm],
+        `INSERT INTO corridas (estado, seq, vence_em, lojista_id) VALUES ($1, 1, $2, $3)
+         RETURNING id, estado, seq, vence_em, lojista_id, criado_em, atualizado_em`,
+        [regra.para, venceEm, lojista.id],
       );
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
@@ -246,7 +227,7 @@ async function transiciona(pool, {
       const { rows: [corrida] } = await conexao.query(
         `UPDATE corridas SET estado = $2, seq = $3, vence_em = $4, atualizado_em = now()
          WHERE id = $1
-         RETURNING id, estado, seq, vence_em, criado_em, atualizado_em`,
+         RETURNING id, estado, seq, vence_em, lojista_id, criado_em, atualizado_em`,
         [corridaId, regra.para, novoSeq, venceEm],
       );
       return { corrida, repetida: false };
