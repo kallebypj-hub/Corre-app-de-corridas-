@@ -171,7 +171,7 @@ test('migrations', async (t) => {
     );
   });
 
-  await t.test('os dois triggers de imutabilidade existem e estão ativos', async () => {
+  await t.test('os triggers de imutabilidade e do log sem buraco existem e estão ativos', async () => {
     const { rows } = await dono.query(`
       SELECT tgname, tgenabled
       FROM pg_trigger
@@ -179,6 +179,7 @@ test('migrations', async (t) => {
       ORDER BY tgname
     `);
     assert.deepEqual(rows, [
+      { tgname: 'eventos_bloqueia_buraco', tgenabled: 'O' },
       { tgname: 'eventos_bloqueia_truncate', tgenabled: 'O' },
       { tgname: 'eventos_bloqueia_update_delete', tgenabled: 'O' },
     ]);

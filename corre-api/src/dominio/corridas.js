@@ -143,8 +143,14 @@ async function tentaReplay(pool, { chave, tipo, corridaId }) {
 
 const CONSTRAINTS_DE_CORRIDA = ['eventos_chave_idempotencia_unica', 'eventos_agregado_seq_unico'];
 
-function ehConflitoUnico(erro) {
-  return Boolean(erro && erro.code === '23505' && CONSTRAINTS_DE_CORRIDA.includes(erro.constraint));
+// Disputa pela posição do log: ou o UNIQUE de seq/chave (23505), ou o
+// trigger anti-buraco (CR001) quando o log já andou entre a leitura e o
+// INSERT. Nos dois casos a chave decide se é replay ou derrota.
+function ehDisputaDePosicao(erro) {
+  if (!erro) return false;
+  if (erro.code === '23505' && CONSTRAINTS_DE_CORRIDA.includes(erro.constraint)) return true;
+  if (erro.code === 'CR001') return true;
+  return false;
 }
 
 // Cria a corrida (∅ → aguardando_pagamento). Toda escrita aceita chave de
@@ -153,6 +159,14 @@ function ehConflitoUnico(erro) {
 async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotencia }) {
   const chave = chaveIdempotencia || randomUUID();
   const dados = higienizaPayload(payload);
+
+  // Lei 5, caso canônico: a resposta se perdeu e o chamador re-envia a
+  // MESMA operação depois do commit. A chave decide antes de validar.
+  if (chaveIdempotencia) {
+    const replayPrevio = await tentaReplay(pool, { chave, tipo: 'criada', corridaId: null });
+    if (replayPrevio) return replayPrevio;
+  }
+
   const regra = validaTransicao({ tipo: 'criada', estadoAtual: null, autorTipo, payload: dados });
 
   try {
@@ -180,7 +194,7 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
       return { corrida, repetida: false };
     });
   } catch (erro) {
-    if (ehConflitoUnico(erro)) {
+    if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplay(pool, { chave, tipo: 'criada', corridaId: null });
       if (replay) return replay;
       // A chave conflitou mas não gravou nada: só aconteceria com evento
@@ -199,6 +213,14 @@ async function transiciona(pool, {
   const chave = chaveIdempotencia || randomUUID();
   const dados = higienizaPayload(payload);
   regraDe(tipo);
+
+  // Lei 5, caso canônico: a operação original já venceu e moveu o estado;
+  // a retentativa que chega DEPOIS do commit seria recusada como transição
+  // ilegal se a chave não fosse consultada antes da validação.
+  if (chaveIdempotencia) {
+    const replayPrevio = await tentaReplay(pool, { chave, tipo, corridaId });
+    if (replayPrevio) return replayPrevio;
+  }
 
   const corridaAtual = await buscaCorrida(pool, corridaId);
   if (!corridaAtual) {
@@ -231,18 +253,19 @@ async function transiciona(pool, {
     });
   } catch (erro) {
     // Sob corrida real, a MESMA retentativa pode esbarrar primeiro no UNIQUE
-    // de seq (a operação original venceu a posição) — por isso o replay é
-    // conferido nos dois conflitos, sempre pela chave.
-    if (ehConflitoUnico(erro)) {
+    // de seq ou no trigger anti-buraco (a operação original venceu a
+    // posição) — por isso o replay é conferido em todas as disputas de
+    // posição, sempre pela chave.
+    if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplay(pool, { chave, tipo, corridaId });
       if (replay) return replay;
-      if (erro.constraint === 'eventos_agregado_seq_unico') {
-        throw new ErroDeDominio(
-          CODIGOS.CONFLITO_DE_CONCORRENCIA,
-          `outro evento venceu a posição ${novoSeq} da corrida ${corridaId}`,
-        );
+      if (erro.constraint === 'eventos_chave_idempotencia_unica') {
+        throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);
       }
-      throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);
+      throw new ErroDeDominio(
+        CODIGOS.CONFLITO_DE_CONCORRENCIA,
+        `outro evento venceu a posição ${novoSeq} da corrida ${corridaId}`,
+      );
     }
     throw erro;
   }
@@ -274,18 +297,26 @@ async function reconstroiEstado(pool, corridaId) {
   return { estado, seq: rows.length };
 }
 
+// A transição de vencimento de cada estado vem da PRÓPRIA tabela
+// declarativa (porPrazo) — o varredor não re-declara regra em código.
+const VENCIMENTO_POR_ESTADO = new Map(
+  Object.entries(TRANSICOES).flatMap(
+    ([tipo, regra]) => (regra.porPrazo ? regra.de.map((de) => [de, tipo]) : []),
+  ),
+);
+
 // Regra 2 da Etapa 1: vencer é consulta ao banco, não timer em memória.
 // Idempotente e seguro com vários varredores: a chave determinística e o
 // UNIQUE de seq fazem cada vencimento ser aplicado no máximo uma vez.
 async function expiraVencidas(pool) {
   const { rows: vencidas } = await pool.query(
     `SELECT id, estado, seq FROM corridas
-     WHERE estado IN ($1, $2) AND vence_em IS NOT NULL AND vence_em <= now()`,
-    [E.AGUARDANDO_PAGAMENTO, E.PROCURANDO_MOTOBOY],
+     WHERE estado = ANY($1::int[]) AND vence_em IS NOT NULL AND vence_em <= now()`,
+    [[...VENCIMENTO_POR_ESTADO.keys()]],
   );
   let aplicadas = 0;
   for (const corrida of vencidas) {
-    const tipo = corrida.estado === E.AGUARDANDO_PAGAMENTO ? 'expirou' : 'cascata_esgotada';
+    const tipo = VENCIMENTO_POR_ESTADO.get(corrida.estado);
     try {
       const { repetida } = await transiciona(pool, {
         corridaId: corrida.id,

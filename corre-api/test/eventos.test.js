@@ -82,7 +82,7 @@ test('eventos append-only', async (t) => {
     `);
     assert.deepEqual(
       rows.map((r) => r.tgname),
-      ['eventos_bloqueia_truncate', 'eventos_bloqueia_update_delete'],
+      ['eventos_bloqueia_buraco', 'eventos_bloqueia_truncate', 'eventos_bloqueia_update_delete'],
     );
   });
 
@@ -104,6 +104,24 @@ test('eventos append-only', async (t) => {
       [randomUUID()],
     );
     assert.equal(erro.code, '42501');
+  });
+
+  await t.test('corre_app não abre buraco no log: seq fora da próxima posição é recusado (CR001)', async () => {
+    const agregado = randomUUID();
+    await insereEvento(app, eventoSintetico({ agregado_id: agregado, seq: 1 }));
+
+    const erro = await esperaErro(
+      app,
+      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, autor_tipo)
+       VALUES ('pulo', 'corrida', $1, 5, 'sistema')`,
+      [agregado],
+    );
+    assert.equal(erro.code, 'CR001');
+    assert.match(erro.message, /log sem buraco/);
+
+    // A posição certa continua aceita — o trigger só recusa o pulo.
+    const id = await insereEvento(app, eventoSintetico({ agregado_id: agregado, seq: 2 }));
+    assert.ok(id);
   });
 
   await t.test('evento de painel sem autor identificado é recusado (23514)', async () => {

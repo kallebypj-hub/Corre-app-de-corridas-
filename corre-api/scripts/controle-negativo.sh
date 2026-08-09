@@ -28,7 +28,11 @@ restaura_remendos() {
   fi
   ARQUIVOS_REMENDADOS=()
 }
-trap restaura_remendos EXIT INT TERM
+# Sinal restaura E encerra — trap de sinal sem exit engoliria o término e
+# a escalação TERM→KILL deixaria sabotagem de código no repositório.
+trap restaura_remendos EXIT
+trap 'restaura_remendos; trap - EXIT; exit 130' INT
+trap 'restaura_remendos; trap - EXIT; exit 143' TERM
 
 psql_super() {
   PGPASSWORD="$PGSUPERPASSWORD" psql -v ON_ERROR_STOP=1 -q \
@@ -110,6 +114,11 @@ sabota_sql "colunas_protegidas_liberadas" "
 sabota_sql "credencial_do_app_com_escrita" "
   GRANT UPDATE, DELETE, TRUNCATE ON eventos TO corre_app;
 " test/boot.test.js "boot aceita a credencial restrita"
+
+# Trigger anti-buraco removido: o app passa a poder pular posição no log.
+sabota_sql "log_com_buraco_liberado" "
+  DROP TRIGGER eventos_bloqueia_buraco ON eventos;
+" test/eventos.test.js "não abre buraco no log"
 
 # ---------- Etapa 1: máquina de estados ----------
 

@@ -42,7 +42,9 @@ async function main() {
   });
 }
 
+// A recusa da trava chega com a mensagem própria dela ("boot recusado: a
+// credencial ..."); qualquer outra falha de boot fica distinguível.
 main().catch((erro) => {
-  console.error(`boot recusado ou falhou: ${erro.message}`);
+  console.error(`falha no boot: ${erro.message}`);
   process.exit(1);
 });

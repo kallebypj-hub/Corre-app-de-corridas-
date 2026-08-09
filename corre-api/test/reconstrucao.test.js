@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const { Pool } = require('pg');
 
 const { criaCorrida, reconstroiEstado } = require('../src/dominio/corridas');
 const { poolApp, aplica, emParalelo } = require('./ajuda-maquina');
@@ -84,4 +85,32 @@ test(`reconstrução: ${TOTAL} corridas sintéticas, estado derivado dos eventos
 
   assert.equal(conferidas, TOTAL);
   assert.deepEqual(divergencias, [], `estado reconstruído divergiu em ${divergencias.length} corrida(s)`);
+});
+
+test('controle interno da reconstrução: projeção adulterada por fora é detectada', async (t) => {
+  // Lei 8 dentro do próprio teste: se a projeção mentir, a comparação tem
+  // que acusar. Um reconstrutor preguiçoso que lesse a própria projeção
+  // passaria as 5.000 acima — e cai aqui.
+  const pool = poolApp(2);
+  const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+  t.after(async () => {
+    await pool.end();
+    await dono.end();
+  });
+
+  const { corrida } = await criaCorrida(pool, {
+    autorTipo: 'lojista',
+    autorId: randomUUID(),
+    payload: { origem: 'controle_interno_reconstrucao' },
+  });
+  await dono.query('UPDATE corridas SET estado = 7 WHERE id = $1', [corrida.id]);
+
+  const derivado = await reconstroiEstado(pool, corrida.id);
+  const { rows: [gravado] } = await pool.query(
+    'SELECT estado FROM corridas WHERE id = $1',
+    [corrida.id],
+  );
+  assert.equal(gravado.estado, 7, 'a adulteração foi aplicada');
+  assert.equal(derivado.estado, 1, 'a reconstrução vem do log, não da projeção');
+  assert.notEqual(derivado.estado, gravado.estado, 'a mentira na projeção aparece na comparação');
 });

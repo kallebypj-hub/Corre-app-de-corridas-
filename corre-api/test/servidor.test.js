@@ -47,13 +47,16 @@ function sobeServidor(env) {
   return { processo, encerrado, primeiroDesfecho };
 }
 
-async function exigeRecusaDeBoot(env) {
+async function exigeRecusaDeBoot(env, motivoEsperado) {
   const { processo, primeiroDesfecho } = sobeServidor(env);
   try {
     const desfecho = await primeiroDesfecho();
     assert.equal(desfecho.tipo, 'encerrou', 'servidor chegou a escutar — a trava de boot não agiu');
     assert.equal(desfecho.codigo, 1, 'processo encerra com erro');
-    assert.match(desfecho.stderr, /boot recusado/);
+    // Estrito: só a recusa GENUÍNA da trava passa, com o motivo certo.
+    // Banco fora do ar ou erro qualquer de boot não podem passar por recusa.
+    assert.match(desfecho.stderr, /boot recusado: a credencial/);
+    assert.match(desfecho.stderr, motivoEsperado);
     assert.doesNotMatch(desfecho.stdout, /escutando/, 'não pode ter chegado a escutar');
   } finally {
     // Se a trava estiver sabotada, o servidor sobrevive: não fica pendurado.
@@ -64,11 +67,11 @@ async function exigeRecusaDeBoot(env) {
 test('ponto de entrada com trava de boot', async (t) => {
   await t.test('servidor com credencial de dono encerra antes de servir a primeira requisição', async () => {
     // Simula a configuração errada: a URL "da aplicação" aponta o dono.
-    await exigeRecusaDeBoot({ DATABASE_URL_APP: process.env.DATABASE_URL });
+    await exigeRecusaDeBoot({ DATABASE_URL_APP: process.env.DATABASE_URL }, /é dono da tabela eventos/);
   });
 
   await t.test('servidor com credencial de superusuário encerra antes de servir', async () => {
-    await exigeRecusaDeBoot({ DATABASE_URL_APP: process.env.DATABASE_URL_SUPER });
+    await exigeRecusaDeBoot({ DATABASE_URL_APP: process.env.DATABASE_URL_SUPER }, /é superusuário/);
   });
 
   await t.test('servidor com a credencial restrita sobe e responde /saude', async () => {
