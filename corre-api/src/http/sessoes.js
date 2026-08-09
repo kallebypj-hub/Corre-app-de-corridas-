@@ -45,7 +45,13 @@ async function emiteSessaoDeMotoboy(pool, { cpf, aparelhoId }) {
   return emiteSessao(pool, { atorTipo: 'motoboy', atorId: motoboy.id, aparelhoId });
 }
 
-// Resolve o token em ator {tipo, id} — identidade nunca vem do corpo.
+// Resolve o token em ator {tipo, id} — identidade nunca vem do corpo, e a
+// sessão é revalidada contra a CONTA VIVA a cada requisição: conta
+// bloqueada não resolve (bloqueio imediato, seção 12) e, para o motoboy, o
+// aparelho da sessão tem que continuar sendo o vinculado à conta (um
+// aparelho por conta — troca invalida o token antigo na hora). Não basta a
+// revogação por DELETE no ato: a revalidação fecha a janela mesmo que uma
+// sessão sobreviva.
 async function resolveSessao(pool, token) {
   if (!token) return null;
   const { rows: [sessao] } = await pool.query(
@@ -54,6 +60,15 @@ async function resolveSessao(pool, token) {
     [hashDoToken(token)],
   );
   if (!sessao) return null;
+
+  const TABELA = { motoboy: 'motoboys', lojista: 'lojistas', operador: 'operadores' };
+  const { rows: [conta] } = await pool.query(
+    `SELECT * FROM ${TABELA[sessao.ator_tipo]} WHERE id = $1`,
+    [sessao.ator_id],
+  );
+  if (!conta || conta.situacao !== 'ativa') return null;
+  if (sessao.ator_tipo === 'motoboy' && conta.aparelho_id !== sessao.aparelho_id) return null;
+
   return { tipo: sessao.ator_tipo, id: sessao.ator_id, aparelhoId: sessao.aparelho_id };
 }
 

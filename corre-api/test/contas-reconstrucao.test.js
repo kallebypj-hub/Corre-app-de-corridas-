@@ -72,6 +72,40 @@ test(`reconstrução de contas: ${TOTAL} contas sintéticas, estado derivado dos
   assert.deepEqual(divergencias, [], `reconstrução divergiu em ${divergencias.length} conta(s)`);
 });
 
+test('reconstrução do agregado operador e varredura de linhas sem evento', async (t) => {
+  const pool = poolApp(4);
+  t.after(() => pool.end());
+
+  const dono = await donoDeTeste(pool);
+  // Reconstrução do operador: gênese (dono) + um atendimento + um estorno
+  // autorizado — todos batendo com a projeção.
+  const derivadoDono = await contas.reconstroiConta(pool, 'operador', dono.id);
+  const gravadoDono = await contas.buscaOperador(pool, dono.id);
+  assert.equal(derivadoDono.papel, gravadoDono.papel);
+  assert.equal(derivadoDono.situacao, gravadoDono.situacao);
+  assert.equal(derivadoDono.seq, gravadoDono.seq);
+
+  const atendimento = await atendimentoDeTeste(pool);
+  const derivadoAt = await contas.reconstroiConta(pool, 'operador', atendimento.id);
+  assert.equal(derivadoAt.papel, 'atendimento');
+  assert.equal(derivadoAt.seq, 1);
+
+  await contas.autorizaEstornoSemEfeito(pool, {
+    corridaId: (await (async () => {
+      const { cadastraLojista, registraCartao } = contas;
+      const { conta } = await cadastraLojista(pool, { nome: 'L', telefone: `88 6${randomUUID()}` });
+      await registraCartao(pool, { lojistaId: conta.id, cartaoRef: 'c' });
+      const { criaCorrida } = require('../src/dominio/corridas');
+      const { corrida } = await criaCorrida(pool, { autorTipo: 'lojista', autorId: conta.id, payload: {} });
+      return corrida.id;
+    })()),
+    autor: dono,
+  });
+  const derivadoDono2 = await contas.reconstroiConta(pool, 'operador', dono.id);
+  const gravadoDono2 = await contas.buscaOperador(pool, dono.id);
+  assert.equal(derivadoDono2.seq, gravadoDono2.seq, 'estorno autorizado avança o seq do operador');
+});
+
 test('controle interno da reconstrução de contas: projeção adulterada por fora é detectada', async (t) => {
   const pool = poolApp(2);
   const { Pool } = require('pg');

@@ -44,20 +44,28 @@ function ehDisputaDePosicao(erro) {
 }
 
 // Retentativa idempotente: se a chave já gravou evento, e foi para ESTA
-// mesma operação, devolve o evento original. Se foi para outra operação,
-// é reuso indevido. Se não gravou nada, devolve null.
-async function tentaReplayEvento(pool, { chave, tipo, agregadoTipo, agregadoId }) {
+// mesma operação, devolve o evento original. Se foi para outra operação —
+// tipo/agregado diferentes OU mesmos dados de identidade divergentes — é
+// reuso indevido, nunca replay silencioso (senão um cadastro com a chave
+// reaproveitada de outra pessoa devolveria a conta alheia). Se a chave não
+// gravou nada, devolve null.
+//
+// `confereDados(payloadGravado)` é opcional: devolve false quando o payload
+// do evento existente não corresponde aos dados desta tentativa.
+async function tentaReplayEvento(pool, {
+  chave, tipo, agregadoTipo, agregadoId, confereDados,
+}) {
   const { rows } = await pool.query(
-    'SELECT id, tipo, agregado_tipo, agregado_id, seq FROM eventos WHERE chave_idempotencia = $1',
+    'SELECT id, tipo, agregado_tipo, agregado_id, seq, payload FROM eventos WHERE chave_idempotencia = $1',
     [chave],
   );
   const evento = rows[0];
   if (!evento) return null;
-  if (
-    evento.tipo !== tipo
-    || evento.agregado_tipo !== agregadoTipo
-    || (agregadoId && evento.agregado_id !== agregadoId)
-  ) {
+  const mesmaOperacao = evento.tipo === tipo
+    && evento.agregado_tipo === agregadoTipo
+    && (!agregadoId || evento.agregado_id === agregadoId)
+    && (!confereDados || confereDados(evento.payload));
+  if (!mesmaOperacao) {
     throw new ErroDeDominio(
       CODIGOS.CHAVE_REUTILIZADA,
       `chave de idempotência já usada em outra operação (${evento.tipo} em ${evento.agregado_tipo} ${evento.agregado_id})`,

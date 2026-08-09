@@ -13,6 +13,8 @@ const { ErroDeDominio } = require('../dominio/erros');
 const contas = require('../dominio/contas');
 const { emiteSessao, emiteSessaoDeMotoboy, resolveSessao } = require('./sessoes');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const STATUS_POR_CODIGO = {
   campo_obrigatorio: 422,
   cpf_invalido: 422,
@@ -84,6 +86,18 @@ function montaApi(pool) {
         }
         next(erro);
       }
+    };
+  }
+
+  // Id malformado na URL vira 404 antes de tocar o banco (senão o cast de
+  // UUID no Postgres estoura erro cru — 22P02).
+  function exigeUuid(nomeParam, codigo) {
+    return (req, res, next) => {
+      if (!UUID_RE.test(req.params[nomeParam] || '')) {
+        res.status(404).json({ erro: codigo });
+        return;
+      }
+      next();
     };
   }
 
@@ -163,7 +177,7 @@ function montaApi(pool) {
     });
   }));
 
-  roteador.post('/painel/motoboys/:id/bloqueio', exigeSessao('operador'), trata(async (req, res) => {
+  roteador.post('/painel/motoboys/:id/bloqueio', exigeSessao('operador'), exigeUuid('id', 'conta_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
     await contas.bloqueiaMotoboy(pool, {
       motoboyId: req.params.id,
@@ -174,7 +188,7 @@ function montaApi(pool) {
     res.status(204).end();
   }));
 
-  roteador.post('/painel/motoboys/:id/liberacao-de-saque', exigeSessao('operador'), trata(async (req, res) => {
+  roteador.post('/painel/motoboys/:id/liberacao-de-saque', exigeSessao('operador'), exigeUuid('id', 'conta_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
     await contas.liberaPrimeiroSaque(pool, {
       motoboyId: req.params.id,
@@ -184,7 +198,7 @@ function montaApi(pool) {
     res.status(204).end();
   }));
 
-  roteador.post('/painel/motoboys/:id/troca-de-aparelho', exigeSessao('operador'), trata(async (req, res) => {
+  roteador.post('/painel/motoboys/:id/troca-de-aparelho', exigeSessao('operador'), exigeUuid('id', 'conta_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
     await contas.trocaAparelho(pool, {
       motoboyId: req.params.id,
@@ -195,7 +209,7 @@ function montaApi(pool) {
     res.status(204).end();
   }));
 
-  roteador.post('/painel/corridas/:id/estorno', exigeSessao('operador'), trata(async (req, res) => {
+  roteador.post('/painel/corridas/:id/estorno', exigeSessao('operador'), exigeUuid('id', 'corrida_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
     await contas.autorizaEstornoSemEfeito(pool, {
       corridaId: req.params.id,
@@ -204,6 +218,25 @@ function montaApi(pool) {
     });
     res.status(202).json({ efeito: 'nenhum_ate_a_etapa_4' });
   }));
+
+  // Rede de segurança: erro não previsto vira 500 genérico, sem vazar stack
+  // nem caminho de arquivo ao cliente. O erro completo fica no log do
+  // servidor (não engolido — Lei do projeto: nada de catch vazio).
+  roteador.use((erro, req, res, proximo) => {
+    if (res.headersSent) {
+      proximo(erro);
+      return;
+    }
+    // Erro de parse do corpo (JSON malformado) chega com status 4xx próprio;
+    // preserva-o. Qualquer outro é 500 genérico — sem stack, sem caminho.
+    const status = Number.isInteger(erro.status) && erro.status >= 400 && erro.status < 500
+      ? erro.status
+      : 500;
+    if (status === 500) {
+      console.error(`erro não tratado em ${req.method} ${req.originalUrl}: ${erro.stack || erro.message}`);
+    }
+    res.status(status).json({ erro: status === 400 ? 'corpo_invalido' : 'erro_interno' });
+  });
 
   return roteador;
 }

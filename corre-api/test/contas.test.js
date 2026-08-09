@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 
+const { Pool } = require('pg');
+
 const contas = require('../src/dominio/contas');
 const { criaCorrida } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
@@ -111,6 +113,45 @@ test('cadastro e travas (Etapa 2)', async (t) => {
       () => criaCorrida(pool, { autorTipo: 'lojista', autorId: randomUUID(), payload: {} }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'lojista_inexistente',
     );
+  });
+
+  await t.test('lojista bloqueado não cria corrida (o ramo "ativo" de exigeLojistaApto tem cobertura)', async () => {
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    try {
+      const { conta: lojista } = await contas.cadastraLojista(pool, {
+        nome: 'Loja a bloquear', telefone: `88 1${randomUUID().slice(0, 10)}`,
+      });
+      await contas.registraCartao(pool, { lojistaId: lojista.id, cartaoRef: 'cartao' });
+      // Não há bloqueio de lojista no domínio ainda; adultera via dono só
+      // para exercitar a guarda de situação.
+      await dono.query("UPDATE lojistas SET situacao = 'bloqueada' WHERE id = $1", [lojista.id]);
+
+      await assert.rejects(
+        () => criaCorrida(pool, { autorTipo: 'lojista', autorId: lojista.id, payload: {} }),
+        (erro) => erro instanceof ErroDeDominio && erro.codigo === 'conta_bloqueada',
+      );
+    } finally {
+      await dono.end();
+    }
+  });
+
+  await t.test('chave de idempotência reusada com DADOS diferentes é recusada, não replay (não devolve conta alheia)', async () => {
+    const chave = `reuso-${randomUUID()}`;
+    const primeiro = cadastroValidoDeMotoboy();
+    const { conta } = await contas.cadastraMotoboy(pool, { ...primeiro, chaveIdempotencia: chave });
+
+    // Mesma chave, OUTRA pessoa (outro CPF): não pode devolver a conta do
+    // primeiro — seria entregar a conta (e a sessão) alheia.
+    const outro = cadastroValidoDeMotoboy();
+    await assert.rejects(
+      () => contas.cadastraMotoboy(pool, { ...outro, chaveIdempotencia: chave }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+    );
+
+    // A mesma chave com os MESMOS dados segue sendo replay legítimo.
+    const replay = await contas.cadastraMotoboy(pool, { ...primeiro, chaveIdempotencia: chave });
+    assert.equal(replay.repetida, true);
+    assert.equal(replay.conta.id, conta.id);
   });
 
   await t.test('bloqueio de motoboy é exclusivo do dono e grava evento com autor', async () => {

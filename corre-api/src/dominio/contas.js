@@ -115,15 +115,18 @@ async function cadastraMotoboy(pool, {
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'motoboy_cadastrado', agregadoTipo: 'motoboy', agregadoId: null,
+      confereDados: (p) => p.cpf === cpfLimpo,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
 
   try {
     return await emTransacao(pool, async (conexao) => {
+      // primeiro_saque não vai no INSERT: nasce 'travado' pelo DEFAULT do
+      // banco (migration 0006) — corre_app nem tem INSERT nessa coluna.
       const { rows: [motoboy] } = await conexao.query(
-        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao, primeiro_saque)
-         VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, 'ativa', 'travado')
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao)
+         VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, 'ativa')
          RETURNING *`,
         [nomeLimpo, telefoneLimpo, cpfLimpo, chavePixLimpa, cnh, crlv, selfie, aparelho],
       );
@@ -142,6 +145,7 @@ async function cadastraMotoboy(pool, {
       // da chave: replay primeiro, recusa depois.
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'motoboy_cadastrado', agregadoTipo: 'motoboy', agregadoId: null,
+        confereDados: (p) => p.cpf === cpfLimpo,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(CODIGOS.CPF_JA_CADASTRADO, 'CPF já cadastrado');
@@ -149,6 +153,7 @@ async function cadastraMotoboy(pool, {
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'motoboy_cadastrado', agregadoTipo: 'motoboy', agregadoId: null,
+        confereDados: (p) => p.cpf === cpfLimpo,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);
@@ -159,7 +164,7 @@ async function cadastraMotoboy(pool, {
 
 // Ação da operação sobre a conta do motoboy: sempre com evento e autor.
 async function acaoDaOperacaoSobreMotoboy(pool, {
-  motoboyId, autor, papeis, tipo, payload, mudancas, chaveIdempotencia,
+  motoboyId, autor, papeis, tipo, payload, mudancas, revogaSessoes, chaveIdempotencia,
 }) {
   const chave = chaveIdempotencia || randomUUID();
   exigePapelDoOperador(autor, papeis);
@@ -198,6 +203,16 @@ async function acaoDaOperacaoSobreMotoboy(pool, {
             mudancas.primeiro_saque || motoboy.primeiro_saque,
           ],
         );
+        // Bloqueio e troca de aparelho revogam as sessões vivas na MESMA
+        // transação do evento (a revalidação em resolveSessao é o segundo
+        // cinto; este é o primeiro). DELETE inline para não criar
+        // dependência circular com a camada http.
+        if (revogaSessoes) {
+          await conexao.query(
+            "DELETE FROM sessoes WHERE ator_tipo = 'motoboy' AND ator_id = $1",
+            [motoboyId],
+          );
+        }
         return atualizado;
       },
     });
@@ -225,6 +240,7 @@ function bloqueiaMotoboy(pool, { motoboyId, motivo, autor, chaveIdempotencia }) 
     tipo: 'motoboy_bloqueado',
     payload: { motivo: exigeTexto(motivo, 'motivo') },
     mudancas: { situacao: 'bloqueada' },
+    revogaSessoes: true,
     chaveIdempotencia,
   });
 }
@@ -253,6 +269,9 @@ async function trocaAparelho(pool, { motoboyId, novoAparelhoId, autor, chaveIdem
     tipo: 'aparelho_trocado',
     payload: { de: atual ? atual.aparelho_id : null, para: aparelho },
     mudancas: { aparelho_id: aparelho },
+    // Troca invalida o token do aparelho antigo na hora — o motoboy re-loga
+    // no aparelho novo (um aparelho por conta).
+    revogaSessoes: true,
     chaveIdempotencia,
   });
 }
@@ -269,6 +288,7 @@ async function cadastraLojista(pool, { nome, telefone, chaveIdempotencia }) {
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'lojista_cadastrado', agregadoTipo: 'lojista', agregadoId: null,
+      confereDados: (p) => p.telefone === telefoneLimpo,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -291,6 +311,7 @@ async function cadastraLojista(pool, { nome, telefone, chaveIdempotencia }) {
     if (erro && erro.code === '23505' && erro.constraint === 'lojistas_telefone_unico') {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'lojista_cadastrado', agregadoTipo: 'lojista', agregadoId: null,
+        confereDados: (p) => p.telefone === telefoneLimpo,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(CODIGOS.TELEFONE_JA_CADASTRADO, 'telefone já cadastrado');
@@ -298,6 +319,7 @@ async function cadastraLojista(pool, { nome, telefone, chaveIdempotencia }) {
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'lojista_cadastrado', agregadoTipo: 'lojista', agregadoId: null,
+        confereDados: (p) => p.telefone === telefoneLimpo,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);
@@ -440,6 +462,12 @@ async function autorizaEstornoSemEfeito(pool, { corridaId, autor, chaveIdempoten
   const chave = chaveIdempotencia || randomUUID();
   exigePapelDoOperador(autor, ['dono']);
   exigeTexto(corridaId, 'corrida_id');
+
+  // Auditoria não referencia corrida fantasma: a corrida tem que existir.
+  const { rows: [corrida] } = await pool.query('SELECT id FROM corridas WHERE id = $1', [corridaId]);
+  if (!corrida) {
+    throw new ErroDeDominio(CODIGOS.CORRIDA_INEXISTENTE, `corrida ${corridaId} não existe`);
+  }
 
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {

@@ -165,10 +165,11 @@ sabota_codigo "segundo_aparelho_aceito" src/http/sessoes.js \
   's|if (motoboy.aparelho_id !== aparelhoId) {|if (false) {|' \
   test/api.test.js "segundo aparelho"
 
-# Primeiro saque nasce liberado: o dinheiro deixa de nascer travado.
-sabota_codigo "primeiro_saque_nasce_liberado" src/dominio/contas.js \
-  "s|'travado'|'liberado'|g" \
-  test/contas.test.js "primeiro saque nasce travado"
+# Primeiro saque nasce liberado: agora é DEFAULT do banco (migration 0006),
+# então a sabotagem é no banco — muda o padrão da coluna.
+sabota_sql "primeiro_saque_nasce_liberado" "
+  ALTER TABLE motoboys ALTER COLUMN primeiro_saque SET DEFAULT 'liberado';
+" test/contas.test.js "primeiro saque nasce travado"
 
 # Lojista pede sem cartão: a exigência da seção 10 some do domínio.
 sabota_codigo "pedido_sem_cartao_aceito" src/dominio/corridas.js \
@@ -185,6 +186,27 @@ sabota_codigo "atendimento_com_poder_de_dono" src/dominio/contas.js \
 sabota_codigo "papel_lido_do_corpo" src/http/api.js \
   's|return operador;|return { ...operador, ...req.body };|' \
   test/api.test.js "forjando papel"
+
+# Sessão não revalidada contra a conta viva: bloqueio deixa de cortar o
+# acesso do token já emitido (a revalidação em resolveSessao é a trava).
+sabota_codigo "sessao_nao_revalida_conta" src/http/sessoes.js \
+  "s|if (!conta \|\| conta.situacao !== 'ativa') return null;|if (false) return null;|" \
+  test/api.test.js "revalida a conta viva"
+
+# CPF sem verificação de dígito no banco: a trava por construção some.
+sabota_sql "cpf_sem_digito_no_banco" "
+  ALTER TABLE motoboys DROP CONSTRAINT motoboys_cpf_digitos_validos;
+" test/migrations.test.js "recusa CPF de dígito inválido"
+
+# Corrida para lojista sem cartão criável no banco: trigger removido.
+sabota_sql "corrida_sem_lojista_apto_no_banco" "
+  DROP TRIGGER corridas_exige_lojista_apto ON corridas;
+" test/migrations.test.js "lojista sem cartão"
+
+# Operador forjado por INSERT direto: trigger de exigência de evento fora.
+sabota_sql "operador_sem_evento_no_banco" "
+  DROP TRIGGER operadores_exige_evento ON operadores;
+" test/migrations.test.js "operador forjado"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero

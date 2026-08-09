@@ -148,6 +148,8 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
   }
 
   const regra = validaTransicao({ tipo: 'criada', estadoAtual: null, autorTipo, payload: dados });
+  // Validação no domínio dá erro claro ao chamador; o trigger de banco
+  // (migration 0006) é a garantia por construção, defesa em profundidade.
   const lojista = await exigeLojistaApto(pool, autorId);
 
   try {
