@@ -19,7 +19,7 @@ aceitos ficam registrados em [`DEFEITOS_ABERTOS.md`](DEFEITOS_ABERTOS.md).
 
 | Etapa | Situação |
 |---|---|
-| 0 — Fundação: migrations, tabela de eventos, CI | **Concluída — em PR contra `main`, aguardando aprovação** |
+| 0 — Fundação: migrations, tabela de eventos, CI | **Aprovada pelo dono em 2026-08-09** — entregue à `main` pelo PR #1; condição registrada no critério de aceite da Etapa 1 |
 | 1 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
 
 ## Rodando a bateria da Etapa 0

@@ -65,7 +65,7 @@ Ao terminar cada etapa: pare, mostre o que fez, mostre a bateria verde, mostre o
 | # | Etapa | Critério de aceite (executável) |
 |---|---|---|
 | 0 | Fundação: repos, migrations, tabela de eventos, CI | CI roda a bateria em banco criado do zero. `UPDATE`/`DELETE` em `eventos` falha por permissão |
-| 1 | Máquina de estados + log de eventos | As 11 transições cobertas. Transição inválida recusada. Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas |
+| 1 | Máquina de estados + log de eventos | As 11 transições cobertas. Transição inválida recusada. Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. Teste que sobe o servidor de verdade com credencial de dono e prova que ele encerra antes de servir a primeira requisição; controle negativo: remover a chamada da verificação do ponto de entrada deixa esse teste vermelho *(condição da aprovação da Etapa 0, 2026-08-09)* |
 | 2 | Cadastro e sessão (lojista, motoboy, painel) | Chave Pix de CPF diferente é recusada. Segundo aparelho na mesma conta é recusado. Primeiro saque nasce travado |
 | 3 | Zonas e preço | Tabela carregada. Mesmo endereço dá sempre o mesmo preço. Fora de zona calcula por linha reta sem API externa |
 | 4 | Pedido + link do cliente + Pix + split | Pix confirmado leva ao estado 2 e retém o valor. Link expira em 15 min. Mudança de pino recalcula antes do pagamento e nunca depois |
@@ -77,6 +77,8 @@ Ao terminar cada etapa: pare, mostre o que fez, mostre a bateria verde, mostre o
 | 10 | Painel + níveis de acesso | Atendimento recebe 403 em estorno e bloqueio. Toda ação do painel gera evento com autor |
 | 11 | Antifraude | Localização simulada é detectada e bloqueia. Par lojista+motoboy repetido em cancelamento é sinalizado. Corrida sem lojista real é impossível por construção |
 | 12 | Blindagem final | Caos: queda no meio de cada transição, duplo clique em tudo, relógio errado, rede oscilando. Caixa fecha ao centavo em todos os cenários |
+
+> **CI e proteção da `main` (registrado em 2026-08-09):** a branch protection exige o status check pelo **nome do job** (`bateria`, em `.github/workflows/ci.yml`). Se o job for renomeado, a proteção deixa de exigir o check **silenciosamente** e a `main` volta a aceitar merge com bateria vermelha. Renomear job de CI exige reajustar a regra de proteção no mesmo ato.
 
 ## Além do funcionamento
 
