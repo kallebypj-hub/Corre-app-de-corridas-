@@ -13,7 +13,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 > **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
 > **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
 >
-> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 103.
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 112.
 
 ## Onde o projeto está
 
@@ -22,7 +22,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 | **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço) |
 | **O que a revisão invalidou** | **Etapa 1:** o motor vale, **a tabela de estados não** — é reescrita na Etapa 5. **Etapa 2:** vale, falta o cliente como ator. **Etapas 0 e 3:** valem |
 | **Próxima etapa** | **4 — Multi-cidade e o cliente como ator** |
-| **Situação da Etapa 4** | **liberada** — não depende de gateway nem da tabela real |
+| **Situação da Etapa 4** | **liberada**, e **só contra interface falsa** — nenhuma etapa toca fornecedor real enquanto a mesa comercial não responder (pendência 22) |
 | **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa*. A pesquisa está feita ([`GATEWAY.md`](GATEWAY.md)); faltam **duas respostas comerciais por escrito**. As Etapas 4, 5 e 6 rodam sem nada disso — a 5 usa a tabela de exemplo, como a Etapa 3 fez |
 | **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
 | **Última bateria verde** | **173 testes**, 0 falhas · controle negativo: **42 sabotagens**, todas vermelhas no teste certo |
@@ -65,11 +65,12 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 | 7 | Teto de R$ 500 de valor de mercadoria | Etapa 16 |
 | 10, 11 | Custo do saque; e **como cadastrar lojista MEI**, que não tem quadro de sócios e a doc não explica. *(A parte que travava — subconta de pessoa física — foi verificada: **todos os candidatos aceitam PF**, e o melhor colocado deixa o motoboy receber antes do KYC)* | Lançamento |
 | 15 | Revisão jurídica das cláusulas de controle + risco novo da seção 15 | Lançamento |
-| **17** | **Chargeback do cartão de garantia — duas saídas levantadas, nenhuma escolhida.** O contrato do candidato põe o chargeback na conta do Corre, mesmo com defesa apresentada | Decisão do dono; afeta a Etapa 8 |
-| **20** | **Reserva da plataforma para o saldo global.** Não existe isolamento por recebedor: um negativo trava o saque de todos. A reserva se financia com um mês de comissão (≈ R$ 17.100) | Arquitetura da Etapa 9; decisão de tamanho é do dono |
-| **22** | **Cadastro de lojista MEI — nenhum fornecedor documenta caminho.** MEI não pode ter sócio, e o candidato exige sócio no QSA. Em Sobral, MEI é a maioria | **Pesa mais que preço** na escolha do gateway |
-| **23** | **Um documento = um recebedor:** motoboy que também é lojista não teria as duas contas | Escolha do gateway |
-| 18, 19, 21 | Saldo global e KYC reprovado depois de receber; e o **ticket médio de mercadoria, que nunca foi medido** | Etapa 11, operação e piloto |
+| **22** | 🔴 **LOJISTA MEI — o maior risco aberto do projeto.** MEI não pode ter sócio por lei, o candidato exige sócio no QSA, e **nenhum fornecedor documenta caminho**. Em Sobral MEI é a maioria | **Trava fornecedor real em TODAS as etapas.** Até responder, tudo é construído contra interface falsa |
+| **23** | **Um documento = um recebedor:** quem é motoboy **e** lojista não teria as duas contas | Escolha do gateway |
+| **3'** | **Abatimento de dívida pretérita em split futuro é suportado?** Não está documentado em gateway nenhum | **A arquitetura do retorno.** Se ninguém suportar, o caminho normal cai |
+| 1, 2 | Pix percentual ou fixo no contrato; e se existe "taxa por transação" sobre Pix | Etapa 7 — **preço é a última pergunta da mesa** |
+| **P** | **As duas premissas do piloto:** entregas/dia por motoboy **e ticket médio de mercadoria** (nunca medido). Sustentam toda conta da spec, inclusive a reserva | Primeira medição do piloto |
+| 18, 19 | KYC reprovado depois de receber; e o tamanho definitivo do colchão de reserva | Etapa 11 e operação |
 
 **Limites aceitos que ainda constrangem obra** (detalhe no `HISTORICO.md`, capítulo 3): estados **2, 3, 5 e 6** sem prazo até a **Etapa 8** (mitigado por `corridasParadas`) — o **5 (Pago) é o pior**, porque o dinheiro já foi dividido, e fechar em Entregue por decurso de prazo está **proibido**; a confirmação de pagamento não prova a entrega física; o motoboy pode exibir um QR próprio; nenhum provedor real de SMS nem de pagamento.
 
