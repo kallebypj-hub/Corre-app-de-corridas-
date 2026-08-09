@@ -1,0 +1,19 @@
+{
+  "name": "corre-api",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Corre — plataforma de despacho de entregas. Backend, web do lojista e painel.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "migrate": "node src/db/migrar.js",
+    "test": "node --test",
+    "bateria": "scripts/bateria.sh",
+    "controle-negativo": "scripts/controle-negativo.sh"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}
