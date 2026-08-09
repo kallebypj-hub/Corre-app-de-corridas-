@@ -11,7 +11,10 @@ const express = require('express');
 
 const { ErroDeDominio } = require('../dominio/erros');
 const contas = require('../dominio/contas');
+const otp = require('../dominio/otp');
+const { emTransacao } = require('../dominio/nucleo');
 const { emiteSessao, emiteSessaoDeMotoboy, resolveSessao } = require('./sessoes');
+const { smsNaoConfigurado } = require('./sms');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -32,9 +35,14 @@ const STATUS_POR_CODIGO = {
   lojista_inexistente: 404,
   corrida_inexistente: 404,
   cartao_de_garantia_ausente: 422,
+  // Re-login OTP
+  limite_de_envio: 429,
+  codigo_invalido: 401,
+  codigo_expirado: 401,
+  codigo_incorreto: 401,
 };
 
-function montaApi(pool) {
+function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
   const roteador = express.Router();
   roteador.use(express.json());
 
@@ -133,6 +141,34 @@ function montaApi(pool) {
     const sessao = await emiteSessaoDeMotoboy(pool, {
       cpf: corpo.cpf, aparelhoId: corpo.aparelho_id,
     });
+    // Login bem-sucedido gera evento (como qualquer ato relevante).
+    await emTransacao(pool, (conexao) => contas.registraLogin(conexao, {
+      atorTipo: 'motoboy', atorId: sessao.atorId, via: 'cpf_aparelho',
+    }));
+    res.status(201).json({ sessao: { token: sessao.token } });
+  }));
+
+  // Re-login por código de 6 dígitos (SMS), lojista e operador. Resposta
+  // genérica: não revela se o telefone existe.
+  roteador.post('/sessoes/otp/solicitar', trata(async (req, res) => {
+    const corpo = req.body || {};
+    await otp.solicitaCodigo(pool, {
+      telefone: corpo.telefone,
+      atorTipo: corpo.ator_tipo,
+      ip: req.ip,
+      enviarSms,
+    });
+    res.status(202).json({ ok: true });
+  }));
+
+  roteador.post('/sessoes/otp/confirmar', trata(async (req, res) => {
+    const corpo = req.body || {};
+    const ator = await otp.confirmaCodigo(pool, {
+      telefone: corpo.telefone,
+      atorTipo: corpo.ator_tipo,
+      codigo: corpo.codigo,
+    });
+    const sessao = await emiteSessao(pool, { atorTipo: ator.atorTipo, atorId: ator.atorId });
     res.status(201).json({ sessao: { token: sessao.token } });
   }));
 
@@ -168,7 +204,11 @@ function montaApi(pool) {
     const corpo = req.body || {};
     const autor = await operadorDaSessao(req);
     const { conta } = await contas.criaOperador(pool, {
-      nome: corpo.nome, papel: corpo.papel, autor, chaveIdempotencia: corpo.chave_idempotencia,
+      nome: corpo.nome,
+      telefone: corpo.telefone,
+      papel: corpo.papel,
+      autor,
+      chaveIdempotencia: corpo.chave_idempotencia,
     });
     const sessao = await emiteSessao(pool, { atorTipo: 'operador', atorId: conta.id });
     res.status(201).json({

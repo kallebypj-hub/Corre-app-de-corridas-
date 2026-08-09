@@ -52,7 +52,9 @@ function donoDeTeste(pool) {
   if (!promessaDono) {
     promessaDono = (async () => {
       try {
-        const { conta } = await criaOperadorGenese(pool, { nome: 'Dono Gênese' });
+        const { conta } = await criaOperadorGenese(pool, {
+          nome: 'Dono Gênese', telefone: `dono-${process.pid}`,
+        });
         return conta;
       } catch (erro) {
         if (erro instanceof ErroDeDominio && erro.codigo === 'genese_ja_feita') {
@@ -74,6 +76,7 @@ async function atendimentoDeTeste(pool) {
   const dono = await donoDeTeste(pool);
   const { conta } = await criaOperador(pool, {
     nome: `Atendimento ${randomUUID().slice(0, 8)}`,
+    telefone: `at-${randomUUID()}`,
     papel: 'atendimento',
     autor: dono,
   });

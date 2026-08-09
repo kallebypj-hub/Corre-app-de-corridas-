@@ -203,11 +203,13 @@ test('cadastro e travas (Etapa 2)', async (t) => {
   await t.test('só o dono cria operador; gênese só existe uma', async () => {
     const atendimento = await atendimentoDeTeste(pool);
     await assert.rejects(
-      () => contas.criaOperador(pool, { nome: 'Intruso', papel: 'dono', autor: atendimento }),
+      () => contas.criaOperador(pool, {
+        nome: 'Intruso', telefone: `i-${randomUUID()}`, papel: 'dono', autor: atendimento,
+      }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'papel_insuficiente',
     );
     await assert.rejects(
-      () => contas.criaOperadorGenese(pool, { nome: 'Segundo Gênese' }),
+      () => contas.criaOperadorGenese(pool, { nome: 'Segundo Gênese', telefone: `g-${randomUUID()}` }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'genese_ja_feita',
     );
   });

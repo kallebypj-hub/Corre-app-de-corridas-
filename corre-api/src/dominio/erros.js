@@ -34,6 +34,11 @@ const CODIGOS = {
   CARTAO_DE_GARANTIA_AUSENTE: 'cartao_de_garantia_ausente',
   GENESE_JA_FEITA: 'genese_ja_feita',
   SESSAO_INVALIDA: 'sessao_invalida',
+  // Re-login OTP
+  LIMITE_DE_ENVIO: 'limite_de_envio',
+  CODIGO_INVALIDO: 'codigo_invalido',
+  CODIGO_EXPIRADO: 'codigo_expirado',
+  CODIGO_INCORRETO: 'codigo_incorreto',
 };
 
 module.exports = { ErroDeDominio, CODIGOS };

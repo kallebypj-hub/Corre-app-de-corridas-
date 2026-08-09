@@ -240,13 +240,13 @@ test('API de cadastro e sessão', async (t) => {
     const atendimento = await atendimentoDeTeste(pool);
 
     const negado = await chama('POST', '/operadores', {
-      corpo: { nome: 'Novo', papel: 'atendimento' },
+      corpo: { nome: 'Novo', telefone: `op-${randomUUID()}`, papel: 'atendimento' },
       token: await sessaoDeOperador(atendimento),
     });
     assert.equal(negado.status, 403);
 
     const criado = await chama('POST', '/operadores', {
-      corpo: { nome: 'Novo Atendente', papel: 'atendimento' },
+      corpo: { nome: 'Novo Atendente', telefone: `op-${randomUUID()}`, papel: 'atendimento' },
       token: await sessaoDeOperador(dono),
     });
     assert.equal(criado.status, 201);

@@ -58,6 +58,41 @@ async function buscaMotoboyPorCpf(pool, cpf) {
   return rows[0] || null;
 }
 
+async function buscaLojistaPorTelefone(pool, telefone) {
+  const { rows } = await pool.query('SELECT * FROM lojistas WHERE telefone = $1', [telefone]);
+  return rows[0] || null;
+}
+
+async function buscaOperadorPorTelefone(pool, telefone) {
+  const { rows } = await pool.query('SELECT * FROM operadores WHERE telefone = $1', [telefone]);
+  return rows[0] || null;
+}
+
+// autor_tipo do evento por ator: operador registra como 'painel' (o CHECK
+// de eventos.autor_tipo não conhece 'operador').
+const AUTOR_TIPO_EVENTO = { motoboy: 'motoboy', lojista: 'lojista', operador: 'painel' };
+
+// Login bem-sucedido gera evento (como qualquer ato de cadastro relevante).
+// Recebe um executor (pool ou conexão em transação): o chamador decide a
+// atomicidade. Bump de seq contíguo — a rara colisão de dois logins
+// simultâneos na mesma conta cai como disputa de posição no banco.
+async function registraLogin(executor, { atorTipo, atorId, via }) {
+  const tabela = TABELAS[atorTipo];
+  if (!tabela) throw new ErroDeDominio(CODIGOS.CONTA_INEXISTENTE, `ator desconhecido: ${atorTipo}`);
+  const { rows: [conta] } = await executor.query(`SELECT seq FROM ${tabela} WHERE id = $1`, [atorId]);
+  if (!conta) throw new ErroDeDominio(CODIGOS.CONTA_INEXISTENTE, `${atorTipo} ${atorId} não existe`);
+  const novoSeq = conta.seq + 1;
+  await executor.query(
+    `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id)
+     VALUES ('login_efetuado', $1, $2, $3, $4, $5, $2)`,
+    [atorTipo, atorId, novoSeq, JSON.stringify({ via: via || 'sessao' }), AUTOR_TIPO_EVENTO[atorTipo]],
+  );
+  await executor.query(
+    `UPDATE ${tabela} SET seq = $2, atualizado_em = now() WHERE id = $1`,
+    [atorId, novoSeq],
+  );
+}
+
 const TABELAS = { motoboy: 'motoboys', lojista: 'lojistas', operador: 'operadores' };
 
 async function respostaDeReplay(pool, evento) {
@@ -383,9 +418,10 @@ async function registraCartao(pool, { lojistaId, cartaoRef, chaveIdempotencia })
 
 // O primeiro operador (gênese) nasce dono, sem autor humano, e só pode
 // existir UM — garantido pelo índice único parcial, não por contagem.
-async function criaOperadorGenese(pool, { nome, chaveIdempotencia }) {
+async function criaOperadorGenese(pool, { nome, telefone, chaveIdempotencia }) {
   const chave = chaveIdempotencia || randomUUID();
   const nomeLimpo = exigeTexto(nome, 'nome');
+  const telefoneLimpo = exigeTexto(telefone, 'telefone');
 
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
@@ -397,9 +433,9 @@ async function criaOperadorGenese(pool, { nome, chaveIdempotencia }) {
   try {
     return await emTransacao(pool, async (conexao) => {
       const { rows: [operador] } = await conexao.query(
-        `INSERT INTO operadores (seq, nome, papel, situacao, genese)
-         VALUES (1, $1, 'dono', 'ativa', true) RETURNING *`,
-        [nomeLimpo],
+        `INSERT INTO operadores (seq, nome, telefone, papel, situacao, genese)
+         VALUES (1, $1, $2, 'dono', 'ativa', true) RETURNING *`,
+        [nomeLimpo, telefoneLimpo],
       );
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
@@ -411,6 +447,9 @@ async function criaOperadorGenese(pool, { nome, chaveIdempotencia }) {
   } catch (erro) {
     if (erro && erro.code === '23505' && erro.constraint === 'operadores_genese_unica') {
       throw new ErroDeDominio(CODIGOS.GENESE_JA_FEITA, 'o operador gênese já existe');
+    }
+    if (erro && erro.code === '23505' && erro.constraint === 'operadores_telefone_unico') {
+      throw new ErroDeDominio(CODIGOS.TELEFONE_JA_CADASTRADO, 'telefone já cadastrado');
     }
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
@@ -424,9 +463,12 @@ async function criaOperadorGenese(pool, { nome, chaveIdempotencia }) {
 }
 
 // Operadores seguintes: só o dono cria.
-async function criaOperador(pool, { nome, papel, autor, chaveIdempotencia }) {
+async function criaOperador(pool, {
+  nome, telefone, papel, autor, chaveIdempotencia,
+}) {
   const chave = chaveIdempotencia || randomUUID();
   const nomeLimpo = exigeTexto(nome, 'nome');
+  const telefoneLimpo = exigeTexto(telefone, 'telefone');
   if (!['dono', 'atendimento'].includes(papel)) {
     throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'papel precisa ser dono ou atendimento');
   }
@@ -439,19 +481,26 @@ async function criaOperador(pool, { nome, papel, autor, chaveIdempotencia }) {
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
 
-  return emTransacao(pool, async (conexao) => {
-    const { rows: [operador] } = await conexao.query(
-      `INSERT INTO operadores (seq, nome, papel, situacao, genese)
-       VALUES (1, $1, $2, 'ativa', false) RETURNING *`,
-      [nomeLimpo, papel],
-    );
-    await conexao.query(
-      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
-       VALUES ('operador_cadastrado', 'operador', $1, 1, $2, 'painel', $3, $4)`,
-      [operador.id, JSON.stringify({ nome: nomeLimpo, papel }), autor.id, chave],
-    );
-    return { conta: operador, repetida: false };
-  });
+  try {
+    return await emTransacao(pool, async (conexao) => {
+      const { rows: [operador] } = await conexao.query(
+        `INSERT INTO operadores (seq, nome, telefone, papel, situacao, genese)
+         VALUES (1, $1, $2, $3, 'ativa', false) RETURNING *`,
+        [nomeLimpo, telefoneLimpo, papel],
+      );
+      await conexao.query(
+        `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
+         VALUES ('operador_cadastrado', 'operador', $1, 1, $2, 'painel', $3, $4)`,
+        [operador.id, JSON.stringify({ nome: nomeLimpo, papel }), autor.id, chave],
+      );
+      return { conta: operador, repetida: false };
+    });
+  } catch (erro) {
+    if (erro && erro.code === '23505' && erro.constraint === 'operadores_telefone_unico') {
+      throw new ErroDeDominio(CODIGOS.TELEFONE_JA_CADASTRADO, 'telefone já cadastrado');
+    }
+    throw erro;
+  }
 }
 
 // Estorno: a AUTORIZAÇÃO existe desde já e é exclusiva do dono; o efeito
@@ -514,6 +563,10 @@ async function autorizaEstornoSemEfeito(pool, { corridaId, autor, chaveIdempoten
 
 // Redutores declarativos: como cada tipo de evento muda o estado da conta.
 // A reconstrução dobra o log com ESTES redutores e compara com a projeção.
+// login_efetuado não muda estado da conta (só avança o seq do log), mas
+// precisa de redutor para a reconstrução aceitar o evento.
+const semMudanca = (estado) => ({ ...estado });
+
 const REDUTORES = {
   motoboy: {
     motoboy_cadastrado: (estado, payload) => ({
@@ -522,14 +575,17 @@ const REDUTORES = {
     aparelho_trocado: (estado, payload) => ({ ...estado, aparelho_id: payload.para }),
     motoboy_bloqueado: (estado) => ({ ...estado, situacao: 'bloqueada' }),
     primeiro_saque_liberado: (estado) => ({ ...estado, primeiro_saque: 'liberado' }),
+    login_efetuado: semMudanca,
   },
   lojista: {
     lojista_cadastrado: () => ({ situacao: 'ativa', cartao_registrado: false }),
     cartao_registrado: (estado) => ({ ...estado, cartao_registrado: true }),
+    login_efetuado: semMudanca,
   },
   operador: {
     operador_cadastrado: (estado, payload) => ({ situacao: 'ativa', papel: payload.papel }),
-    estorno_autorizado: (estado) => ({ ...estado }),
+    estorno_autorizado: semMudanca,
+    login_efetuado: semMudanca,
   },
 };
 
@@ -569,9 +625,12 @@ module.exports = {
   criaOperador,
   autorizaEstornoSemEfeito,
   reconstroiConta,
+  registraLogin,
   buscaMotoboy,
   buscaMotoboyPorCpf,
   buscaLojista,
+  buscaLojistaPorTelefone,
   buscaOperador,
+  buscaOperadorPorTelefone,
   exigePapelDoOperador,
 };

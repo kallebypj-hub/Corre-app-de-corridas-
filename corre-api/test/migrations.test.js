@@ -205,7 +205,9 @@ test('migrations', async (t) => {
     try {
       await app.query('BEGIN');
       await app.query(
-        "INSERT INTO operadores (seq, nome, papel, situacao, genese) VALUES (1, 'intruso', 'dono', 'ativa', false)",
+        `INSERT INTO operadores (seq, nome, telefone, papel, situacao, genese)
+         VALUES (1, 'intruso', $1, 'dono', 'ativa', false)`,
+        [`forjado-${randomUUID()}`],
       );
       // Sem o evento operador_cadastrado, o trigger deferido derruba o commit.
       const erro = await esperaErro(app, 'COMMIT');
