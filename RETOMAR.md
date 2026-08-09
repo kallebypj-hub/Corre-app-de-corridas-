@@ -23,7 +23,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 | **O que a revisão invalidou** | **Etapa 1:** o motor vale, **a tabela de estados não** — é reescrita na Etapa 5. **Etapa 2:** vale, falta o cliente como ator. **Etapas 0 e 3:** valem |
 | **Próxima etapa** | **4 — Multi-cidade e o cliente como ator** |
 | **Situação da Etapa 4** | **liberada** — não depende de gateway nem da tabela real |
-| **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa* (seção 17, itens 1 e 2) |
+| **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa*. A pesquisa está feita ([`GATEWAY.md`](GATEWAY.md)); faltam **duas respostas comerciais por escrito** |
 | **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
 | **Última bateria verde** | 152 testes, 0 falhas · controle negativo: 34 sabotagens, todas vermelhas no teste certo |
 | **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 |
@@ -51,8 +51,8 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 
 | # | Pendência | Trava o quê |
 |---|---|---|
-| **1** | **Escolha do gateway — reaberta.** Três critérios: Pix percentual; o dinheiro nunca encosta na conta do Corre; **de quem sai a taxa tem que ser declarável**. Mais: QR dinâmico por API, split de 3 recebedores, subconta para lojista e motoboy | **Etapa 7** |
-| **2** | **Quem paga a taxa do gateway.** A taxa incide sobre mercadoria + frete; a receita é 5% do frete. Se sair da comissão, cada entrega dá prejuízo | **Etapa 7** — e a viabilidade do modelo |
+| **1** | **Escolha do gateway — pesquisada, falta decidir.** O mais barato que atende é o **Pagar.me**; falta a resposta por escrito de duas perguntas comerciais (Pix percentual ou fixo no contrato? existe "taxa por transação" sobre Pix?). Enquanto não vierem, o critério (A) está formalmente em aberto. Ver [`GATEWAY.md`](GATEWAY.md) | **Etapa 7** |
+| **2** | **Quem paga a taxa do gateway.** Recomendação: debitar da parcela de mercadoria — o lojista recebe R$ 98,69 num pedido de R$ 100 e **precisa saber antes de assinar**. Alternativa: embutir no total cobrado do cliente | **Etapa 7** — e a viabilidade do modelo |
 | **T** | **Tabela real de Sobral não está no repositório** — agora com duas colunas: preço por anel **e minutos por anel** | **Correção da Etapa 3** e o prazo estimado da Etapa 5 |
 | 5 | Tempo base de coleta (o outro número do prazo estimado) | Etapa 5 |
 | 13 | Teto de faltas de pagamento que bloqueia um cliente | Etapa 12 |

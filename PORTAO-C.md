@@ -8,7 +8,9 @@
 >
 > **A decisão que estava aqui — PagBank com Custódia — caiu junto.** Ela foi tomada por um requisito (retenção com liberação por API) que virou peso morto. **A escolha de gateway está reaberta** com três critérios eliminatórios: Pix percentual; o dinheiro nunca encosta na conta do Corre; e **de quem sai a taxa tem que ser declarável**. Ver `CORRE.md`, seção 17, item 1, e o `HISTORICO.md`, decisões 37 a 41.
 >
-> **Ironia registrada:** o **Efí**, descartado aqui por "dividir no ato", faz **exatamente** o que a especificação passou a pedir.
+> **Ironia registrada:** o **Efí**, descartado aqui por "dividir no ato", faz **exatamente** o que a especificação passou a pedir. *(Ele voltou à mesa e ficou em 2º lugar — cai por outro motivo, que este levantamento nem chegou a perguntar: não dá para dizer de quem sai a taxa. Ver [`GATEWAY.md`](GATEWAY.md).)*
+>
+> **O levantamento novo é o [`GATEWAY.md`](GATEWAY.md).** É ele que vale.
 
 ### O que deste documento continua valendo
 

@@ -43,7 +43,7 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 **Lei 6 — Dinheiro só se move em transição de estado registrada.** Cobrança, split e estorno são consequência de evento, nunca de chamada avulsa. Não existe endpoint que "só transfere".
 
-**Lei 7 — Custo de transação é premissa, não detalhe.** A comissão é 5% do frete e o gateway consome parte disso. Antes de integrar qualquer gateway, escreva a conta do custo real por corrida em R$ e mostre. Se o Pix tiver custo **fixo** por transação em vez de percentual, **pare e avise** — a comissão não fecha. **Desde a revisão de 2026-08-09 a conta mudou de forma:** a taxa incide sobre **mercadoria + frete**, e a receita do Corre é só 5% do frete. A conta só fecha se ficar declarado **de quem sai a taxa** — ver seção 9.
+**Lei 7 — Custo de transação é premissa, não detalhe.** A comissão é 5% do frete e o gateway consome parte disso. Antes de integrar qualquer gateway, escreva a conta do custo real por corrida em R$ e mostre. Se o Pix tiver custo **fixo** por transação em vez de percentual, **pare e avise** — a comissão não fecha. **Desde a revisão de 2026-08-09 a conta mudou de forma:** a taxa incide sobre **mercadoria + frete**, e a receita do Corre é só 5% do frete. A conta só fecha se ficar declarado **de quem sai a taxa** — ver seção 9. E o custo fixo virou pior do que caro: **taxa fixa não é splitável em nenhum gateway** e cai obrigatoriamente na plataforma.
 
 **Lei 8 — Teste que não falha quando deveria não é teste.** Toda regra crítica precisa de controle negativo: sabote a regra, rode a bateria e prove que ela fica **vermelha** — e vermelha **no teste que vigia aquela regra**, não por motivo alheio. Bateria verde com a regra quebrada é falso positivo e precisa ser corrigido antes de seguir.
 
@@ -123,11 +123,11 @@ As etapas 0 a 3 estão na `main`. A revisão de 2026-08-09 **invalidou parte do 
 | 4 | Multi-cidade e o cliente como ator | Corrida com lojista da cidade A e zona da cidade B é recusada **pelo banco**. Duas cidades com tabelas de preço diferentes coexistem sem se misturar. Cliente nasce por telefone, é da plataforma e não da cidade. Nenhuma consulta devolve dado de outra cidade | não iniciada |
 | 5 | Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado | As **14 arestas** cobertas; par fora da tabela é recusado. **Nenhum caminho chega a Entregue sem passar por Pago.** Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. Prazo estimado é gravado na criação com a versão da tabela; mesma corrida, mesmo prazo | não iniciada |
 | 6 | Despacho: cascata, timer de 30s, regras de recusa | 50 aparelhos disputando a mesma corrida resultam em exatamente 1 aceite. Cascata de 5 min sem aceite leva a Sem motoboy **sem nenhum movimento de dinheiro**. 4 recusas seguidas → offline por 15 min. Teto de 2 corridas ativas | não iniciada |
-| 7 | **Cobrança na porta: QR dinâmico, confirmação e split triplo** | A cobrança nasce com os **três recebedores declarados** e a soma bate com o total ao centavo. Webhook duplicado + consulta ativa simultânea produzem **um único** Pago. Entrega é impossível antes da confirmação. 10.000 corridas: mercadoria + frete = soma das três parcelas + taxa, ao centavo. Lei 9 na geração da cobrança, na confirmação e no par confirmação/expiração | não iniciada — **dinheiro; auditoria obrigatória; travada na seção 17, itens 1 e 2** |
+| 7 | **Cobrança na porta: QR dinâmico, confirmação e split triplo** | A cobrança nasce com os **três recebedores declarados** e a soma bate com o total ao centavo. Webhook duplicado + consulta ativa simultânea produzem **um único** Pago. **Com o webhook desligado, a corrida ainda fecha** (a consulta ativa é o caminho primário). Entrega é impossível antes da confirmação. Mercadoria zero cai para dois recebedores e ainda fecha. 10.000 corridas: mercadoria + frete = soma das três parcelas + taxa, ao centavo. Lei 9 na geração da cobrança, na confirmação e no par confirmação/expiração | não iniciada — **dinheiro; auditoria obrigatória; travada na seção 17, itens 1 e 2** |
 | 8 | Entrega, espera na porta e retorno | Sem pagamento confirmado não existe transição para Entregue. 5 min de espera + 1 aviso registrado habilita o retorno. Retorno cobra o cartão do lojista e credita o motoboy. **Corrida em retorno nunca carrega dinheiro pago** | não iniciada |
 | 9 | Saldo e saque | Soma dos saldos das subcontas + sacado = soma dos splits, ao centavo, em 10.000 corridas. Primeiro saque nasce travado. O Corre não move saldo de ninguém — o app espelha | não iniciada — **dinheiro; auditoria obrigatória** |
 | 10 | Chat interno nas três pontas | **Nenhuma resposta da API contém telefone de ninguém.** Mensagem é evento: não edita, não apaga. Cada ponta só lê as conversas das corridas de que participa. Chat de corrida encerrada continua legível e imutável | não iniciada |
-| 11 | Painel, níveis de acesso e disputa | Atendimento recebe 403 em estorno e bloqueio. Toda ação gera evento com autor. Disputa abre e resolve por evento compensatório, **sem reabrir estado final** | não iniciada — **auditoria obrigatória** |
+| 11 | Painel, níveis de acesso e disputa | Atendimento recebe 403 em estorno e bloqueio. Toda ação gera evento com autor. Disputa abre e resolve por evento compensatório, **sem reabrir estado final**. **Estorno sai 100% da parcela do lojista e não toca o frete** — controle negativo: estorno sem split explícito fica vermelho | não iniciada — **dinheiro e autorização; auditoria obrigatória** |
 | 12 | Reputação nas três pontas | Nota do motoboy só desempata dentro da janela de 2 min. Falha por endereço errado conta contra a loja. **Não pagamento conta contra o cliente e contra mais ninguém.** Cliente acima do teto de faltas é recusado como destino até a operação liberar | não iniciada |
 | 13 | App do motoboy (Kotlin) | GPS reporta com tela apagada e app em background por 30 min contínuos. Push chega em menos de 5s. Perda de rede não duplica aceite. O QR aparece na tela e some sozinho quando a confirmação chega | não iniciada |
 | 14 | Ponte web mínima + app do cliente (Flutter) | O SMS chega e o link abre **sem instalar nada**; paga e rastreia, e nada além disso. O link morre com a corrida. O app do cliente mostra a **mesma** cobrança que o motoboy exibe, buscada no backend | não iniciada |
@@ -193,7 +193,7 @@ O cliente que compra pela primeira vez **não tem app nenhum e não vai instalar
 5. **Motoboy** aceita, vai à loja, confirma a coleta, sai com a mercadoria.
 6. Motoboy chega na porta e declara a chegada. **O backend gera um QR Pix dinâmico do total (mercadoria + frete)** e o app do motoboy o exibe.
 7. **Cliente paga** — pelo app dele, pelo link do SMS, ou lendo o QR na tela do motoboy com o banco que ele já usa.
-8. **A confirmação chega ao backend** (webhook do gateway **e** consulta ativa). Só então o app do motoboy libera a entrega.
+8. **A confirmação chega ao backend.** O caminho **primário é consulta ativa** — o backend pergunta ao gateway, de poucos em poucos segundos, enquanto o QR está na tela. O **webhook é aceleração e reconciliação de retaguarda, nunca a fonte que libera a mercadoria**: as políticas de retentativa publicadas chegam a mais de duas horas, e o webhook cai no nosso servidor, não no aparelho do motoboy, que é quem está na porta esperando. Só então o app libera a entrega.
 9. Motoboy entrega e confirma. Corrida → **Entregue**.
 
 **A entrega é consignada ao pagamento.** A mercadoria só troca de mão depois que o backend disse que o Pix caiu. **O dinheiro nunca passa pela mão do motoboy** — ele carrega a mercadoria, não o caixa.
@@ -348,19 +348,38 @@ Ele **substituiu o "valor declarado"** da versão anterior: antes era uma declar
 
 **Cartão de garantia do lojista:** fica no cadastro, **nunca é cobrado no fluxo normal**. Cobre cancelamento pós-aceite causado pelo lojista e **o retorno** — por cliente ausente ou por cliente que não pagou —, repassado integral ao motoboy. **Com o pagamento na porta ele deixou de ser exceção rara e virou a rede de proteção do modelo**: é ele que garante que o motoboy nunca faz viagem de graça. O lojista precisa saber disso antes de aceitar o cadastro.
 
-### A conta da Lei 7 e o problema novo
+### Estorno não toca o frete
 
-A taxa do gateway incide sobre o **total** (mercadoria + frete). A receita do Corre é **5% do frete**. Numa entrega de mercadoria R$ 100 + frete R$ 10, a 1,19%:
+Se o cliente **recusa a mercadoria depois de ter pago**, a entrega **foi prestada**: o motoboy fez a viagem e o Corre fez a intermediação. Logo:
 
-| | |
-|---|---|
-| Total cobrado | R$ 110,00 |
-| Taxa do gateway (1,19%) | **R$ 1,31** |
-| Comissão do Corre (5% de R$ 10) | **R$ 0,50** |
+**O estorno sai 100% da parcela do lojista. O frete fica com o motoboy e a comissão fica com o Corre.**
 
-**Se a taxa sair da comissão, cada entrega dá prejuízo — e o prejuízo cresce com o preço da mercadoria, que não é nosso.** Uma mercadoria de R$ 400 com frete de R$ 10 custaria R$ 4,88 de taxa contra R$ 0,50 de receita.
+E, na prática do gateway, **isso tem que ser dito explicitamente no cancelamento**: se o split não for reenviado, o fornecedor reaplica a proporção original e tira dinheiro do motoboy e do Corre. Estorno sem split explícito é defeito, e é controle negativo da Etapa 11.
 
-Portanto a especificação exige, do gateway e do contrato: **a taxa da parcela de mercadoria é debitada da parcela de mercadoria**, e a comissão de 5% do frete chega inteira. Fornecedor que não permita dizer **de quem sai a taxa** não serve, ainda que seja o mais barato. Isso virou o **terceiro critério eliminatório** (seção 17, item 1) e a conta final só fecha depois de decidido **quem paga** (seção 17, item 2).
+### A conta da Lei 7, refeita
+
+A taxa do gateway incide sobre o **total** (mercadoria + frete). A receita do Corre é **5% do frete**. A 1,19% (preço de tabela dos dois candidatos mais baratos):
+
+| Mercadoria R$ 100 + frete R$ 10 · total R$ 110 · taxa R$ 1,31 | Lojista | Motoboy | **Corre** |
+|---|---|---|---|
+| **Taxa debitada do lojista** | R$ 98,69 | R$ 9,50 | **+ R$ 0,50** |
+| Taxa proporcional entre os três | R$ 98,81 | R$ 9,39 | + R$ 0,49 |
+| **Taxa debitada do Corre** | R$ 100,00 | R$ 9,50 | **− R$ 0,81** |
+
+**Ponto de equilíbrio, se a taxa sair da comissão:** `mercadoria ≤ 3,2 × frete`. Com frete de R$ 10, só fecha até ~R$ 32 de mercadoria. Acima disso **toda entrega dá prejuízo, e o prejuízo cresce com o preço da mercadoria, que não é nosso** — R$ 500 de mercadoria custariam R$ 5,57 do bolso do Corre.
+
+**Com a taxa debitada da mercadoria, a margem do Corre é imune ao valor da mercadoria:** R$ 0,50 por corrida, em R$ 100 ou em R$ 500.
+
+Portanto a especificação exige, do gateway e do contrato: **a taxa é debitada da parcela de mercadoria**, e a comissão de 5% do frete chega inteira. Fornecedor que não permita dizer **de quem sai a taxa** não serve, ainda que seja o mais barato — é o critério (D) da seção 17, item 1.
+
+**Duas consequências que não são negociáveis:**
+
+1. **Custo fixo não é só caro, é insplitável.** Os gateways só aceitam regra de split para a taxa **percentual**; qualquer componente **fixo** cai obrigatoriamente na plataforma e nenhum parâmetro o move. Um fixo de R$ 0,99 por Pix vira 50 centavos de receita contra 99 de custo — prejuízo em toda entrega, em todo cenário. É o que torna o critério (A) duplamente eliminatório.
+2. **"Comissão zero sobre a mercadoria" continua verdade, mas a taxa muda de bolso.** O Corre não tira nada da mercadoria; o gateway tira. O lojista recebe R$ 98,69 num pedido de R$ 100 — 1,31%, **menos do que qualquer maquininha que ele já usa**, e pior em pedido pequeno (1,79% num de R$ 20, porque ele paga a taxa sobre o frete também). **Isso tem que estar no contrato de adesão do lojista e ser dito antes de assinar.**
+
+**Quando a mercadoria é zero** (venda já acertada fora, seção 3) não existe parcela de lojista de onde debitar: a taxa sai do Corre e a comissão vira R$ 0,38 num frete de R$ 10. **Fecha sempre**, porque 1,19% do frete é muito menor que 5% do frete.
+
+O levantamento completo, o ranking e as perguntas que faltam estão em [`GATEWAY.md`](GATEWAY.md).
 
 ## 10. Cadastro
 
@@ -370,6 +389,10 @@ Portanto a especificação exige, do gateway e do contrato: **a taxa da parcela 
 - **Subconta no gateway** (é para lá que a parcela do frete cai)
 - Um aparelho por conta
 - Aprovação automática — roda na hora. O **primeiro saque** fica travado até conferência
+
+**Ele roda antes de poder sacar, e a tela tem que dizer isso.** Nos gateways pesquisados a subconta nasce apta a **receber** antes de estar apta a **movimentar**: o KYC (documento, biometria) corre em paralelo e leva até 24h. O app **mostra o estado do KYC** e **não promete saque** antes de a subconta estar ativa. Prometer é fazer o motoboy trabalhar, ver saldo e não conseguir tirar — que é o jeito mais rápido de perder um motoboy.
+
+**Saque agregado, não por corrida.** A tarifa de saque é fixa e sai do bolso dele; com R$ 9,50 líquidos por corrida, sacar a cada corrida come o ganho. A configuração padrão da subconta é **transferência periódica agregada**, e o app explica por quê.
 
 **Chave Pix = o próprio CPF do cadastro**, verificada no ato (dígitos verificadores no código **e** `CHECK` no banco). Motivo: sem consulta DICT no MVP, chave de outro tipo (e-mail, telefone, aleatória) não é verificável quanto ao dono — seria brecha de conta laranja. Quando o gateway trouxer consulta de titularidade, ampliar é decisão nova.
 
@@ -384,6 +407,10 @@ Portanto a especificação exige, do gateway e do contrato: **a taxa da parcela 
 **São três condições separadas, e a terceira é nova:** **pode entrar** (cadastro ativo) ≠ **pode pedir** (cartão registrado) ≠ **pode receber** (subconta aprovada). Sem cartão **ou** sem subconta, a criação de corrida é recusada — no domínio e por trigger no banco, com a razão certa em cada caso.
 
 **"Cadastro em 1 minuto: entra, olha, mexe" continua verdade — e agora só até o primeiro pedido.** Com a mercadoria dentro da cobrança, o lojista virou recebedor, e recebedor precisa de KYC. Ele entra e olha em um minuto; para vender, precisa da subconta aprovada. **Isso é uma piora real de onboarding e está registrada como risco** (seção 17, item 11).
+
+**Loja com CNPJ: quem cadastra é o sócio, não o gerente.** Os gateways exigem que o responsável pela subconta seja **sócio registrado e qualificado no QSA** — administrador e procurador não são aceitos (Circular BCB 3.978/20). Em Sobral isso significa **o dono da loja em pessoa**, e é esforço de campo a planejar no lançamento, não surpresa a descobrir no cadastro.
+
+**O lojista precisa saber, antes de assinar, que a taxa do gateway sai da parcela dele** (seção 9). Vai no contrato de adesão, não numa tela que ninguém lê.
 
 ### Cliente
 
@@ -440,7 +467,7 @@ O **teto de faltas de pagamento** que bloqueia um cliente ainda não tem número
 - **Nada se apaga nem se edita.** Correção só por evento compensatório
 - Toda ação do painel gera evento **com autor identificado**
 - **Estorno:** a autorização (exclusiva do dono) e o registro do ato existem desde a Etapa 2; o **efeito financeiro só existe a partir da Etapa 7**. Até lá o evento é gravado no agregado do operador sem tocar o log da corrida, que é só de transições
-- **Estorno depois do split é diferente do que era.** O dinheiro está em três contas que não são nossas: a devolução depende do que o gateway permite desfazer de um split já liquidado (seção 17, item 1). O que o Corre pode devolver sozinho é a própria comissão
+- **Estorno depois do split é diferente do que era.** O dinheiro está em três contas que não são nossas. A regra é a da seção 9: **o estorno sai 100% da parcela do lojista e não toca o frete**, porque a entrega foi prestada. E o split precisa ser **reenviado explicitamente** no cancelamento — se não for, o gateway reaplica a proporção original e tira dinheiro do motoboy e do Corre. **Controle negativo obrigatório desta etapa:** estorno sem split explícito tem que ficar vermelho
 
 ## 14. Antifraude
 
@@ -486,13 +513,15 @@ O **teto de faltas de pagamento** que bloqueia um cliente ainda não tem número
 
 ## 17. Pontos ainda em aberto
 
-1. **Escolha do gateway — REABERTA.** A decisão anterior (PagBank com Custódia) **caiu junto com o Portão C**: ela existia para reter dinheiro pago antes da entrega, e não se paga mais antes da entrega. **Três critérios eliminatórios:**
-   - **(A) Pix percentual.** Custo **fixo** por transação descarta o fornecedor — a comissão de 5% não se ajusta a ele. *(Foi o que descartou o Asaas: Pix fixo de R$ 1,99.)*
-   - **(C) O dinheiro nunca encosta na conta do Corre.** **Res. BCB 494/2025.** Desenho em que o valor cheio cai na plataforma e ela repassa está descartado por construção.
-   - **(D) *(novo)* De quem sai a taxa tem que ser declarável.** A taxa incide sobre mercadoria + frete e a receita é 5% do frete; se a taxa não puder ser debitada da parcela de mercadoria, o modelo dá prejuízo (seção 9).
+1. **Escolha do gateway — REABERTA e pesquisada; falta decidir.** A decisão anterior (PagBank com Custódia) **caiu junto com o Portão C**: ela existia para reter dinheiro pago antes da entrega, e não se paga mais antes da entrega. **Três critérios eliminatórios:**
+   - **(A) Pix percentual.** Custo **fixo** por transação descarta o fornecedor — a comissão de 5% não se ajusta a ele, e taxa fixa **não é splitável** (seção 9). *(Foi o que descartou o Asaas: R$ 1,99 fixo.)*
+   - **(C) O dinheiro nunca encosta na conta do Corre.** **Res. BCB 494/2025.** Desenho em que o valor cheio cai na plataforma e ela repassa está descartado por construção. *(Foi o que descartou a Woovi, apesar do menor percentual do mercado, e o Mercado Pago, cujo split público é 1:1.)*
+   - **(D) *(novo)* De quem sai a taxa tem que ser declarável.** *(É o que separa o 1º do 2º e do 3º lugar.)*
 
-   Além dos três, o fornecedor precisa de: **QR Pix dinâmico por API**, confirmação por **webhook e consulta ativa**, **split de 3 recebedores** na mesma cobrança, e subconta para **lojista e motoboy**. **Nada se implementa antes desta escolha.**
-2. **Quem paga a taxa do gateway.** Decisão do dono, não do fornecedor: a taxa da mercadoria sai do lojista (e ele precisa saber disso antes de assinar) ou o modelo muda. **Trava a Etapa 7 junto com o item 1**
+   Além dos três, o fornecedor precisa de: **QR Pix dinâmico por API**, confirmação por **webhook e consulta ativa**, **split de 3 recebedores** na mesma cobrança, e subconta para **lojista e motoboy**.
+
+   **O mais barato que atende, em 2026-08-09: Pagar.me** (Pix 1,19%; `options.charge_processing_fee` por recebedor concentra a taxa no lojista; único do grupo com **estorno parcial de Pix com split reenviável**). **Não é escolha feita** — depende de duas respostas comerciais por escrito, e o critério (A) fica **formalmente em aberto** enquanto não vierem: o contrato do Pagar.me também pode ser Pix **fixo**. Ranking, conta e perguntas em [`GATEWAY.md`](GATEWAY.md). **Nada se implementa antes desta escolha.**
+2. **Quem paga a taxa do gateway.** É decisão do dono, não do fornecedor. A recomendação da spec é **debitar da parcela de mercadoria** — o Corre continua com comissão zero sobre ela e o motoboy recebe o frete inteiro, mas **o lojista recebe R$ 98,69 num pedido de R$ 100** e precisa saber disso **antes de assinar**. Alternativa a considerar: **embutir a taxa no total cobrado do cliente**, elevando o QR — muda o preço na ponta. **Trava a Etapa 7 junto com o item 1**
 3. **Valor do adicional por km** fora de zona
 4. **Transcrição da tabela de zonas de Sobral** — agora com **duas colunas**: preço por anel **e minutos por anel** (seção 8)
 5. **Tempo base de coleta** — o outro número do prazo estimado
@@ -519,7 +548,15 @@ Estimativa a partir do grupo de 66 motoboys que já opera em Sobral:
 | Projeção com os 3 grupos da cidade | ~R$ 40.000/mês |
 | Custo para o motoboy (20 corridas/dia) | R$ 260/mês |
 
-**A linha "líquido após gateway" saiu da tabela.** Ela pressupunha taxa sobre o frete. Com a mercadoria dentro da cobrança, o líquido depende inteiramente de **quem paga a taxa** (seção 17, item 2): se a taxa da mercadoria sair da comissão, o líquido é **negativo**; se sair da parcela do lojista, a comissão chega quase inteira. A linha volta quando o item 2 for decidido.
+**A linha "líquido após gateway" saiu da tabela**, e o motivo é que ela deixou de ser uma linha: com a mercadoria dentro da cobrança, o líquido depende inteiramente de **quem paga a taxa** (seção 17, item 2).
+
+| Se a taxa… | Líquido por corrida | Líquido/mês |
+|---|---|---|
+| …for debitada da mercadoria | **R$ 0,50** (comissão intacta) | ~R$ 17.100 |
+| …for rateada entre os três | R$ 0,49 | ~R$ 16.800 |
+| …sair da comissão do Corre | **negativo**, e pior quanto mais cara a mercadoria | **prejuízo** |
+
+A linha volta à tabela como número único quando o item 2 for decidido.
 
 **Premissa mais frágil de todo o modelo:** entregas por dia por motoboy. A 8/dia o negócio é outro. Medir isso é a prioridade número 1 do piloto.
 
