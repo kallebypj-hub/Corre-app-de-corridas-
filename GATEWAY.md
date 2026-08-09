@@ -166,6 +166,81 @@ A spec pedia CNH, CRLV, selfie e chave Pix. O contrato de criação de recebedor
 
 MEI é CNPJ, então entra como `corporation` e cai na exigência de `managing_partners` com **sócio qualificado no QSA**. **O MEI não tem QSA no sentido clássico, e a documentação não diz como preencher esse campo para ele** — `nao_documentado`. Vira a **pergunta comercial G** (seção 6): *"Como se cadastra um recebedor MEI, que não tem quadro de sócios?"* Em Sobral, lojista MEI é a maioria.
 
-## 9. Pendência jurídica
+## 9. As três perguntas de 2026-08-09
+
+Levantamento de 8 agentes, 322 chamadas, com verificação cética que **derrubou o número de título de uma das frentes** e corrigiu 15 outros. O que segue é o que sobreviveu à conferência na fonte.
+
+### 9.1 Chargeback do cartão de garantia — quem perde o dinheiro somos nós
+
+O achado que decide, e não é a bandeira: é o **contrato**.
+
+> **Cláusula 18, §1º** (seção "Das operações de marketplace"): *"Independentemente do que vier a ser pactuado entre o Cliente e o(s) outro(s) recebedor(es), eventual chargeback será, perante o Pagar.me, de **RESPONSABILIDADE EXCLUSIVA DO CLIENTE** e, portanto, pode ser a este imputado para fins de diminuição do saldo disponível em sua Conta Pagar.me."*
+
+O "Cliente" é o **marketplace** — o Corre. E a **cláusula 57** fecha a porta: *"Qualquer chargeback ou estorno será **debitado** na Conta Pagar.me do Cliente, **mesmo na hipótese de que** … o Cliente tenha apresentado documentos comprobatórios … e o Emissor tenha considerado que tais documentos eram insuficientes."*
+
+O parâmetro `liable` existe (*"Indica se o recebedor é responsável pela transação em caso de chargeback"*, e **ao menos um recebedor precisa ser `true`**), mas ele reparte entre nós e os recebedores — **perante o gateway a conta é nossa**. Não existe `charge_transfer` nas opções de split.
+
+| | Verificado |
+|---|---|
+| **Prazo para o lojista contestar** | **`nao_documentado` como regra geral.** Os "540 dias" que circulam vêm de um boletim Visa de 2021 e estão escopados a *"merchant insolvency or bankruptcy"*. O único teto não escopado no PDF é **120 dias corridos** da data de processamento. A Central de Ajuda do Pagar.me fala em "75 a 540 dias" — conteúdo do gateway, não normativo de bandeira |
+| **Prazo para nós defendermos** | **10 dias corridos** |
+| **Multa por índice alto** | **R$ 99,00** (cláusula 62) quando o índice de chargeback ultrapassa o limite |
+| **Reserva de Segurança** | Cláusulas 63–64: o gateway pode reter, por **90 dias corridos** |
+| **Custo de contestar** | Referência de mercado: **R$ 55,00 por contestação** (Stripe), devolvidos só se ganharmos. Numa cobrança de **R$ 10**, contestar custa mais que o valor |
+
+**O custo comparado da mesma cobrança de R$ 10, tudo verificado:**
+
+| Meio | Custo | Tem contestação? |
+|---|---|---|
+| **Pix** (1,19%) | **R$ 0,12** | Não tem chargeback. Tem **MED** (Mecanismo Especial de Devolução), que é para fraude |
+| Cartão de crédito (4,39%) | R$ 0,44 | **Sim** — e a conta é nossa |
+| Boleto | R$ 3,49 | Não |
+| Pix Automático (Efí) | R$ 3,50 por Pix liquidado | Não |
+
+**Estorno de Pix, verificado:** máximo **90 dias** da criação da transação; **a taxa do Pix não volta**; e o estorno **gera uma taxa de transferência**.
+
+**O que ficou `nao_documentado` e importa:** nenhuma página do Pagar.me descreve **abater dívida pretérita no split de uma cobrança futura** — que é exatamente o mecanismo da saída A. É pergunta comercial, não leitura de doc.
+
+### 9.2 Saldo global — a reserva é o único remédio, e ela se financia sozinha
+
+**Confirmado literal, e é pior do que parecia:** *"se um recebedor está negativo, ele pode afetar um recebedor positivo e esse segundo não consegue sacar o valor total do seu saldo disponível"*; *"esse valor vai ser o limite de saque de **qualquer** recebedor"*. Exemplo oficial: R$ 150 + R$ 100 − R$ 110 = **R$ 140**, e o recebedor de R$ 150 não saca os R$ 150. **A trava vale também para antecipação.**
+
+**Como um recebedor fica negativo** (literal): *"em casos de estornos, chargebacks ou cobranças de gateway e antifraude."*
+
+**Existe isolamento? Não.** `POST /recipients` tem **zero** campos de reserva, retenção, hold, limite ou saldo mínimo. Os campos de raiz são `code`, `register_information`, `default_bank_account`, `transfer_settings` (3 campos), `automatic_anticipation_settings` (5) e `metadata`. **A reserva é o único remédio disponível.**
+
+**A reserva se financia com um mês de comissão.** O recebedor principal entra na soma do saldo global, e ele é o Corre. Deixando `transfer_enabled: false` na nossa própria conta durante o primeiro mês, o colchão vira **≈ R$ 17.100** (a comissão mensal projetada) sem tirar um centavo de ninguém. Com ticket de mercadoria de R$ 100, isso cobre **~170 estornos simultâneos**; com o teto de R$ 500, **~34**.
+
+> **A conta e a sua premissa frágil, dita na cara:** 1.320 corridas/dia útil × taxa de recusa-após-pagamento × ticket médio de mercadoria. **Nenhum dos dois últimos números existe** — a taxa de recusa é o que o piloto tem que medir (seção 18) e **o ticket médio de mercadoria nunca foi medido**. A 1% de recusa e R$ 100 de ticket dá **R$ 1.320/dia** de exposição, e a reserva de um mês cobre **13 dias** do pior caso contínuo. A 5%, cobre 2,6 dias. **É por isso que a taxa de recusa é a primeira coisa a medir no piloto.**
+
+**Detectar no instante: não existe webhook de saldo.** São 68 eventos documentados e **nenhum** de `balance.`, `transfer.`, `payable.` ou `anticipation.`. `GET /recipients/{id}/balance` devolve **um recebedor por chamada**, e não há endpoint de saldo consolidado.
+
+**Mas isso não nos impede — e a arquitetura do projeto já resolve.** Os webhooks que **existem** são os das **causas**: `charge.refunded`, `chargeback.received`, `charge.chargedback`. Como o Corre conhece o split de toda cobrança (ele é quem declara), **dá para manter o saldo de cada recebedor no nosso próprio log de eventos e saber que alguém ficou negativo no instante em que a causa acontece** — não quando alguém tenta sacar. É o event sourcing que já está na `main` fazendo o trabalho que o gateway não faz. Consultar `GET .../balance` vira **conciliação periódica**, não detecção.
+
+**KYC reprovado depois de receber:** o saldo fica travado e **a ação é nossa**. Por LGPD o marketplace recebe **só o status final** (`aprovado`/`recusado`/`refazer`), via webhook `recipient.updated`.
+
+**Prazo de API a marcar na agenda: 28/08/2026.** O Pagar.me descontinua `GET /balance/operations`, `GET /payables/{id}`, remove filtros, torna a paginação exclusivamente por cursor e limita o histórico a 24 meses. Não é existencial, mas é quebra de contrato de API com data.
+
+### 9.3 Lojista MEI — **nenhum dos quatro documenta caminho para MEI**
+
+> **`gov.br`, literal: "O MEI não tem contrato social e não pode ter sócio. O MEI é um Empresário Individual, que exerce atividade econômica em nome próprio."**
+
+E o Pagar.me exige, por escrito: *"É necessário adicionar um único representante legal (`managing_partners`) para cada recebedor do tipo Pessoa Jurídica"*, que *"deve ser um sócio registrado no Quadro de Sócios e devidamente qualificado no QSA"*, e *"não são aceitos Administradores, mesmo que qualificados no QSA, nem Procuradores"*. **Um MEI tem zero sócios por definição legal.** É contradição documental frontal.
+
+| Gateway | Exige | Caminho para MEI |
+|---|---|---|
+| **PagBank** | **1 sócio, sem QSA** — e o campo `person` é descrito como *"Dados do **dono da conta** ou de um sócio em caso de contas para empresas"* | **O menos ruim.** "Dono da conta" é exatamente o que o titular MEI é, e é o único que nomeia **"PJ MEI"** em página oficial. Mas é a redação permissiva de **um campo**, não um caminho documentado |
+| **iugu** | 1 responsável (`resp_name`/`resp_cpf`), sem QSA | Trava em `files[social_contract]`, *"Obrigatório se person_type é Pessoa Jurídica"* — e **zero menções a CCMEI**. Aceita "Extrato do SIMEI" e "Declaração anual do SIMEI", mas em `files[balance_sheet]`, que é outro campo |
+| **Pagar.me** | **1 sócio COM qualificação no QSA** | **Bloqueio frontal e explícito.** O CCMEI aparece uma única vez, e como **documento de KYC** — *"Contrato Social (ou CCMEI no caso de MEI) e/ou Procuração podem ser solicitados"* —, não como campo do cadastro |
+| **Efí** | — | Fora: **zero subcontas criáveis por API** (resposta de staff oficial, 12/09/2024) |
+
+**Achado que ninguém tinha levantado, e que fecha a porta do plano B:** o Pagar.me está implantando **um documento = um recebedor**. Literal: *"o foco inicial está em realizar as adequações para **não ser possível criação de novos recebedores com mesmo documento**. Após isso, procederemos com o ajuste da base legada."* Duas consequências diretas para o Corre:
+
+1. **Cadastrar o MEI como pessoa física deixa de ser plano B convivente.** Se o CPF do titular já é recebedor PF, o mesmo CPF não abre um segundo recebedor — e migrar PF→PJ depois vira problema de base legada.
+2. **Motoboy que também é lojista não consegue ter as duas contas.** Em cidade do porte de Sobral isso não é hipótese.
+
+**Números do MEI, verificados:** teto de **R$ 81.000,00/ano**; acima de **R$ 97.200,00** o desenquadramento é **retroativo ao início do ano**. O PLP 186/26, que aumentaria o teto, **não é lei** (apresentado em 29/06/2026, sem aprovação).
+
+## 10. Pendência jurídica
 
 Validar com advogado se o desenho escolhido mantém o Corre fora do papel de instituição de pagamento sob a **Res. BCB 494/2025**. No desenho Pagar.me o Corre é **um dos três recebedores** e recebe só os 5% do frete — o valor cheio nunca fica com ele, que é exatamente o que o critério (C) exige. Nos desenhos alternativos (Efí ou iugu com o **lojista** emitindo a cobrança), o Corre passa a **orquestrar emissão com credencial de terceiro**, o que é figura diferente e precisa de parecer próprio.

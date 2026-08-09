@@ -7,7 +7,7 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
-> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 92.
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 103.
 
 ---
 
@@ -605,7 +605,11 @@ O **teto de faltas de pagamento** que bloqueia um cliente ainda não tem número
 14. **Confirmar que o retorno por cliente que não pagou é do cartão do lojista.** É o que a regra "quem causa paga" e a regra de cliente ausente já implicam, mas deixou de ser caso raro e virou o principal modo de falha do modelo
 15. **Revisão jurídica** das três cláusulas de controle, mais o risco novo da seção 15
 16. **A ponte web deve permitir abrir disputa?** Hoje ela sobrevive 24h só leitura, com o comprovante — o cliente sem app não abre disputa sozinho (seção 2). Ampliar a ponte contraria "paga e acompanha, nada mais", então é decisão do dono
-17. **Chargeback do cartão de garantia** (seção 14). É o único meio do modelo que tem contestação, e quando ela chegar o dinheiro já foi para o motoboy. Sem trava no MVP
+17. **Chargeback do cartão de garantia — DECISÃO ABERTA, duas saídas levantadas** (`GATEWAY.md`, 9.1). O cartão entrou pela porta dos fundos quando o retorno virou cobrança de cartão, e **cartão tem contestação**. O contrato do candidato é explícito: chargeback é *"de responsabilidade exclusiva do Cliente"* — **o Corre**, debitado da nossa conta, mesmo com documentos apresentados. Contestar custa mais que o valor de um retorno de R$ 10. As duas saídas — **débito na próxima corrida** (o cartão volta a ser só garantia) × **cartão como cobrança com o chargeback aceito** — estão levantadas com número. **Nenhuma foi escolhida**
+20. **Reserva da plataforma para o saldo global** (`GATEWAY.md`, 9.2). Não é risco, é arquitetura: **não existe isolamento por recebedor** em nenhum campo da API, e um recebedor negativo trava o saque de todos. **A reserva é o único remédio**, e ela se financia com um mês de comissão (≈ R$ 17.100) deixando `transfer_enabled: false` na nossa própria conta. Falta o dono decidir **o tamanho e por quanto tempo** — e isso depende da taxa de recusa, que só o piloto mede
+21. **Ticket médio de mercadoria nunca foi medido** (seção 18). É ele que dimensiona a reserva, o teto de R$ 500 e a exposição por entrega. Entra na lista de medições do piloto ao lado das entregas/dia
+22. **Cadastro de lojista MEI — nenhum fornecedor documenta caminho** (`GATEWAY.md`, 9.3). MEI é CNPJ e **não pode ter sócio** por definição legal, enquanto o candidato melhor colocado exige sócio qualificado no QSA. Em Sobral, MEI é a maioria dos lojistas. **Esta pergunta vai à mesa comercial junto com as duas de preço, e a resposta dela pesa mais que preço na escolha**
+23. **Um documento = um recebedor** (`GATEWAY.md`, 9.3). O candidato está fechando a criação de recebedores com o mesmo documento. **Motoboy que também é lojista não teria as duas contas** — e em Sobral isso não é hipótese
 
 ## 18. Números de referência
 
@@ -631,7 +635,10 @@ A linha volta à tabela como número único quando o item 2 for decidido.
 
 **Premissa mais frágil de todo o modelo:** entregas por dia por motoboy. A 8/dia o negócio é outro. Medir isso é a prioridade número 1 do piloto.
 
-**Premissa nova a medir no piloto:** **quantos clientes não pagam na porta.** É o número que decide se o cartão de garantia do lojista aguenta o modelo.
+**Premissas novas a medir no piloto, as duas do mesmo tamanho da primeira:**
+
+1. **Quantos clientes não pagam na porta.** Decide se o cartão de garantia aguenta o modelo — e, com o número abaixo, dimensiona a reserva da plataforma (`GATEWAY.md`, 9.2).
+2. **O ticket médio de mercadoria.** **Nunca foi medido, e não está nesta tabela por isso.** É ele que dimensiona a exposição por entrega, a reserva, e diz se o teto de R$ 500 é apertado ou folgado. Sem ele, toda conta de risco desta especificação roda com número suposto.
 
 ## 19. Chat interno
 

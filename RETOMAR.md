@@ -13,7 +13,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 > **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
 > **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
 >
-> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 92.
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 103.
 
 ## Onde o projeto está
 
@@ -65,7 +65,11 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 | 7 | Teto de R$ 500 de valor de mercadoria | Etapa 16 |
 | 10, 11 | Custo do saque; e **como cadastrar lojista MEI**, que não tem quadro de sócios e a doc não explica. *(A parte que travava — subconta de pessoa física — foi verificada: **todos os candidatos aceitam PF**, e o melhor colocado deixa o motoboy receber antes do KYC)* | Lançamento |
 | 15 | Revisão jurídica das cláusulas de controle + risco novo da seção 15 | Lançamento |
-| 18, 19 | Saldo global do marketplace prende o saque de todos; e para onde vai o saldo de um motoboy reprovado no KYC depois de já ter recebido | Etapa 11 e operação |
+| **17** | **Chargeback do cartão de garantia — duas saídas levantadas, nenhuma escolhida.** O contrato do candidato põe o chargeback na conta do Corre, mesmo com defesa apresentada | Decisão do dono; afeta a Etapa 8 |
+| **20** | **Reserva da plataforma para o saldo global.** Não existe isolamento por recebedor: um negativo trava o saque de todos. A reserva se financia com um mês de comissão (≈ R$ 17.100) | Arquitetura da Etapa 9; decisão de tamanho é do dono |
+| **22** | **Cadastro de lojista MEI — nenhum fornecedor documenta caminho.** MEI não pode ter sócio, e o candidato exige sócio no QSA. Em Sobral, MEI é a maioria | **Pesa mais que preço** na escolha do gateway |
+| **23** | **Um documento = um recebedor:** motoboy que também é lojista não teria as duas contas | Escolha do gateway |
+| 18, 19, 21 | Saldo global e KYC reprovado depois de receber; e o **ticket médio de mercadoria, que nunca foi medido** | Etapa 11, operação e piloto |
 
 **Limites aceitos que ainda constrangem obra** (detalhe no `HISTORICO.md`, capítulo 3): estados **2, 3, 5 e 6** sem prazo até a **Etapa 8** (mitigado por `corridasParadas`) — o **5 (Pago) é o pior**, porque o dinheiro já foi dividido, e fechar em Entregue por decurso de prazo está **proibido**; a confirmação de pagamento não prova a entrega física; o motoboy pode exibir um QR próprio; nenhum provedor real de SMS nem de pagamento.
 
