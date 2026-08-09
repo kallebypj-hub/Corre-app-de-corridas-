@@ -290,6 +290,58 @@ sabota_codigo "piso_por_eixo" src/dominio/preco.js \
   's|const aLat = BigInt(latE6 - centroLatE6) \* BigInt(metrosPorGrauLat);|const aLat = (BigInt(latE6 - centroLatE6) * BigInt(metrosPorGrauLat) / 1000000n) * 1000000n;|' \
   test/preco.test.js "logo acima do múltiplo"
 
+# ---------- Trava de configuração de taxa ----------
+
+# A TRAVA REMOVIDA DO DOMÍNIO: a parcela do Corre pode nascer negativa ou
+# zero e a corrida é criada assim mesmo. É o cenário exato que a trava
+# existe para impedir — pagar para trabalhar, em silêncio.
+sabota_codigo "trava_de_taxa_removida" src/dominio/split.js \
+  's|if (corre <= 0n) {|if (false) {|' \
+  test/split.test.js "recusaria, com código de CONFIGURAÇÃO"
+
+# A trava existe mas não é CHAMADA na criação da corrida: o pedido fora do
+# envelope passa e vira corrida.
+sabota_codigo "criacao_nao_confere_a_taxa" src/dominio/corridas.js \
+  's|const configuracao = await exigeConfiguracaoQueFecha(pool, dados);|const configuracao = await configuracaoVigente(pool);|' \
+  test/split.test.js "não vira corrida"
+
+# O CHECK do banco derrubado: passa a ser possível PUBLICAR uma configuração
+# que dá prejuízo. É a camada forte — sem ela sobra só o domínio.
+sabota_sql "publicacao_de_prejuizo_liberada" "
+  ALTER TABLE configuracoes_taxa DROP CONSTRAINT configuracao_taxa_nunca_opera_no_prejuizo;
+" test/split.test.js "acima do equilíbrio"
+
+# Taxa fixa deixa de cair na plataforma: quem paga é o lojista. Mentira
+# confortável — nenhum gateway rateia taxa fixa, e ela é o que torna custo
+# fixo eliminatório. O CHECK do banco passa a discordar do domínio.
+sabota_codigo "taxa_fixa_empurrada_para_o_lojista" src/dominio/split.js \
+  's|const taxaDoCorre = taxaFixa + taxaPercentual - taxaDoLojista - taxaDoMotoboy;|const taxaDoCorre = taxaPercentual - taxaDoLojista - taxaDoMotoboy;|' \
+  test/split.test.js "mesmo centavo em 2.000 casos"
+
+# Teto por parcela removido: com mercadoria menor que a taxa, a parcela do
+# lojista fica NEGATIVA — o caso real da venda já acertada fora.
+sabota_codigo "sem_teto_de_taxa_por_parcela" src/dominio/split.js \
+  's|const taxaDoLojista = pretendidoLojista > lojistaBruto ? lojistaBruto : pretendidoLojista;|const taxaDoLojista = pretendidoLojista;|' \
+  test/split.test.js "não deixa o lojista negativo"
+
+# Comissão arredondada para CIMA: o centavo passa a sair do motoboy e ir
+# para a plataforma, o contrário da regra declarada.
+sabota_codigo "comissao_arredondada_para_a_plataforma" src/dominio/split.js \
+  's|const correBruto = piso(frete \* comissaoBps, BPS);|const correBruto = teto(frete * comissaoBps);|' \
+  test/split.test.js "vai para o motoboy"
+
+# Taxa estimada para BAIXO: subestima custo, e o split deixa de fechar
+# contra a conta publicada.
+sabota_codigo "taxa_estimada_para_baixo" src/dominio/split.js \
+  's|const taxaPercentual = teto(total \* taxaPctBps);|const taxaPercentual = piso(total * taxaPctBps, BPS);|' \
+  test/split.test.js "para CIMA"
+
+# A aplicação ganha poder de publicar configuração de taxa: some a garantia
+# de que versão publicada é imutável e a leitura passa a ter janela (Lei 9).
+sabota_sql "app_publica_configuracao_de_taxa" "
+  GRANT INSERT, UPDATE, DELETE ON configuracoes_taxa TO corre_app;
+" test/split.test.js "não altera, não apaga e não publica"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 

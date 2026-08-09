@@ -20,6 +20,7 @@ const { randomUUID } = require('node:crypto');
 const E = require('./estados');
 const { TRANSICOES } = require('./transicoes');
 const { ErroDeDominio, CODIGOS } = require('./erros');
+const { calculaSplit, configuracaoVigente } = require('./split');
 const {
   emTransacao, agoraDoBanco, ehDisputaDePosicao, tentaReplayEvento,
 } = require('./nucleo');
@@ -133,6 +134,37 @@ async function exigeLojistaApto(pool, lojistaId) {
   return lojista;
 }
 
+// A TRAVA DE CONFIGURAÇÃO DE TAXA. Roda antes de a corrida existir, porque
+// a decisão é "recusar-se a operar", não "descobrir o prejuízo depois".
+//
+// Confere duas coisas, nesta ordem:
+//   1. o PIOR PONTO do envelope que a própria configuração declara (frete
+//      mínimo com mercadoria no teto). Não depende de nada vindo do cliente,
+//      e por isso já morde hoje, antes de a corrida carregar valores;
+//   2. os valores REAIS do pedido, quando eles vierem (Etapa 7).
+//
+// A garantia forte não é esta: é o CHECK da migration 0009, que impede
+// PUBLICAR uma configuração capaz de dar prejuízo. Isto aqui é defesa em
+// profundidade — e é o que fica vermelho no controle negativo.
+async function exigeConfiguracaoQueFecha(pool, dados) {
+  const configuracao = await configuracaoVigente(pool);
+
+  calculaSplit({
+    mercadoriaCentavos: configuracao.mercadoria_maxima_centavos,
+    freteCentavos: configuracao.frete_minimo_centavos,
+    configuracao,
+  });
+
+  if (dados.mercadoria_centavos !== undefined && dados.frete_centavos !== undefined) {
+    calculaSplit({
+      mercadoriaCentavos: dados.mercadoria_centavos,
+      freteCentavos: dados.frete_centavos,
+      configuracao,
+    });
+  }
+  return configuracao;
+}
+
 // Cria a corrida (∅ → aguardando_pagamento). Toda escrita aceita chave de
 // idempotência (Lei 5); sem chave fornecida, gera-se uma — a retentativa do
 // chamador que quer idempotência DEVE mandar a própria chave.
@@ -151,15 +183,20 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
   // Validação no domínio dá erro claro ao chamador; o trigger de banco
   // (migration 0006) é a garantia por construção, defesa em profundidade.
   const lojista = await exigeLojistaApto(pool, autorId);
+  const configuracao = await exigeConfiguracaoQueFecha(pool, dados);
 
   try {
     return await emTransacao(pool, async (conexao) => {
       const agora = await agoraDoBanco(conexao);
       const venceEm = calculaVenceEm(regra, agora);
       const { rows: [corrida] } = await conexao.query(
-        `INSERT INTO corridas (estado, seq, vence_em, lojista_id) VALUES ($1, 1, $2, $3)
-         RETURNING id, estado, seq, vence_em, lojista_id, criado_em, atualizado_em`,
-        [regra.para, venceEm, lojista.id],
+        `INSERT INTO corridas (estado, seq, vence_em, lojista_id, configuracao_taxa_id, mercadoria_centavos)
+         VALUES ($1, 1, $2, $3, $4, $5)
+         RETURNING id, estado, seq, vence_em, lojista_id, configuracao_taxa_id, mercadoria_centavos, criado_em, atualizado_em`,
+        [
+          regra.para, venceEm, lojista.id, configuracao.id,
+          dados.mercadoria_centavos === undefined ? null : dados.mercadoria_centavos,
+        ],
       );
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
@@ -343,6 +380,7 @@ async function corridasParadas(pool, { horas = 24 } = {}) {
 
 module.exports = {
   criaCorrida,
+  exigeConfiguracaoQueFecha,
   transiciona,
   reconstroiEstado,
   expiraVencidas,

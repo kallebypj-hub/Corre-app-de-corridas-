@@ -109,6 +109,8 @@ test('migrations', async (t) => {
       { column_name: 'tabela_preco_id', data_type: 'uuid', is_nullable: 'YES' },
       { column_name: 'frete_centavos', data_type: 'bigint', is_nullable: 'YES' },
       { column_name: 'zona_nome', data_type: 'text', is_nullable: 'YES' },
+      { column_name: 'configuracao_taxa_id', data_type: 'uuid', is_nullable: 'YES' },
+      { column_name: 'mercadoria_centavos', data_type: 'bigint', is_nullable: 'YES' },
     ]);
   });
 
@@ -239,7 +241,8 @@ test('migrations', async (t) => {
     `);
     assert.deepEqual(
       inserir.rows.map((r) => r.column_name),
-      ['estado', 'frete_centavos', 'lojista_id', 'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
+      ['configuracao_taxa_id', 'estado', 'frete_centavos', 'lojista_id', 'mercadoria_centavos',
+        'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
     );
 
     const atualizar = await dono.query(`

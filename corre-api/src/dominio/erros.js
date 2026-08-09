@@ -42,6 +42,22 @@ const CODIGOS = {
   // Etapa 3 — zonas e preço
   TABELA_PRECO_INEXISTENTE: 'tabela_preco_inexistente',
   COORDENADA_INVALIDA: 'coordenada_invalida',
+  // Trava de configuração de taxa. Estes dois NÃO são erro do usuário: são
+  // falha de configuração da plataforma, e a mensagem e o código dizem isso.
+  CONFIGURACAO_DE_TAXA_AUSENTE: 'configuracao_de_taxa_ausente',
+  CONFIGURACAO_DE_TAXA_INVALIDA: 'configuracao_de_taxa_invalida',
+  VALOR_INVALIDO: 'valor_invalido',
 };
 
-module.exports = { ErroDeDominio, CODIGOS };
+// Falha nossa, não do chamador. Serve para o painel e o log separarem "o
+// usuário errou" de "a plataforma está mal configurada e parou de operar".
+const CODIGOS_DE_CONFIGURACAO = new Set([
+  CODIGOS.CONFIGURACAO_DE_TAXA_AUSENTE,
+  CODIGOS.CONFIGURACAO_DE_TAXA_INVALIDA,
+]);
+
+function ehFalhaDeConfiguracao(erro) {
+  return erro instanceof ErroDeDominio && CODIGOS_DE_CONFIGURACAO.has(erro.codigo);
+}
+
+module.exports = { ErroDeDominio, CODIGOS, ehFalhaDeConfiguracao };
