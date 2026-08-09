@@ -302,6 +302,67 @@ test('migrations', async (t) => {
     ]);
   });
 
+  await t.test('EFEITO — corre_app não publica versão de preço (só SELECT em tabelas_preco/zonas)', async () => {
+    // Versão publicada é imutável; publicar é ato de dono. O app só lê.
+    const tabela = await dono.query(`
+      SELECT privilege_type FROM information_schema.role_table_grants
+      WHERE table_name = 'tabelas_preco' AND grantee = 'corre_app' ORDER BY privilege_type
+    `);
+    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), ['SELECT']);
+    const zonas = await dono.query(`
+      SELECT privilege_type FROM information_schema.role_table_grants
+      WHERE table_name = 'zonas' AND grantee = 'corre_app' ORDER BY privilege_type
+    `);
+    assert.deepEqual(zonas.rows.map((r) => r.privilege_type), ['SELECT']);
+
+    const app = await conectaApp();
+    try {
+      const erro = await esperaErro(
+        app,
+        `INSERT INTO tabelas_preco (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
+         VALUES ('pirata', false, 111320, 111100, 150)`,
+      );
+      assert.equal(erro.code, '42501');
+    } finally {
+      await app.end();
+    }
+  });
+
+  await t.test('grants de codigos_otp: corre_app com SELECT/INSERT e UPDATE só de tentativas/usado_em/morto_em', async () => {
+    const insert = await dono.query(`
+      SELECT column_name FROM information_schema.role_column_grants
+      WHERE table_name = 'codigos_otp' AND grantee = 'corre_app' AND privilege_type = 'INSERT'
+      ORDER BY column_name
+    `);
+    assert.deepEqual(
+      insert.rows.map((r) => r.column_name),
+      ['ator_id', 'ator_tipo', 'codigo_hash', 'expira_em', 'max_tentativas', 'telefone'],
+    );
+    const update = await dono.query(`
+      SELECT column_name FROM information_schema.role_column_grants
+      WHERE table_name = 'codigos_otp' AND grantee = 'corre_app' AND privilege_type = 'UPDATE'
+      ORDER BY column_name
+    `);
+    assert.deepEqual(update.rows.map((r) => r.column_name), ['morto_em', 'tentativas', 'usado_em']);
+
+    // codigo_hash e expira_em são imutáveis pelo app: UPDATE neles falha.
+    // codigos_otp.ator_id não tem FK, então o dono insere direto p/ o teste.
+    const app = await conectaApp();
+    try {
+      await dono.query(
+        `INSERT INTO codigos_otp (ator_tipo, ator_id, telefone, codigo_hash, max_tentativas, expira_em)
+         VALUES ('operador', $1, $2, 'h', 5, now() + interval '10 min')`,
+        [randomUUID(), `otp-${randomUUID()}`],
+      );
+      const erroHash = await esperaErro(app, "UPDATE codigos_otp SET codigo_hash = 'x'");
+      assert.equal(erroHash.code, '42501');
+      const erroExpira = await esperaErro(app, 'UPDATE codigos_otp SET expira_em = now()');
+      assert.equal(erroExpira.code, '42501');
+    } finally {
+      await app.end();
+    }
+  });
+
   await t.test('corre_app não escreve em schema_migrations', async () => {
     const app = await conectaApp();
     try {

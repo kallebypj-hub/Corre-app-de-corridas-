@@ -20,13 +20,11 @@ async function importar() {
   const dados = JSON.parse(readFileSync(arquivo, 'utf8'));
 
   for (const campo of [
-    'rotulo', 'centro_lat_e6', 'centro_lng_e6',
-    'metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos', 'zonas',
+    'rotulo', 'metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos', 'zonas',
   ]) {
     if (dados[campo] === undefined) throw new Error(`campo ausente no arquivo: ${campo}`);
   }
-  for (const chave of ['centro_lat_e6', 'centro_lng_e6', 'metros_por_grau_lat',
-    'metros_por_grau_lng', 'adicional_km_centavos']) {
+  for (const chave of ['metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos']) {
     if (!Number.isInteger(dados[chave])) {
       throw new Error(`${chave} precisa ser inteiro (sem ponto flutuante) — Lei 1`);
     }
@@ -45,12 +43,11 @@ async function importar() {
     await client.query('BEGIN');
     const { rows: [tabela] } = await client.query(
       `INSERT INTO tabelas_preco
-         (rotulo, exemplo, centro_lat_e6, centro_lng_e6, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+         (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
       [
         dados.rotulo,
         dados.exemplo !== false,
-        dados.centro_lat_e6, dados.centro_lng_e6,
         dados.metros_por_grau_lat, dados.metros_por_grau_lng, dados.adicional_km_centavos,
       ],
     );

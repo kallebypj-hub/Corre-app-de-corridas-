@@ -14,8 +14,9 @@ CREATE TABLE tabelas_preco (
   -- Marca claramente dado de exemplo: a tabela real de Sobral ainda não
   -- existe (regra 7). Nenhuma versão de exemplo deve ir a produção.
   exemplo       BOOLEAN NOT NULL DEFAULT true,
-  centro_lat_e6 INTEGER NOT NULL,   -- centro de referência p/ fora de zona
-  centro_lng_e6 INTEGER NOT NULL,   -- graus × 1e6, inteiro (sem float)
+  -- O centro de referência para "fora de zona" é o centro da ÚLTIMA zona
+  -- (maior ordem), derivado do retângulo dela (seção 8) — não é dado da
+  -- tabela.
   -- Fatores de conversão graus→metros, como DADO inteiro (não há cos/float
   -- no caminho do cálculo, regra 4): metros por grau de latitude (~111320)
   -- e por grau de longitude (~111320·cos(lat_centro)), pré-calculados na

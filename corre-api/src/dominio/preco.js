@@ -9,28 +9,29 @@
 // - Determinismo (regra 2): mesma consulta, mesmo centavo, sempre. Não há
 //   relógio, aleatório ou parâmetro de tempo no cálculo (regra 6).
 // - Sem API externa (regra 3): fora de zona é distância em LINHA RETA a
-//   partir do centro da tabela, com os fatores metros/grau gravados como
-//   dado inteiro na versão da tabela.
-// - Fronteira/sobreposição resolvem por MENOR ordem (regra declarada, ver
-//   resolveZona) — nunca aleatório.
+//   partir do CENTRO DA ÚLTIMA ZONA (seção 8), com os fatores metros/grau
+//   gravados como dado inteiro na versão da tabela.
+// - Arredondamento num lugar só (regra 5): a distância é medida em
+//   metros×1e6 e só é cortada UMA vez, no teto de km. Não há piso por eixo
+//   antes disso — piso antes do teto cobraria por MENOS distância do que a
+//   real.
+// - Fronteira/sobreposição resolvem por MENOR ordem (ver resolveZona).
 
 const { ErroDeDominio, CODIGOS } = require('./erros');
 
-// -------------------------------------------------------- arredondamento
-//
-// REGRA DE ARREDONDAMENTO DECLARADA (regra 5), num lugar só:
-// a distância em metros é convertida para km SEMPRE PARA CIMA (teto) — o
-// cliente nunca paga por menos distância do que a real. Todo o resto do
-// cálculo é inteiro por construção (centavos), sem qualquer arredondamento
-// adicional. Usada em todo lugar que precise de km.
-function kmTetoDeMetros(metros) {
-  const m = BigInt(metros);
-  const MIL = 1000n;
-  // teto da divisão inteira, sem float.
-  return (m + MIL - 1n) / MIL;
+// REGRA DE ARREDONDAMENTO DECLARADA (regra 5), num lugar só: metros→km
+// SEMPRE PARA CIMA (teto). É o ÚNICO arredondamento do caminho. A distância
+// trafega em metros×1e6 (escala fina) até aqui.
+const METROS_POR_KM_E6 = 1_000_000_000n; // 1000 m/km × 1e6
+
+function kmTeto(distanciaEscaladaE6) {
+  const d = BigInt(distanciaEscaladaE6);
+  return (d + METROS_POR_KM_E6 - 1n) / METROS_POR_KM_E6;
 }
 
-// Raiz quadrada inteira (piso), em BigInt — sem Math.sqrt (float).
+// Raiz quadrada inteira (piso), em BigInt — sem Math.sqrt (float). Como
+// opera sobre metros×1e6, o piso é sub-micrométrico e nunca cruza a
+// fronteira de km sozinho; o teto acima é quem decide o balde de km.
 function isqrt(valor) {
   const n = BigInt(valor);
   if (n < 0n) throw new Error('isqrt de negativo');
@@ -44,18 +45,26 @@ function isqrt(valor) {
   return x;
 }
 
-// Distância em metros (inteiro), aproximação planar local: converte cada
-// eixo para metros com o fator inteiro da tabela e aplica Pitágoras com
-// raiz inteira. Sem trigonometria, sem float.
-function distanciaMetros({
+// Distância em metros×1e6 (um único piso, em isqrt). Aproximação planar
+// local: cada eixo em escala cheia (graus×1e6 · metros/grau = metros×1e6),
+// Pitágoras e raiz inteira. Sem trigonometria, sem float.
+function distanciaEscalada({
   latE6, lngE6, centroLatE6, centroLngE6, metrosPorGrauLat, metrosPorGrauLng,
 }) {
-  const dLat = BigInt(latE6 - centroLatE6); // em graus × 1e6
-  const dLng = BigInt(lngE6 - centroLngE6);
-  const E6 = 1_000_000n;
-  const metrosLat = (dLat * BigInt(metrosPorGrauLat)) / E6;
-  const metrosLng = (dLng * BigInt(metrosPorGrauLng)) / E6;
-  return isqrt(metrosLat * metrosLat + metrosLng * metrosLng);
+  const aLat = BigInt(latE6 - centroLatE6) * BigInt(metrosPorGrauLat);
+  const aLng = BigInt(lngE6 - centroLngE6) * BigInt(metrosPorGrauLng);
+  return isqrt(aLat * aLat + aLng * aLng);
+}
+
+// Centavos cabem folgadamente em 53 bits para qualquer frete real; ainda
+// assim, nunca deixe um valor acima do inteiro seguro virar Number em
+// silêncio (perderia centavo) — sobe (nada de erro engolido).
+function paraCentavosNumero(bigints) {
+  const bi = BigInt(bigints);
+  if (bi > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error(`frete acima do inteiro seguro (${bi} centavos)`);
+  }
+  return Number(bi);
 }
 
 // ------------------------------------------------------------- resolução
@@ -67,8 +76,7 @@ function pontoNaZona(zona, latE6, lngE6) {
 
 async function carregaTabela(pool, tabelaId) {
   const { rows: [tabela] } = await pool.query(
-    `SELECT id, rotulo, exemplo, centro_lat_e6, centro_lng_e6,
-            metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos
+    `SELECT id, rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos
      FROM tabelas_preco WHERE id = $1`,
     [tabelaId],
   );
@@ -109,11 +117,27 @@ function resolveZona(zonas, latE6, lngE6) {
   return null;
 }
 
-// Calcula o frete para um ponto, numa versão específica da tabela.
-// Dentro de zona: preço da zona. Fora de todas: zona mais cara + adicional
-// por km em linha reta a partir do centro (regra 3). Tudo em centavos,
-// BigInt no caminho todo; devolve Number seguro no fim (cabe em 53 bits).
+// Centro da "última zona" (seção 8): a de maior ordem. Como zonas vem
+// ordenada por ordem asc, é a última. Ponto médio inteiro do retângulo.
+function centroDaUltimaZona(zonas) {
+  const ultima = zonas[zonas.length - 1];
+  return {
+    centroLatE6: Number((BigInt(ultima.lat_min_e6) + BigInt(ultima.lat_max_e6)) / 2n),
+    centroLngE6: Number((BigInt(ultima.lng_min_e6) + BigInt(ultima.lng_max_e6)) / 2n),
+  };
+}
+
+// Calcula o frete para um ponto, numa versão específica da tabela. Dentro
+// de zona: preço da zona. Fora de todas: zona mais cara + adicional por km
+// em linha reta a partir do centro da última zona (regra 3). Tudo em
+// centavos, BigInt no caminho todo.
 async function calculaFrete(pool, { tabelaId, latE6, lngE6 }) {
+  if (!Number.isInteger(latE6) || !Number.isInteger(lngE6)) {
+    throw new ErroDeDominio(
+      CODIGOS.COORDENADA_INVALIDA,
+      'coordenadas precisam ser graus × 1e6 inteiros',
+    );
+  }
   const alvo = tabelaId || await tabelaVigente(pool);
   const { tabela, zonas } = await carregaTabela(pool, alvo);
   if (zonas.length === 0) {
@@ -127,41 +151,42 @@ async function calculaFrete(pool, { tabelaId, latE6, lngE6 }) {
       zona_nome: zona.nome,
       dentro_de_zona: true,
       distancia_km: 0,
-      frete_centavos: Number(BigInt(zona.preco_centavos)),
+      frete_centavos: paraCentavosNumero(BigInt(zona.preco_centavos)),
     };
   }
 
-  // Fora de zona: zona mais cara desta versão + adicional por km (teto).
+  // Fora de zona: zona mais cara desta versão + adicional por km (teto),
+  // distância a partir do centro da última zona.
   const maisCaraCentavos = zonas.reduce(
     (max, z) => (BigInt(z.preco_centavos) > max ? BigInt(z.preco_centavos) : max),
     0n,
   );
-  const metros = distanciaMetros({
+  const { centroLatE6, centroLngE6 } = centroDaUltimaZona(zonas);
+  const dist = distanciaEscalada({
     latE6,
     lngE6,
-    centroLatE6: tabela.centro_lat_e6,
-    centroLngE6: tabela.centro_lng_e6,
+    centroLatE6,
+    centroLngE6,
     metrosPorGrauLat: tabela.metros_por_grau_lat,
     metrosPorGrauLng: tabela.metros_por_grau_lng,
   });
-  const km = kmTetoDeMetros(metros);
-  const adicional = km * BigInt(tabela.adicional_km_centavos);
-  const total = maisCaraCentavos + adicional;
+  const km = kmTeto(dist);
+  const total = maisCaraCentavos + km * BigInt(tabela.adicional_km_centavos);
 
   return {
     tabela_preco_id: tabela.id,
     zona_nome: null,
     dentro_de_zona: false,
     distancia_km: Number(km),
-    frete_centavos: Number(total),
+    frete_centavos: paraCentavosNumero(total),
   };
 }
 
 module.exports = {
   calculaFrete,
   resolveZona,
-  distanciaMetros,
-  kmTetoDeMetros,
+  distanciaEscalada,
+  kmTeto,
   isqrt,
   tabelaVigente,
   carregaTabela,

@@ -2,8 +2,6 @@
   "_aviso": "TABELA DE EXEMPLO — NAO E A TABELA REAL DE SOBRAL. Valores fictícios, só para desenvolvimento e teste. A tabela real (regra 7 da Etapa 3) ainda não existe; será transcrita da tabela que já opera na cidade e importada por este mesmo formato.",
   "rotulo": "exemplo-v1",
   "exemplo": true,
-  "centro_lat_e6": -3686000,
-  "centro_lng_e6": -40349000,
   "metros_por_grau_lat": 111320,
   "metros_por_grau_lng": 111100,
   "adicional_km_centavos": 150,

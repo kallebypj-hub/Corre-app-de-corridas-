@@ -4,22 +4,27 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const https = require('node:https');
+const path = require('node:path');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const { Pool } = require('pg');
 
 const { calculaFrete } = require('../src/dominio/preco');
 const { poolApp } = require('./ajuda-maquina');
 
+const executa = promisify(execFile);
+const IMPORTADOR = path.join(__dirname, '..', 'scripts', 'importar-tabela-preco.js');
+
 // Publica uma versão de tabela de preço como dono (publicar é ato de dono).
 async function publicaTabela(dono, {
-  rotulo, adicionalKmCentavos = 150, zonas,
-  centroLatE6 = -3686000, centroLngE6 = -40349000,
+  rotulo, adicionalKmCentavos = 150, zonas, exemplo = true,
   metrosPorGrauLat = 111320, metrosPorGrauLng = 111100,
 }) {
   const { rows: [tabela] } = await dono.query(
     `INSERT INTO tabelas_preco
-       (rotulo, exemplo, centro_lat_e6, centro_lng_e6, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
-     VALUES ($1, true, $2, $3, $4, $5, $6) RETURNING id`,
-    [rotulo, centroLatE6, centroLngE6, metrosPorGrauLat, metrosPorGrauLng, adicionalKmCentavos],
+       (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [rotulo, exemplo, metrosPorGrauLat, metrosPorGrauLng, adicionalKmCentavos],
   );
   for (const z of zonas) {
     await dono.query(
@@ -94,6 +99,27 @@ test('motor de preço (Etapa 3)', async (t) => {
     assert.ok(Number.isInteger(fora.frete_centavos));
   });
 
+  await t.test('fora de zona em DIAGONAL (dLng≠0), soma não-quadrado-perfeito: valor exato', async () => {
+    // Centro = ponto médio da última zona (Anel 2) = (-3686000, -40349000).
+    // dLat=86000, dLng=49000 → dist²=(86000·111320)²+(49000·111100)² não é
+    // quadrado perfeito; km teto = 12; frete = 900 + 12·150 = 2700.
+    const r = await calculaFrete(pool, { tabelaId, latE6: -3600000, lngE6: -40300000 });
+    assert.equal(r.dentro_de_zona, false);
+    assert.equal(r.distancia_km, 12);
+    assert.equal(r.frete_centavos, 2700);
+    assert.ok(Number.isInteger(r.frete_centavos));
+  });
+
+  await t.test('ponto logo acima do múltiplo de km: teto cobra o km cheio, sem piso por eixo', async () => {
+    // dLat=35933 → distância real ≈ 4000,07 m (acima de 4 km). Com o teto
+    // único a distância vira 5 km (1650). Um piso por eixo antes do teto
+    // truncaria para 4 km (1500) — cobrando a MENOS que a distância real.
+    const r = await calculaFrete(pool, { tabelaId, latE6: -3650067, lngE6: -40349000 });
+    assert.equal(r.dentro_de_zona, false);
+    assert.equal(r.distancia_km, 5);
+    assert.equal(r.frete_centavos, 1650);
+  });
+
   await t.test('adicional por km arredonda para CIMA (teto), regra declarada', async () => {
     // -3646000 está fora do anel 2 (lat_max = -3652000). Δlat do centro
     // (-3686000) = 40000 e6 → metros = 40000*111320/1e6 = 4452 (floor) →
@@ -149,6 +175,29 @@ test('motor de preço (Etapa 3)', async (t) => {
     }
   });
 
+  await t.test('tabela vigente: versão real (exemplo=false) vence a de exemplo; calculaFrete sem tabelaId usa a vigente', async () => {
+    // Publica uma versão REAL depois da de exemplo; a vigente passa a ser a real.
+    const real = await publicaTabela(dono, {
+      rotulo: `real-${process.pid}`,
+      exemplo: false,
+      zonas: ZONAS.map((z) => (z.nome === 'Centro' ? { ...z, preco: 555 } : z)),
+    });
+    const vigente = await require('../src/dominio/preco').tabelaVigente(pool);
+    assert.equal(vigente, real, 'a versão real (não-exemplo) vence a de exemplo');
+
+    const semTabela = await calculaFrete(pool, { latE6: -3686000, lngE6: -40349000 });
+    assert.equal(semTabela.tabela_preco_id, real);
+    assert.equal(semTabela.frete_centavos, 555);
+  });
+
+  await t.test('coordenada não inteira é recusada como erro de domínio, não erro cru', async () => {
+    const { ErroDeDominio } = require('../src/dominio/erros');
+    await assert.rejects(
+      () => calculaFrete(pool, { tabelaId, latE6: -3686000.5, lngE6: -40349000 }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'coordenada_invalida',
+    );
+  });
+
   await t.test('frete é sempre inteiro em centavos (Lei 1) — dentro e fora de zona', async () => {
     for (const ponto of [
       { latE6: -3686000, lngE6: -40349000 },
@@ -158,5 +207,36 @@ test('motor de preço (Etapa 3)', async (t) => {
       const r = await calculaFrete(pool, { tabelaId, ...ponto });
       assert.ok(Number.isInteger(r.frete_centavos), `frete não inteiro: ${r.frete_centavos}`);
     }
+  });
+});
+
+test('importação da tabela de exemplo (caminho real de carga)', async (t) => {
+  const pool = poolApp();
+  t.after(() => pool.end());
+
+  await t.test('o importador carrega a tabela de exemplo, marcada como exemplo', async () => {
+    // Roda o script de importação de verdade (como o dono faria), com o
+    // arquivo de exemplo padrão.
+    const { stdout } = await executa('node', [IMPORTADOR], {
+      env: { ...process.env },
+      timeout: 30_000,
+    });
+    assert.match(stdout, /tabela de preço importada/);
+    assert.match(stdout, /exemplo=true/);
+
+    const { rows: [tabela] } = await pool.query(
+      "SELECT id, exemplo FROM tabelas_preco WHERE rotulo = 'exemplo-v1' ORDER BY criado_em DESC LIMIT 1",
+    );
+    assert.ok(tabela, 'tabela de exemplo carregada');
+    assert.equal(tabela.exemplo, true, 'marcada como exemplo (regra 7)');
+
+    const { rows: [{ n }] } = await pool.query(
+      'SELECT count(*)::int AS n FROM zonas WHERE tabela_id = $1', [tabela.id],
+    );
+    assert.equal(n, 3, 'as 3 zonas de exemplo foram carregadas');
+
+    // E o motor calcula sobre a tabela recém-importada.
+    const centro = await calculaFrete(pool, { tabelaId: tabela.id, latE6: -3686000, lngE6: -40349000 });
+    assert.equal(centro.frete_centavos, 500);
   });
 });

@@ -41,6 +41,7 @@ const CODIGOS = {
   CODIGO_INCORRETO: 'codigo_incorreto',
   // Etapa 3 — zonas e preço
   TABELA_PRECO_INEXISTENTE: 'tabela_preco_inexistente',
+  COORDENADA_INVALIDA: 'coordenada_invalida',
 };
 
 module.exports = { ErroDeDominio, CODIGOS };
