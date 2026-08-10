@@ -372,6 +372,31 @@ Registro exigido pelo dono: defeito conhecido e não registrado é defeito que v
 
 *(Este capítulo era o arquivo `DEFEITOS_ABERTOS.md`, incorporado aqui na reorganização de 2026-08-09. Nenhuma entrada foi alterada.)*
 
+## 2026-08-10 — A Lei 11 está aplicada PELA METADE (PR #9, ABERTO)
+
+A auditoria adversarial da própria rodada da Lei 11 achou **29 itens**; **quatro foram confirmados por reprodução minha** e um quinto está por reproduzir. Estão aqui, e não só no relatório, porque **defeito confirmado que só existe em conversa é defeito perdido**.
+
+Reprodução dos quatro primeiros, com a credencial da aplicação, num banco nascido das migrations:
+
+```
+(1) CLIENTE fantasma cancelou a corrida alheia          -> estado 10
+(2) PAINEL fantasma cancelou com mercadoria na rua      -> estado 10
+(3) log: cancelada         autor cliente  existe? não
+    log: motoboy_aceitou   autor motoboy  existe? não
+    log: coleta_confirmada autor motoboy  existe? não
+    log: cancelada         autor painel   existe? não
+```
+
+| # | O que é | Como se reproduz | O que falta |
+|---|---|---|---|
+| **A** | **`transiciona` confere só o LOJISTA.** O `cliente` ficou de fora, e `corridas.cliente_id` **existe desde a migration `0010`** — era fechável e foi ignorado. O comentário no código diz "fecha-se aqui a metade que dá para fechar hoje": **era falso**, havia duas metades fecháveis | Criar corrida, chamar `transiciona` com `autorTipo:'cliente'` e um UUID qualquer: cancela | Conferir `corridas.cliente_id === autorId`, com sabotagem irmã da do lojista |
+| **B** | **`painel` não é conferido de forma alguma.** Um UUID inventado cancela corrida **com a mercadoria já na rua** — o estado em que só a operação pode cancelar, justamente porque há mercadoria de terceiro fora da loja. `contas.js` recusa autor forjado na troca de aparelho, que é a autorização mais barata do sistema | Levar a corrida até `com_a_mercadoria` e cancelar com `autorTipo:'painel'` e UUID inventado | Carregar o operador e passar por `exigePapelDoOperador`, como `contas.js` já faz |
+| **C** | **`corridas.js` grava autor INEXISTENTE no log append-only.** É palavra por palavra o defeito fechado em `clientes.js` na mesma rodada, deixado aberto no motor que mais grava log. A Lei 3 torna irreversível; `eventos.autor_id` é polimórfico e não tem FK, então a única defesa possível é o código | Qualquer transição de motoboy/cliente/painel; conferir com `LEFT JOIN` nas tabelas de conta | `exigeAutorReal` por tipo de ator, antes de qualquer escrita |
+| **D** | **A bateria DEPENDE do defeito para passar.** `test/ajuda-maquina.js` gera `autorId: randomUUID()` para motoboy, cliente e painel — **todos os eventos dos 232 testes têm autor inexistente**. Nenhuma regressão futura seria vista | Ler o auxiliar | Auxiliar cria atores reais. **Vem primeiro**: com o gerador inventando UUID, qualquer correção de autor quebra a bateria e a pressão vira afrouxar a correção |
+| **E** | **Por reproduzir:** `doMesmoAutor` compara `payload.autor_id === (autorId \|\| null)`, então **`null` casa com `null`** — o replay de evento do `sistema` seria entregue a qualquer chamador sem id, e a chave do varredor (`vencimento:<id>:<seq>`) é determinística e derivável | — | Reproduzir antes de corrigir; se não confirmar, **registrar como refutado** |
+
+**Ordem de correção decidida:** D (o auxiliar) → A e B → C → E. O auxiliar primeiro **de propósito**.
+
 ## 2026-08-10 — A chave determinística do varredor pode ser queimada por um chamador (Etapa 5, aberto)
 
 `expiraVencidas` usa a chave `vencimento:<corrida_id>:<seq>` para ser idempotente entre varredores concorrentes. Ela é **derivável**: quem souber o id e o seq de uma corrida pode gravar um evento com essa chave antes do varredor e, a partir daí, aquele vencimento nunca mais se aplica àquela corrida — a chave está queimada para sempre, porque é determinística.
