@@ -34,6 +34,12 @@ const AGREGADO = 'corrida';
 const CHAVES_DO_SERVIDOR = [
   'vence_em', 'criado_em',
   'prazo_minutos', 'prazo_min_minutos', 'prazo_max_minutos',
+  // A VERSÃO DA TABELA TAMBÉM É DO SERVIDOR. Ela vinha do payload e isso
+  // deixava quem pede escolher a promessa que a corrida ia carregar: uma
+  // versão antiga com minutos menores mostra ao cliente uma faixa que a
+  // operação já abandonou, e ainda troca a âncora de auditoria do preço.
+  // A versão é sempre a VIGENTE da cidade. (Achado da auditoria da Etapa 5.)
+  'tabela_preco_id',
 ];
 
 function higienizaPayload(payload) {
@@ -107,8 +113,9 @@ function calculaVenceEm(regra, agora) {
 
 // `prazo_minutos` e `pago_em` NÃO entram aqui — e não é escolha de estilo: a
 // aplicação não tem privilégio de SELECT nessas colunas (migration 0012), e
-// pedi-las derrubaria a consulta. É o que torna "o app nunca mostra o valor
-// pontual" uma impossibilidade em vez de um cuidado.
+// pedi-las derrubaria a consulta. É o que impede o pontual de vazar POR
+// DESCUIDO. Recalcular o número a partir das coordenadas do log continua
+// possível, e isso é limite declarado (seção 8).
 async function buscaCorrida(pool, corridaId) {
   const { rows } = await pool.query(
     `SELECT id, estado, seq, vence_em, lojista_id, cliente_id, cidade_id, tabela_preco_id,
@@ -125,9 +132,9 @@ async function respostaDeReplay(pool, evento) {
   return { corrida, repetida: true };
 }
 
-async function tentaReplay(pool, { chave, tipo, corridaId }) {
+async function tentaReplay(pool, { chave, tipo, corridaId, confereDados }) {
   const evento = await tentaReplayEvento(pool, {
-    chave, tipo, agregadoTipo: AGREGADO, agregadoId: corridaId,
+    chave, tipo, agregadoTipo: AGREGADO, agregadoId: corridaId, confereDados,
   });
   if (!evento) return null;
   return respostaDeReplay(pool, evento);
@@ -208,7 +215,7 @@ async function prazoDaCriacao(pool, dados) {
       `prazo exige as quatro coordenadas; faltando: ${faltando.join(', ')}`,
     );
   }
-  const tabelaId = dados.tabela_preco_id || await tabelaVigente(pool);
+  const tabelaId = await tabelaVigente(pool);
   return calculaPrazo(pool, {
     tabelaId,
     origemLatE6: dados.origem_lat_e6,
@@ -227,8 +234,20 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
 
   // Lei 5, caso canônico: a resposta se perdeu e o chamador re-envia a
   // MESMA operação depois do commit. A chave decide antes de validar.
+  //
+  // "MESMA operação" INCLUI O MESMO DONO. Sem esta conferência, a chave
+  // repetida por outro lojista devolvia a corrida DELE — e devolvia ANTES da
+  // validação de autor, então motoboy, cliente, painel e até 'sistema'
+  // recebiam o pedido alheio com um id de chave acertado. Era vazamento e
+  // desvio de autorização ao mesmo tempo, e ainda engolia em silêncio o
+  // segundo pedido, que nunca era criado. (Achado da auditoria da Etapa 5;
+  // `contas.js` e `clientes.js` já faziam a conferência — só a criação de
+  // corrida estava aberta.)
+  const doMesmoDono = (payloadDoEvento) => payloadDoEvento.lojista_id === autorId;
   if (chaveIdempotencia) {
-    const replayPrevio = await tentaReplay(pool, { chave, tipo: 'criada', corridaId: null });
+    const replayPrevio = await tentaReplay(pool, {
+      chave, tipo: 'criada', corridaId: null, confereDados: doMesmoDono,
+    });
     if (replayPrevio) return replayPrevio;
   }
 
@@ -278,6 +297,9 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
           // janela o que o privilégio de coluna tirou pela porta.
           JSON.stringify({
             ...dados,
+            // O DONO fica no payload: é o que faz a chave de idempotência
+            // valer por chamador, e não virar chave-mestra de quem acertar.
+            lojista_id: lojista.id,
             vence_em: venceEm.toISOString(),
             ...(prazo ? {
               tabela_preco_id: prazo.tabela_preco_id,
@@ -296,7 +318,9 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
     }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     if (ehDisputaDePosicao(erro)) {
-      const replay = await tentaReplay(pool, { chave, tipo: 'criada', corridaId: null });
+      const replay = await tentaReplay(pool, {
+        chave, tipo: 'criada', corridaId: null, confereDados: doMesmoDono,
+      });
       if (replay) return replay;
       // A chave conflitou mas não gravou nada: só aconteceria com evento
       // apagado, o que o banco proíbe. Erro cru — não é caso de negócio.
@@ -435,6 +459,7 @@ async function expiraVencidas(pool) {
     [[...VENCIMENTO_POR_ESTADO.keys()]],
   );
   let aplicadas = 0;
+  const problemas = [];
   for (const corrida of vencidas) {
     const tipo = VENCIMENTO_POR_ESTADO.get(corrida.estado);
     try {
@@ -449,15 +474,27 @@ async function expiraVencidas(pool) {
       if (!repetida) aplicadas += 1;
     } catch (erro) {
       // Outro varredor ou uma transição legítima venceu a corrida no meio:
-      // não é falha, o vencimento deixou de valer. Qualquer outro erro sobe.
+      // não é falha, o vencimento deixou de valer.
       if (
         erro instanceof ErroDeDominio
         && [CODIGOS.CONFLITO_DE_CONCORRENCIA, CODIGOS.TRANSICAO_ILEGAL].includes(erro.codigo)
       ) {
         continue;
       }
-      throw erro;
+      // UMA CORRIDA NÃO DERRUBA A VARREDURA DA CIDADE. Antes, qualquer outro
+      // erro subia e abortava o laço — e uma única corrida envenenada (por
+      // exemplo com a chave determinística `vencimento:<id>:<seq>` já
+      // queimada por um chamador) parava o vencimento de TODAS as outras,
+      // para sempre. O erro NÃO é engolido: é registrado, e se a lista
+      // inteira falhar o erro sobe, porque aí não é uma corrida ruim, é o
+      // varredor quebrado. (Achado da auditoria da Etapa 5; a queima da
+      // chave em si é defeito aberto — ver HISTORICO.md.)
+      problemas.push(erro);
+      console.error(`varredor: corrida ${corrida.id} não venceu (${erro.message})`);
     }
+  }
+  if (aplicadas === 0 && problemas.length > 0 && problemas.length === vencidas.length) {
+    throw problemas[0];
   }
   return aplicadas;
 }

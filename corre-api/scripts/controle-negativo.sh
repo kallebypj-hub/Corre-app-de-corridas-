@@ -539,6 +539,42 @@ sabota_codigo "renumeracao_sem_trava" migrations/0012_maquina_de_estados_e_prazo
   's|    RAISE EXCEPTION|    RAISE NOTICE|' \
   test/migrations.test.js "a trava da renumeração de estados morde"
 
+# -------- Etapa 5, correções da auditoria adversarial --------
+
+# A CHAVE DE IDEMPOTÊNCIA VOLTA A SER CHAVE-MESTRA: a criação para de conferir
+# o dono e a chave repetida devolve a corrida DE OUTRO lojista — antes mesmo
+# da validação de autor.
+sabota_codigo "chave_sem_dono_na_criacao" src/dominio/corridas.js \
+  's|  const doMesmoDono = (payloadDoEvento) => payloadDoEvento.lojista_id === autorId;|  const doMesmoDono = () => true;|' \
+  test/idempotencia.test.js "NÃO é chave-mestra"
+
+# A mensagem de reuso volta a entregar o id do agregado alheio — o mesmo
+# vazamento por HTTP que a auditoria da Etapa 4 achou entre cidades.
+sabota_codigo "mensagem_de_reuso_vaza_id" src/dominio/nucleo.js \
+  's|em ${evento.agregado_tipo})`,|em ${evento.agregado_tipo} ${evento.agregado_id})`,|' \
+  test/idempotencia.test.js "NÃO é chave-mestra"
+
+# A SEGUNDA CAMADA VOLTA A DECIDIR PELO NÚMERO DO ESTADO em vez do fato no
+# log: dois UPDATEs com a credencial da aplicação levam a corrida a Entregue.
+sabota_sql "pago_derivado_do_estado" "
+  CREATE OR REPLACE FUNCTION corridas_marca_pago() RETURNS TRIGGER
+  LANGUAGE plpgsql AS \$\$
+  BEGIN
+    IF TG_OP = 'UPDATE' AND OLD.pago_em IS NOT NULL THEN NEW.pago_em := OLD.pago_em;
+    ELSIF NEW.estado = 5 THEN NEW.pago_em := now();
+    ELSE NEW.pago_em := NULL;
+    END IF;
+    RETURN NEW;
+  END;
+  \$\$;
+" test/maquina.test.js "vem do FATO no log"
+
+# A versão da tabela volta a vir do payload: quem pede escolhe a promessa que
+# a corrida vai carregar, e a âncora de auditoria do preço.
+sabota_codigo "versao_da_tabela_do_payload" src/dominio/corridas.js \
+  "s|  'tabela_preco_id',||" \
+  test/prazo.test.js "NÃO escolhe a versão da tabela"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 

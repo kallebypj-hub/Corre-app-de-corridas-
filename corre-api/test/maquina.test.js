@@ -192,6 +192,35 @@ test('máquina de estados (Etapa 5)', async (t) => {
     assert.ok(linha.pago_em, 'entrar no estado 5 grava pago_em');
   });
 
+  await t.test('INVARIANTE: pago_em vem do FATO no log, não do número do estado', async () => {
+    // Achado da auditoria da Etapa 5, e é o coração da segunda camada. A
+    // 0012 derivava `pago_em` de `NEW.estado = 5` — e `estado` é a coluna que
+    // o chamador escreve. Duas camadas decidindo pelo mesmo número, com o
+    // mesmo dono, caem juntas: dois UPDATEs levavam qualquer corrida a
+    // Entregue com o log inteiro sendo `criada`. A 0013 deriva do evento
+    // `pagamento_confirmado`.
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    t.after(() => dono.end());
+
+    const corrida = await levaAte(pool, E.PROCURANDO_MOTOBOY);
+
+    // Com a credencial DA APLICAÇÃO, sem tocar em código: mover o estado
+    // para 5 não fabrica o fato, e por isso o 8 continua impossível.
+    await pool.query('UPDATE corridas SET estado = 5 WHERE id = $1', [corrida.id]);
+    const { rows: [semFato] } = await dono.query('SELECT pago_em FROM corridas WHERE id = $1', [corrida.id]);
+    assert.equal(semFato.pago_em, null, 'estado 5 sem evento de pagamento não pode carimbar pago_em');
+    await assert.rejects(
+      () => pool.query('UPDATE corridas SET estado = 8 WHERE id = $1', [corrida.id]),
+      /corridas_entregue_exige_pago/,
+      'dois UPDATEs não podem levar a Entregue',
+    );
+
+    // O caminho legal grava o evento primeiro (Lei 2), e é ele que carimba.
+    const legitima = await levaAte(pool, E.PAGO);
+    const { rows: [comFato] } = await dono.query('SELECT pago_em FROM corridas WHERE id = $1', [legitima.id]);
+    assert.ok(comFato.pago_em, 'com o evento no log, o fato é carimbado');
+  });
+
   await t.test('INVARIANTE: pago não se desfaz — nem por transição, nem por UPDATE do dono', async () => {
     const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
     t.after(() => dono.end());

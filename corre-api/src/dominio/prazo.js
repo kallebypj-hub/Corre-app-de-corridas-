@@ -126,8 +126,18 @@ async function calculaPrazo(pool, {
     + maior(origem.minutosDoAnel, destino.minutosDoAnel)
     + maior(origem.km, destino.km) * BigInt(tabela.adicional_km_minutos);
 
-  if (minutos > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error(`prazo acima do inteiro seguro (${minutos} minutos)`);
+  // TETO DE SANIDADE, e não o inteiro seguro do JavaScript. A guarda antiga
+  // era `MAX_SAFE_INTEGER` enquanto a coluna do banco é `INTEGER`: um ponto
+  // absurdamente distante passava pela guarda e estourava no `INSERT`, com
+  // erro cru do Postgres em vez de erro de domínio. Um ano de minutos já é
+  // muito além de qualquer entrega — daqui para cima é coordenada errada,
+  // não corrida longa. (Achado da auditoria da Etapa 5.)
+  const TETO_DE_MINUTOS = 525_600n;
+  if (minutos > TETO_DE_MINUTOS) {
+    throw new ErroDeDominio(
+      CODIGOS.COORDENADA_INVALIDA,
+      `prazo absurdo (${minutos} minutos): coordenada fora de qualquer alcance de entrega`,
+    );
   }
   const calculado = Number(minutos);
   const faixa = faixaDePrazo(calculado);

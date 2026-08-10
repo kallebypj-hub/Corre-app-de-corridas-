@@ -381,7 +381,9 @@ Como a faixa se forma, num lugar só (`prazo.js`):
 
 Tempo calculado 25 → **20 a 30**. Calculado 23 → **15 a 25**. Calculado 27 → **20 a 30**. A largura é sempre 10 minutos, e **o teto é sempre maior que o calculado** — a faixa nunca promete menos do que a conta disse.
 
-**O app nunca mostra o valor pontual, nem em tela de detalhe.** A garantia não é disciplina de quem escreve tela: o valor pontual fica gravado para auditoria e a aplicação **não tem privilégio de lê-lo** — só o dono do banco lê. O que a API devolve é a faixa. *(Princípio das dez leis: quando dá para tornar impossível, não se pede cuidado.)*
+**O app nunca mostra o valor pontual, nem em tela de detalhe.** O valor pontual fica gravado para auditoria e a aplicação **não tem privilégio de lê-lo** — só o dono do banco lê —, e o log carrega só a faixa. O que a API devolve é a faixa.
+
+> **O alcance dessa trava, dito com precisão** (a auditoria da Etapa 5 derrubou a versão exagerada). Ela torna impossível **vazar por descuido**: `SELECT *` em `corridas` falha, coluna nova nasce invisível, e nenhuma resposta carrega o pontual sem alguém ter ido buscá-lo de propósito. Ela **não** torna o número irrecuperável: as coordenadas e a versão da tabela estão no log, e quem chamar o motor de prazo de novo chega ao mesmo minuto. **É limite declarado, não trava furada** — guardar as coordenadas é o que torna o prazo auditável, e trocar auditoria por sigilo de um número que é só estimativa seria mau negócio.
 
 ## 9. Dinheiro
 

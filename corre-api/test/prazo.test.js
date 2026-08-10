@@ -12,6 +12,7 @@ const { criaCorrida } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
 const { poolApp, lojistaApto, emParalelo } = require('./ajuda-maquina');
 const { publicaTabela, ZONAS, PONTOS } = require('./ajuda-preco');
+const { tabelaVigente } = require('../src/dominio/preco');
 
 // Os números da tabela de exemplo usados nas contas abaixo:
 //   tempo base de coleta        10 min
@@ -20,6 +21,32 @@ const { publicaTabela, ZONAS, PONTOS } = require('./ajuda-preco');
 const BASE = 10;
 const POR_KM = 3;
 const MIN = { Centro: 8, 'Anel 1': 14, 'Anel 2': 22 };
+
+// O prazo esperado de um par DENTRO de zona, calculado à mão a partir da
+// versão VIGENTE lida do banco. É reimplementação deliberada: usar prazo.js
+// para prever o que prazo.js faz seria tautologia, e amarrar a expectativa a
+// uma versão publicada por outro arquivo de teste seria verde por acaso.
+async function esperadoDentroDeZona(pool, dono, a, b) {
+  const id = await tabelaVigente(pool);
+  const { rows: [tabela] } = await dono.query(
+    'SELECT tempo_base_coleta_minutos AS base FROM tabelas_preco WHERE id = $1', [id],
+  );
+  const { rows: zonas } = await dono.query(
+    `SELECT nome, minutos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6
+     FROM zonas WHERE tabela_id = $1 ORDER BY ordem`, [id],
+  );
+  const anelDe = (ponto) => zonas.find((z) => ponto.latE6 >= z.lat_min_e6 && ponto.latE6 <= z.lat_max_e6
+    && ponto.lngE6 >= z.lng_min_e6 && ponto.lngE6 <= z.lng_max_e6);
+  const za = anelDe(a);
+  const zb = anelDe(b);
+  assert.ok(za && zb, 'este auxiliar só vale para pontos DENTRO de zona');
+  return {
+    tabelaId: id,
+    minutos: tabela.base + Math.max(za.minutos, zb.minutos),
+    zonaA: za.nome,
+    zonaB: zb.nome,
+  };
+}
 
 test('motor de prazo (Etapa 5)', async (t) => {
   const pool = poolApp();
@@ -30,6 +57,7 @@ test('motor de prazo (Etapa 5)', async (t) => {
   });
 
   const tabelaId = await publicaTabela(dono, { rotulo: `prazo-${process.pid}`, zonas: ZONAS });
+  const lojistaDoArquivo = await lojistaApto(pool);
 
   const prazoDe = (origem, destino) => calculaPrazo(pool, {
     tabelaId,
@@ -180,38 +208,59 @@ test('motor de prazo (Etapa 5)', async (t) => {
   });
 
   // -------------------------------------------------- gravado na criação
-  await t.test('a corrida nasce com a faixa e a versão da tabela gravadas', async () => {
+  await t.test('a corrida nasce com a faixa e a versão VIGENTE gravadas', async () => {
+    const alvo = await esperadoDentroDeZona(pool, dono, PONTOS.centro, PONTOS.anel2);
     const { corrida } = await criaCorrida(pool, {
       autorTipo: 'lojista',
       autorId: await lojistaApto(pool),
       payload: {
-        tabela_preco_id: tabelaId,
         origem_lat_e6: PONTOS.centro.latE6,
         origem_lng_e6: PONTOS.centro.lngE6,
         destino_lat_e6: PONTOS.anel2.latE6,
         destino_lng_e6: PONTOS.anel2.lngE6,
       },
     });
-    const esperado = faixaDePrazo(BASE + MIN['Anel 2']);
+    const esperado = faixaDePrazo(alvo.minutos);
     assert.equal(corrida.prazo_min_minutos, esperado.min);
     assert.equal(corrida.prazo_max_minutos, esperado.max);
-    assert.equal(corrida.tabela_preco_id, tabelaId, 'prazo sem versão não se audita');
-    assert.equal(corrida.origem_zona_nome, 'Centro');
-    assert.equal(corrida.destino_zona_nome, 'Anel 2');
+    assert.equal(corrida.tabela_preco_id, alvo.tabelaId, 'a versão gravada é a vigente, não a escolhida');
+    assert.equal(corrida.origem_zona_nome, alvo.zonaA);
+    assert.equal(corrida.destino_zona_nome, alvo.zonaB);
 
     // E o valor PONTUAL fica gravado — só que só o dono o enxerga.
     const { rows: [linha] } = await dono.query(
       'SELECT prazo_minutos FROM corridas WHERE id = $1', [corrida.id],
     );
-    assert.equal(linha.prazo_minutos, BASE + MIN['Anel 2']);
+    assert.equal(linha.prazo_minutos, alvo.minutos);
+  });
+
+  await t.test('quem pede NÃO escolhe a versão da tabela — ela é sempre a vigente', async () => {
+    // Uma versão antiga com minutos menores mostraria ao cliente uma faixa
+    // que a operação já abandonou, e trocaria a âncora de auditoria do preço.
+    // (Achado da auditoria da Etapa 5.)
+    await assert.rejects(
+      () => criaCorrida(pool, {
+        autorTipo: 'lojista',
+        autorId: lojistaDoArquivo,
+        payload: {
+          tabela_preco_id: tabelaId,
+          origem_lat_e6: PONTOS.centro.latE6,
+          origem_lng_e6: PONTOS.centro.lngE6,
+          destino_lat_e6: PONTOS.centro.latE6,
+          destino_lng_e6: PONTOS.centro.lngE6,
+        },
+      }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'tempo_do_cliente',
+      'tabela_preco_id vindo do payload tem que ser recusado',
+    );
   });
 
   await t.test('a aplicação NÃO CONSEGUE LER o valor pontual — nem na corrida, nem no log', async () => {
+    const alvo = await esperadoDentroDeZona(pool, dono, PONTOS.centro, PONTOS.anel1);
     const { corrida } = await criaCorrida(pool, {
       autorTipo: 'lojista',
       autorId: await lojistaApto(pool),
       payload: {
-        tabela_preco_id: tabelaId,
         origem_lat_e6: PONTOS.centro.latE6,
         origem_lng_e6: PONTOS.centro.lngE6,
         destino_lat_e6: PONTOS.anel1.latE6,
@@ -237,13 +286,13 @@ test('motor de prazo (Etapa 5)', async (t) => {
       [corrida.id],
     );
     assert.equal(evento.payload.prazo_minutos, undefined, 'o pontual não pode vazar pelo payload do evento');
-    assert.equal(evento.payload.prazo_min_minutos, faixaDePrazo(BASE + MIN['Anel 1']).min);
-    assert.equal(evento.payload.prazo_max_minutos, faixaDePrazo(BASE + MIN['Anel 1']).max);
+    assert.equal(evento.payload.prazo_min_minutos, faixaDePrazo(alvo.minutos).min);
+    assert.equal(evento.payload.prazo_max_minutos, faixaDePrazo(alvo.minutos).max);
   });
 
   await t.test('prazo digitado pelo cliente é recusado — prazo é derivado, não informado', async () => {
     const lojista = await lojistaApto(pool);
-    for (const chave of ['prazo_minutos', 'prazo_min_minutos', 'prazo_max_minutos']) {
+    for (const chave of ['prazo_minutos', 'prazo_min_minutos', 'prazo_max_minutos', 'tabela_preco_id']) {
       await assert.rejects(
         () => criaCorrida(pool, {
           autorTipo: 'lojista',
@@ -263,7 +312,6 @@ test('motor de prazo (Etapa 5)', async (t) => {
         autorTipo: 'lojista',
         autorId: lojista,
         payload: {
-          tabela_preco_id: tabelaId,
           origem_lat_e6: PONTOS.centro.latE6,
           origem_lng_e6: PONTOS.centro.lngE6,
         },
@@ -306,12 +354,12 @@ test('motor de prazo (Etapa 5)', async (t) => {
   // ------------------------------------------------------------- Lei 9
   await t.test('Lei 9: 200 criações concorrentes com prazo, nenhuma faixa incoerente', async () => {
     const lojista = await lojistaApto(pool);
+    const alvoConcorrente = await esperadoDentroDeZona(pool, dono, PONTOS.anel1, PONTOS.anel2);
     const criadas = await emParalelo(Array.from({ length: 200 }, (_, i) => i), 20, async () => {
       const { corrida } = await criaCorrida(pool, {
         autorTipo: 'lojista',
         autorId: lojista,
         payload: {
-          tabela_preco_id: tabelaId,
           origem_lat_e6: PONTOS.anel1.latE6,
           origem_lng_e6: PONTOS.anel1.lngE6,
           destino_lat_e6: PONTOS.anel2.latE6,
@@ -320,7 +368,7 @@ test('motor de prazo (Etapa 5)', async (t) => {
       });
       return corrida;
     });
-    const esperado = faixaDePrazo(BASE + MIN['Anel 2']);
+    const esperado = faixaDePrazo(alvoConcorrente.minutos);
     for (const corrida of criadas) {
       assert.equal(corrida.prazo_min_minutos, esperado.min);
       assert.equal(corrida.prazo_max_minutos, esperado.max);
@@ -332,13 +380,13 @@ test('motor de prazo (Etapa 5)', async (t) => {
   await t.test('Lei 9: a mesma chave de idempotência sob concorrência produz UMA corrida e UM prazo', async () => {
     const lojista = await lojistaApto(pool);
     const chave = `prazo-idem-${randomUUID()}`;
+    const alvoIdem = await esperadoDentroDeZona(pool, dono, PONTOS.centro, PONTOS.anel2);
     const resultados = await emParalelo(Array.from({ length: 20 }, (_, i) => i), 20, async () => {
       const { corrida } = await criaCorrida(pool, {
         autorTipo: 'lojista',
         autorId: lojista,
         chaveIdempotencia: chave,
         payload: {
-          tabela_preco_id: tabelaId,
           origem_lat_e6: PONTOS.centro.latE6,
           origem_lng_e6: PONTOS.centro.lngE6,
           destino_lat_e6: PONTOS.anel2.latE6,
@@ -348,7 +396,7 @@ test('motor de prazo (Etapa 5)', async (t) => {
       return corrida;
     });
     assert.equal(new Set(resultados.map((c) => c.id)).size, 1, 'a chave tem que arbitrar uma corrida só');
-    const esperado = faixaDePrazo(BASE + MIN['Anel 2']);
+    const esperado = faixaDePrazo(alvoIdem.minutos);
     for (const corrida of resultados) {
       assert.equal(corrida.prazo_min_minutos, esperado.min);
       assert.equal(corrida.prazo_max_minutos, esperado.max);

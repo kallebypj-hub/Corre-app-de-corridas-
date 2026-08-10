@@ -61,13 +61,15 @@ CREATE INDEX corridas_vencidas ON corridas (vence_em)
 -- camada, no banco, construída como a `cidade_id` de `eventos` (0011): por
 -- DERIVAÇÃO, não por confiança.
 --
--- `pago_em` é escrito por TRIGGER quando o estado vira 5, e a aplicação NÃO
--- TEM GRANT para escrevê-lo. Valor que o chamador não fornece é valor que o
--- chamador não forja. O CHECK então exige o fato: estado 8 sem `pago_em` é
--- linha impossível, mesmo que a tabela de arestas seja sabotada.
+-- `pago_em` é escrito por TRIGGER e a aplicação NÃO TEM GRANT para
+-- escrevê-lo. O CHECK então exige o fato: estado 8 sem `pago_em` é linha
+-- impossível.
 --
--- (Lei 10: com duas camadas, sabotar uma deixa a regra de pé. O controle
--- negativo desta invariante derruba AS DUAS.)
+-- ATENÇÃO — ESTA MIGRATION ERROU A DERIVAÇÃO, e a 0013 conserta. Aqui o
+-- gatilho derivava `pago_em` de `NEW.estado = 5`, e `estado` é exatamente a
+-- coluna que o chamador escreve: as duas camadas decidiam pelo mesmo número,
+-- controlado pelo mesmo escritor, e caíam juntas. A 0013 passa a derivar do
+-- FATO — o evento `pagamento_confirmado` no log. Leia as duas juntas.
 ALTER TABLE corridas ADD COLUMN pago_em TIMESTAMPTZ;
 
 CREATE FUNCTION corridas_marca_pago() RETURNS TRIGGER
@@ -144,9 +146,15 @@ ALTER TABLE zonas
 --
 -- O dono decidiu que o app NUNCA mostra o valor pontual, nem em tela de
 -- detalhe — número exato vira promessa e erro de três minutos vira
--- reclamação. Isso podia ser disciplina de quem escreve tela; vira
--- IMPOSSIBILIDADE mais abaixo, quando `corre_app` perde o privilégio de LER
--- esta coluna. O que não se pode ler não vaza para tela nenhuma.
+-- reclamação. Por isso `corre_app` perde o privilégio de LER esta coluna
+-- mais abaixo.
+--
+-- O QUE ISSO GARANTE, sem exagero (a auditoria da Etapa 5 derrubou a versão
+-- exagerada): garante que o pontual não vaza POR DESCUIDO — `SELECT *`
+-- falha e coluna nova nasce invisível. NÃO garante que o número seja
+-- irrecuperável: as coordenadas e a versão da tabela estão no log, e quem
+-- chamar o motor de prazo de novo chega ao mesmo minuto. É limite declarado
+-- (seção 8): guardar as coordenadas é o que torna o prazo auditável.
 ALTER TABLE corridas
   ADD COLUMN prazo_minutos      INTEGER CHECK (prazo_minutos IS NULL OR prazo_minutos >= 0),
   ADD COLUMN prazo_min_minutos  INTEGER CHECK (prazo_min_minutos IS NULL OR prazo_min_minutos >= 0),
