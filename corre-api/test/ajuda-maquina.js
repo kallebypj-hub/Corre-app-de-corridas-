@@ -5,12 +5,31 @@ const { Pool } = require('pg');
 
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { cadastraLojista, registraCartao } = require('../src/dominio/contas');
+const { emTransacao } = require('../src/dominio/nucleo');
 
-function poolApp(max = 10) {
+// A cidade da bateria: Sobral, a cidade 1, com id fixo na migration 0010.
+// Depois da Etapa 4 NENHUMA tabela por cidade se lê sem cidade declarada —
+// um pool cru continua funcionando e continua CEGO, que é o certo.
+const SOBRAL = '00000001-2312-4908-8000-000000000001';
+
+function poolCru(max = 10) {
   if (!process.env.DATABASE_URL_APP) {
     throw new Error('DATABASE_URL_APP não definido — rode via scripts/bateria.sh');
   }
   return new Pool({ connectionString: process.env.DATABASE_URL_APP, max });
+}
+
+// Pool já amarrado a Sobral — é o que a maioria dos testes quer. Quem
+// precisa do pool sem cidade (para provar que ele cega) usa `poolCru`.
+function poolApp(max = 10, cidadeId = SOBRAL) {
+  const cru = poolCru(max);
+  return {
+    cidadeId,
+    cru,
+    query: (texto, params) => emTransacao(cru, (c) => c.query(texto, params), { cidadeId }),
+    connect: () => cru.connect(),
+    end: () => cru.end(),
+  };
 }
 
 // Autor "natural" de cada tipo, para montar cenários.
@@ -110,6 +129,8 @@ async function emParalelo(itens, limite, trabalho) {
 
 module.exports = {
   poolApp,
+  poolCru,
+  SOBRAL,
   AUTOR_PADRAO,
   CAMINHOS,
   autorIdPara,

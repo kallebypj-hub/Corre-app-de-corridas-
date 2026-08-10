@@ -43,18 +43,20 @@ async function importar() {
     await client.query('BEGIN');
     const { rows: [tabela] } = await client.query(
       `INSERT INTO tabelas_preco
-         (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+         (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos, cidade_id)
+       VALUES ($1, $2, $3, $4, $5,
+               COALESCE($6, (SELECT id FROM cidades WHERE ibge = '2312908'))) RETURNING id`,
       [
         dados.rotulo,
         dados.exemplo !== false,
         dados.metros_por_grau_lat, dados.metros_por_grau_lng, dados.adicional_km_centavos,
+        dados.cidade_id || null,
       ],
     );
     for (const zona of dados.zonas) {
       await client.query(
-        `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6, cidade_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT cidade_id FROM tabelas_preco WHERE id = $1))`,
         [tabela.id, zona.nome, zona.ordem, zona.preco_centavos,
           zona.lat_min_e6, zona.lat_max_e6, zona.lng_min_e6, zona.lng_max_e6],
       );

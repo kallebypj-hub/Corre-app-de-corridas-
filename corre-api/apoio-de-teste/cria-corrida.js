@@ -7,15 +7,30 @@
 
 const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
+const { emTransacao } = require('../src/dominio/nucleo');
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { cadastraLojista, registraCartao } = require('../src/dominio/contas');
+
+// Etapa 4: processo de apoio também opera dentro de uma cidade. Sobral tem id
+// fixo (migration 0010), então não é preciso consultar para descobri-la — e
+// consultar para descobrir a cidade seria, ela mesma, consulta sem cidade.
+const SOBRAL = '00000001-2312-4908-8000-000000000001';
+function daCidade(cru, cidadeId = process.env.CORRE_CIDADE_ID || SOBRAL) {
+  return {
+    cidadeId,
+    query: (t, p) => emTransacao(cru, (c) => c.query(t, p), { cidadeId }),
+    connect: () => cru.connect(),
+    end: () => cru.end(),
+  };
+}
+
 
 async function main() {
   const alvo = process.argv[2];
   if (!['aguardando_pagamento', 'procurando_motoboy'].includes(alvo)) {
     throw new Error(`alvo inválido: ${alvo}`);
   }
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL_APP });
+  const pool = daCidade(new Pool({ connectionString: process.env.DATABASE_URL_APP }));
   try {
     // Corrida exige lojista real com cartão (Etapa 2).
     const { conta: lojista } = await cadastraLojista(pool, {

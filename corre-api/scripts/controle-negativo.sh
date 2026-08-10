@@ -141,8 +141,9 @@ sabota_sql "sem_unique_de_sequencia" "
 " test/concorrencia.test.js "exatamente uma vencedora"
 
 # UNIQUE da chave de idempotência removido: retentativa duplica evento.
+# (Desde a 0011 a idempotência é ÍNDICE único por cidade, não constraint.)
 sabota_sql "sem_unique_de_idempotencia" "
-  ALTER TABLE eventos DROP CONSTRAINT eventos_chave_idempotencia_unica;
+  DROP INDEX eventos_chave_idempotencia_unica;
 " test/idempotencia.test.js "um único evento"
 
 # Guarda de tempo removida: o payload do cliente passa a poder trazer
@@ -253,7 +254,13 @@ sabota_codigo "otp_codigo_em_claro" src/dominio/otp.js \
 # Versão de preço publicada é imutável / só-leitura para o app: se corre_app
 # ganhar INSERT em tabelas_preco, o teste de imutabilidade fica vermelho.
 sabota_sql "app_publica_preco" "
-  GRANT INSERT (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos) ON tabelas_preco TO corre_app;
+  GRANT INSERT ON tabelas_preco, zonas TO corre_app;
+  -- Depois da Etapa 4 a proteção tem DUAS camadas: privilégio E política de
+  -- cidade. Sabotar só o privilégio deixaria a regra de pé pela política, e
+  -- o teste ficaria verde — falso positivo que este script pega. Para provar
+  -- a regra é preciso derrubar as duas.
+  ALTER TABLE tabelas_preco DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
 " test/migrations.test.js "não publica versão de preço"
 
 # Centavos trocados por ponto flutuante (reais): o frete deixa de ser inteiro
@@ -289,6 +296,143 @@ sabota_codigo "arredondamento_removido" src/dominio/preco.js \
 sabota_codigo "piso_por_eixo" src/dominio/preco.js \
   's|const aLat = BigInt(latE6 - centroLatE6) \* BigInt(metrosPorGrauLat);|const aLat = (BigInt(latE6 - centroLatE6) * BigInt(metrosPorGrauLat) / 1000000n) * 1000000n;|' \
   test/preco.test.js "logo acima do múltiplo"
+
+# ---------- Trava de configuração de taxa ----------
+
+# A TRAVA REMOVIDA DO DOMÍNIO: a parcela do Corre pode nascer negativa ou
+# zero e a corrida é criada assim mesmo. É o cenário exato que a trava
+# existe para impedir — pagar para trabalhar, em silêncio.
+sabota_codigo "trava_de_taxa_removida" src/dominio/split.js \
+  's|if (corre <= 0n) {|if (false) {|' \
+  test/split.test.js "recusaria, com código de CONFIGURAÇÃO"
+
+# A trava existe mas não é CHAMADA na criação da corrida: o pedido fora do
+# envelope passa e vira corrida.
+sabota_codigo "criacao_nao_confere_a_taxa" src/dominio/corridas.js \
+  's|const configuracao = await exigeConfiguracaoQueFecha(pool, dados);|const configuracao = await configuracaoVigente(pool);|' \
+  test/split.test.js "não vira corrida"
+
+# O CHECK do banco derrubado: passa a ser possível PUBLICAR uma configuração
+# que dá prejuízo. É a camada forte — sem ela sobra só o domínio.
+sabota_sql "publicacao_de_prejuizo_liberada" "
+  ALTER TABLE configuracoes_taxa DROP CONSTRAINT configuracao_taxa_nunca_opera_no_prejuizo;
+" test/split.test.js "acima do equilíbrio"
+
+# Taxa fixa deixa de cair na plataforma: quem paga é o lojista. Mentira
+# confortável — nenhum gateway rateia taxa fixa, e ela é o que torna custo
+# fixo eliminatório. O CHECK do banco passa a discordar do domínio.
+sabota_codigo "taxa_fixa_empurrada_para_o_lojista" src/dominio/split.js \
+  's|const taxaDoCorre = taxaFixa + taxaPercentual - taxaDoLojista - taxaDoMotoboy;|const taxaDoCorre = taxaPercentual - taxaDoLojista - taxaDoMotoboy;|' \
+  test/split.test.js "mesmo centavo em 2.000 casos"
+
+# Teto por parcela removido: com mercadoria menor que a taxa, a parcela do
+# lojista fica NEGATIVA — o caso real da venda já acertada fora.
+sabota_codigo "sem_teto_de_taxa_por_parcela" src/dominio/split.js \
+  's|const taxaDoLojista = pretendidoLojista > lojistaBruto ? lojistaBruto : pretendidoLojista;|const taxaDoLojista = pretendidoLojista;|' \
+  test/split.test.js "não deixa o lojista negativo"
+
+# Comissão arredondada para CIMA: o centavo passa a sair do motoboy e ir
+# para a plataforma, o contrário da regra declarada.
+sabota_codigo "comissao_arredondada_para_a_plataforma" src/dominio/split.js \
+  's|const correBruto = piso(frete \* comissaoBps, BPS);|const correBruto = teto(frete * comissaoBps);|' \
+  test/split.test.js "vai para o motoboy"
+
+# Taxa estimada para BAIXO: subestima custo, e o split deixa de fechar
+# contra a conta publicada.
+sabota_codigo "taxa_estimada_para_baixo" src/dominio/split.js \
+  's|const taxaPercentual = teto(total \* taxaPctBps);|const taxaPercentual = piso(total * taxaPctBps, BPS);|' \
+  test/split.test.js "para CIMA"
+
+# A aplicação ganha poder de publicar configuração de taxa: some a garantia
+# de que versão publicada é imutável e a leitura passa a ter janela (Lei 9).
+sabota_sql "app_publica_configuracao_de_taxa" "
+  GRANT INSERT, UPDATE, DELETE ON configuracoes_taxa TO corre_app;
+" test/split.test.js "não altera, não apaga e não publica"
+
+# Falha de configuração volta a ser tratada como erro do usuário: 4xx, sem
+# registro nosso, e com a mensagem interna (centavos, rótulo) vazando.
+sabota_codigo "falha_de_configuracao_vira_erro_do_usuario" src/http/api.js \
+  's|if (ehFalhaDeConfiguracao(erro)) {|if (false) {|' \
+  test/split.test.js "responde 503"
+
+# ---------- Etapa 4: multi-cidade (RLS) e cliente ----------
+
+# A ARMADILHA DO POOL, que é o motivo de esta etapa existir: a cidade
+# declarada por CONEXÃO em vez de por TRANSAÇÃO. `false` no terceiro
+# argumento de set_config torna a variável de SESSÃO — ela sobrevive ao
+# COMMIT e vaza para a próxima requisição que pegar a mesma conexão.
+sabota_codigo "cidade_presa_a_conexao" src/dominio/nucleo.js \
+  "s|await conexao.query('SELECT set_config(\$1, \$2, true)', \['corre.cidade_id', cidadeId\]);|await conexao.query('SELECT set_config(\$1, \$2, false)', ['corre.cidade_id', cidadeId]);|" \
+  test/cidades.test.js "não a carrega"
+
+# RLS desligado nas tabelas por cidade: a política existe, mas não é
+# aplicada. É o falso verde clássico — tudo funciona, e tudo vaza.
+sabota_sql "rls_desligado" "
+  ALTER TABLE lojistas DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE motoboys DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE corridas DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE tabelas_preco DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE configuracoes_taxa DISABLE ROW LEVEL SECURITY;
+" test/cidades.test.js "CEGA"
+
+# A política deixa de FECHAR POR PADRÃO: sem cidade declarada passa a ver
+# tudo, em vez de nada. Esquecer a cidade voltaria a vazar.
+sabota_sql "politica_abre_por_padrao" "
+  DROP POLICY lojistas_da_cidade ON lojistas;
+  CREATE POLICY lojistas_da_cidade ON lojistas FOR ALL TO corre_app
+    USING (corre_cidade_atual() IS NULL OR cidade_id = corre_cidade_atual())
+    WITH CHECK (corre_cidade_atual() IS NULL OR cidade_id = corre_cidade_atual());
+" test/cidades.test.js "CEGA"
+
+# WITH CHECK removido: lê certo, mas GRAVA em qualquer cidade. É a metade
+# da política que costuma ser esquecida, e é a que dá dente.
+sabota_sql "politica_sem_with_check" "
+  DROP POLICY lojistas_da_cidade ON lojistas;
+  CREATE POLICY lojistas_da_cidade ON lojistas FOR ALL TO corre_app
+    USING (cidade_id = corre_cidade_atual()) WITH CHECK (true);
+" test/cidades.test.js "não lê nem escreve na cidade B"
+
+# A chave composta que casa a cidade entre corrida e lojista, removida: o
+# banco deixa de impedir a corrida de misturar cidades.
+sabota_sql "corrida_pode_misturar_cidades" "
+  ALTER TABLE corridas DROP CONSTRAINT corridas_lojista_da_mesma_cidade;
+" test/cidades.test.js "impossível por construção"
+
+# Telefone de cliente deixa de ser único: dois lojistas digitando o mesmo
+# número passam a criar duas contas — e o cliente vira duas pessoas.
+sabota_sql "telefone_de_cliente_repetido" "
+  ALTER TABLE clientes DROP CONSTRAINT clientes_telefone_unico;
+" test/cidades.test.js "UMA conta"
+
+# Reivindicação deixa de ser condicional: o UPDATE passa a valer sempre, e
+# duas confirmações simultâneas geram dois eventos (lost update clássico).
+sabota_codigo "reivindicacao_nao_condicional" src/dominio/clientes.js \
+  's|WHERE id = \$1 AND reivindicado_em IS NULL|WHERE id = $1|' \
+  test/cidades.test.js "UM evento só"
+
+# O LOG fora do isolamento: foi o furo que a auditoria adversarial achou na
+# primeira versão da Etapa 4. `eventos` é a fonte da verdade da Lei 2, e sem
+# política nela o recorte por cidade era enfeite.
+sabota_sql "log_fora_do_isolamento" "
+  ALTER TABLE eventos DISABLE ROW LEVEL SECURITY;
+" test/cidades.test.js "CEGA"
+
+# A cidade do evento deixa de ser DERIVADA do agregado: o gatilho some e a
+# coluna fica no que o chamador (não) mandou. Sem derivação, escrever no log
+# de outra cidade volta a passar pela política.
+sabota_sql "cidade_do_evento_nao_derivada" "
+  DROP TRIGGER eventos_deriva_cidade ON eventos;
+" test/cidades.test.js "não se lê nem se escreve"
+
+# A chave de idempotência volta a ser global entre cidades: repetir numa
+# cidade uma chave usada noutra volta a colidir — e a mensagem do conflito
+# entregava o id do agregado alheio.
+sabota_sql "chave_de_idempotencia_global" "
+  DROP INDEX eventos_chave_idempotencia_unica;
+  CREATE UNIQUE INDEX eventos_chave_idempotencia_unica
+    ON eventos (chave_idempotencia) WHERE chave_idempotencia IS NOT NULL;
+" test/cidades.test.js "por cidade e não vaza"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero

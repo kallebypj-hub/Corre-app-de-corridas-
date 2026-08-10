@@ -10,7 +10,7 @@ const { smsFake } = require('../src/http/sms');
 const { hashDoCodigo, solicitaCodigo, confirmaCodigo } = require('../src/dominio/otp');
 const { ErroDeDominio } = require('../src/dominio/erros');
 const contas = require('../src/dominio/contas');
-const { poolApp } = require('./ajuda-maquina');
+const { poolApp, SOBRAL } = require('./ajuda-maquina');
 const { donoDeTeste } = require('./ajuda-contas');
 
 // Extrai o código do texto do SMS fake (só existe em teste).
@@ -34,6 +34,12 @@ test('re-login por código OTP (SMS)', async (t) => {
   });
 
   async function chama(caminho, corpo, headers = {}) {
+    // Antes de existir sessão a cidade vem do corpo (a API exige). Cliente
+    // não tem cidade e não declara nenhuma.
+    if (corpo && typeof corpo === 'object' && corpo.cidade_id === undefined
+        && corpo.ator_tipo !== 'cliente') {
+      corpo = { ...corpo, cidade_id: SOBRAL };
+    }
     const resposta = await fetch(base + caminho, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },

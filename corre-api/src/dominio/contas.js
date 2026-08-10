@@ -114,7 +114,7 @@ async function acrescentaEventoDeConta(pool, {
     );
     const conta = await atualizaProjecao(conexao, seqAtual + 1);
     return { conta, repetida: false };
-  });
+  }, { cidadeId: pool.cidadeId });
 }
 
 // ---------------------------------------------------------------- motoboy
@@ -160,10 +160,10 @@ async function cadastraMotoboy(pool, {
       // primeiro_saque não vai no INSERT: nasce 'travado' pelo DEFAULT do
       // banco (migration 0006) — corre_app nem tem INSERT nessa coluna.
       const { rows: [motoboy] } = await conexao.query(
-        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao)
-         VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, 'ativa')
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao, cidade_id)
+         VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, 'ativa', $9)
          RETURNING *`,
-        [nomeLimpo, telefoneLimpo, cpfLimpo, chavePixLimpa, cnh, crlv, selfie, aparelho],
+        [nomeLimpo, telefoneLimpo, cpfLimpo, chavePixLimpa, cnh, crlv, selfie, aparelho, pool.cidadeId],
       );
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
@@ -173,7 +173,7 @@ async function cadastraMotoboy(pool, {
         }), chave],
       );
       return { conta: motoboy, repetida: false };
-    });
+    }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     if (erro && erro.code === '23505' && erro.constraint === 'motoboys_cpf_unico') {
       // A retentativa da MESMA operação pode esbarrar no CPF único antes
@@ -331,9 +331,9 @@ async function cadastraLojista(pool, { nome, telefone, chaveIdempotencia }) {
   try {
     return await emTransacao(pool, async (conexao) => {
       const { rows: [lojista] } = await conexao.query(
-        `INSERT INTO lojistas (seq, nome, telefone, situacao)
-         VALUES (1, $1, $2, 'ativa') RETURNING *`,
-        [nomeLimpo, telefoneLimpo],
+        `INSERT INTO lojistas (seq, nome, telefone, situacao, cidade_id)
+         VALUES (1, $1, $2, 'ativa', $3) RETURNING *`,
+        [nomeLimpo, telefoneLimpo, pool.cidadeId],
       );
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
@@ -341,7 +341,7 @@ async function cadastraLojista(pool, { nome, telefone, chaveIdempotencia }) {
         [lojista.id, JSON.stringify({ nome: nomeLimpo, telefone: telefoneLimpo }), chave],
       );
       return { conta: lojista, repetida: false };
-    });
+    }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     if (erro && erro.code === '23505' && erro.constraint === 'lojistas_telefone_unico') {
       const replay = await tentaReplayEvento(pool, {
@@ -443,7 +443,7 @@ async function criaOperadorGenese(pool, { nome, telefone, chaveIdempotencia }) {
         [operador.id, JSON.stringify({ nome: nomeLimpo, papel: 'dono', genese: true }), chave],
       );
       return { conta: operador, repetida: false };
-    });
+    }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     if (erro && erro.code === '23505' && erro.constraint === 'operadores_genese_unica') {
       throw new ErroDeDominio(CODIGOS.GENESE_JA_FEITA, 'o operador gênese já existe');
@@ -494,7 +494,7 @@ async function criaOperador(pool, {
         [operador.id, JSON.stringify({ nome: nomeLimpo, papel }), autor.id, chave],
       );
       return { conta: operador, repetida: false };
-    });
+    }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     if (erro && erro.code === '23505' && erro.constraint === 'operadores_telefone_unico') {
       throw new ErroDeDominio(CODIGOS.TELEFONE_JA_CADASTRADO, 'telefone já cadastrado');

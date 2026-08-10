@@ -5,11 +5,25 @@
 
 const { ErroDeDominio, CODIGOS } = require('./erros');
 
-async function emTransacao(pool, trabalho) {
+// A cidade da transação (Etapa 4). O terceiro argumento `true` de
+// set_config é o que decide tudo: torna a variável LOCAL À TRANSAÇÃO, e ela
+// some no COMMIT.
+//
+// NUNCA defina isto por conexão. Conexão de pool é reaproveitada entre
+// requisições, e cidade presa à conexão vaza para a requisição seguinte —
+// em silêncio e só sob carga, que é quando ninguém está olhando. É a
+// armadilha nomeada no CORRE.md, seção 20, e ela tem teste e controle
+// negativo próprios.
+async function declaraCidade(conexao, cidadeId) {
+  await conexao.query('SELECT set_config($1, $2, true)', ['corre.cidade_id', cidadeId]);
+}
+
+async function emTransacao(pool, trabalho, { cidadeId } = {}) {
   const conexao = await pool.connect();
   try {
     await conexao.query('BEGIN');
     try {
+      if (cidadeId) await declaraCidade(conexao, cidadeId);
       const resultado = await trabalho(conexao);
       await conexao.query('COMMIT');
       return resultado;
@@ -76,6 +90,7 @@ async function tentaReplayEvento(pool, {
 
 module.exports = {
   emTransacao,
+  declaraCidade,
   agoraDoBanco,
   ehDisputaDePosicao,
   tentaReplayEvento,

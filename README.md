@@ -1,92 +1,38 @@
 # Corre
 
 Plataforma de despacho de entregas para o comércio. Cidade piloto: Sobral/CE.
-A especificação completa e as 8 leis inegociáveis estão em [`CORRE.md`](CORRE.md).
+
+## Por onde começar
+
+| Arquivo | Para que serve | Quando ler |
+|---|---|---|
+| [`RETOMAR.md`](RETOMAR.md) | Em que etapa o projeto está, o que já está na `main`, o que trava, próximo passo | **Primeiro, sempre** |
+| [`CORRE.md`](CORRE.md) | As 9 leis, o método de teste, o regime de trabalho e a especificação vigente | Sempre |
+| [`HISTORICO.md`](HISTORICO.md) | Decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos | Só quando precisar saber *por quê* |
+| [`GATEWAY.md`](GATEWAY.md) | A escolha de gateway reaberta: critérios, ranking, a conta da Lei 7 e o que falta perguntar | Antes da Etapa 7 |
+| [`PORTAO-C.md`](PORTAO-C.md) | Pergunta **morta** em 2026-08-09 (o pagamento saiu de antes da entrega). Fica como levantamento de mercado | Quase nunca |
+
+Regra de casa: **uma sessão por etapa**, e a verdade do projeto mora no repositório — nunca no histórico de conversa. Se algo importante só existe no chat, é defeito.
+
+> **Revisão de 2026-08-09:** o pagamento passou para a **porta do cliente** (QR Pix dinâmico no app do motoboy), com a **mercadoria dentro da cobrança** e **split triplo**. Isso invalidou a Etapa 4 planejada, o Portão C e a tabela de estados. Leia o aviso no topo do `RETOMAR.md` antes de qualquer coisa.
 
 ## Estrutura
 
-Monorepo aprovado pelo dono (2026-08-09): quando o contrato da API mudar,
-o app Kotlin muda no mesmo PR. O tronco é `main`; toda etapa entra por PR
-com a bateria e o controle negativo verdes no CI. Limites conhecidos e
-aceitos ficam registrados em [`DEFEITOS_ABERTOS.md`](DEFEITOS_ABERTOS.md).
-
 | Diretório | Conteúdo |
 |---|---|
-| [`corre-api/`](corre-api) | Backend (Node.js + Express), web do lojista, painel, migrations do PostgreSQL |
-| [`corre-app/`](corre-app) | App Android do motoboy (Kotlin) — Etapa 6, ainda não construído |
+| [`corre-api/`](corre-api) | Backend (Node.js + Express), painel, migrations do PostgreSQL — serve os três apps e a ponte web |
+| `corre-app-motoboy/` | App Android do motoboy (Kotlin, `br.com.corre.motoboy`) — Etapa 13, ainda não construído |
+| `corre-app-lojista/` | App do lojista (Flutter, `br.com.corre.lojista`) — Etapa 15, ainda não construído |
+| `corre-app-cliente/` | App do cliente (Flutter, `br.com.corre.cliente`) — Etapa 14, ainda não construído |
 
-## Estado da obra
-
-| Etapa | Situação |
-|---|---|
-| 0 — Fundação: migrations, tabela de eventos, CI | **Aprovada pelo dono em 2026-08-09** — entregue à `main` pelo PR #1; condição registrada no critério de aceite da Etapa 1 |
-| 1 — Máquina de estados + log de eventos | **Aprovada pelo dono em 2026-08-09** — mesclada pelo PR #2 |
-| 2 — Cadastro e sessão (com re-login OTP) | **Aprovada pelo dono em 2026-08-09** — mesclada pelo PR #3 |
-| 3 — Zonas e preço | **Concluída — em PR contra `main`, aguardando aprovação** |
-| 4 em diante | Não iniciadas — uma etapa por vez, com aprovação entre elas |
-
-## Rodando a bateria da Etapa 0
-
-Pré-requisitos: Node.js ≥ 20, PostgreSQL 16 com um superusuário acessível
-(padrões: `postgres`/`postgres` em `localhost:5432` — sobrescreva por
-variável de ambiente, ver `corre-api/scripts/setup-db.sh`).
+## Rodando
 
 ```bash
-cd corre-api
-npm ci
-npm run bateria            # banco nasce do zero das migrations + testes
-npm run controle-negativo  # Lei 8: sabota a regra e exige bateria vermelha
+cd corre-api && npm ci
+npm run bateria            # banco nasce do zero das migrations, depois os testes
+npm run controle-negativo  # Lei 8: sabota cada regra e exige vermelho no teste que a vigia
 ```
 
-A bateria **sempre** derruba e recria o banco de teste a partir das
-migrations — nunca rode apontando para um banco que importa.
+Pré-requisitos: Node.js ≥ 20 e PostgreSQL 16 em `localhost:5432` com superusuário acessível (padrão `postgres`/`postgres`; sobrescreva por variável de ambiente — ver `corre-api/scripts/setup-db.sh`).
 
-## Garantias da fundação (Etapa 0)
-
-- `eventos` é append-only em duas camadas independentes, no banco:
-  o papel da aplicação (`corre_app`) tem `SELECT` na tabela e `INSERT` só
-  nas colunas de negócio — `id` e `criado_em` são sempre atribuídos pelo
-  banco (nem `OVERRIDING SYSTEM VALUE` passa), e triggers fazem
-  `UPDATE`/`DELETE`/`TRUNCATE` diretos falharem **até para o dono da
-  tabela**. Limite inerente do PostgreSQL: o dono ainda consegue desligar
-  as travas em sessão comum — por isso `corre_dono` é reservado a
-  migrations e a aplicação conecta **sempre** como `corre_app`, nunca como
-  dono nem superusuário. Remoção sancionada das travas só por migration
-  versionada no git.
-- Dinheiro é inteiro em centavos (Lei 1): domínio `centavos` (`BIGINT`).
-- Migration aplicada não se edita: o runner registra o checksum SHA-256 e
-  recusa divergência.
-- Trava de boot: a aplicação se recusa a iniciar se a credencial da conexão
-  for superusuário, dono de `eventos` ou tiver qualquer escrita em
-  `eventos` (`corre-api/src/db/boot.js`) — a regra "app conecta só como
-  `corre_app`" é verificada em execução, não prometida em texto. O ponto de
-  entrada (`corre-api/src/servidor.js`) chama a trava antes do `listen`.
-
-## Garantias da máquina de estados (Etapa 1)
-
-- Transições legais num lugar só: `corre-api/src/dominio/transicoes.js`
-  (tabela declarativa; 13 arestas + criação). O motor não tem `if` de
-  legalidade fora dela, e a reconstrução usa a mesma tabela.
-- Ordem do log por `UNIQUE (agregado_tipo, agregado_id, seq)` — vencedor
-  único em disputa concorrente decidido pelo banco, não por código.
-- Idempotência por `UNIQUE (chave_idempotencia)` — retentativa com a mesma
-  chave é operação nula que devolve o resultado original.
-- Prazo é dado, não timer: `vence_em` gravado no evento e na projeção;
-  vencer é consulta (`src/bin/expira-vencidas.js`), reinício não perde nada.
-- Tempo é do servidor: payload com `vence_em`/`criado_em` do cliente é
-  recusado.
-
-## Garantias do motor de preço (Etapa 3)
-
-- Tabela de zonas **versionada** (`tabelas_preco`/`zonas`): alterar preço
-  cria versão nova; corrida guarda a versão usada. Aplicação só lê;
-  publicar é ato de dono (`scripts/importar-tabela-preco.js`).
-- **Determinismo**: mesmo endereço, mesmo centavo, sempre — sem relógio,
-  sem aleatório, sem parâmetro de tempo no cálculo.
-- **Sem API de mapa**: fora de zona por distância em linha reta a partir do
-  centro, com fatores metros/grau gravados como dado inteiro.
-- **Centavos inteiros (Lei 1)**: cálculo todo em `BigInt`; arredondamento
-  declarado num lugar só (`preco.js`) — km sempre para cima (teto).
-- Fronteira entre zonas resolve pela de **menor `ordem`** — determinística.
-- Tabela real de Sobral ainda não existe: usa-se
-  `dados/tabela-preco-exemplo.json`, marcada como exemplo.
+A bateria **sempre derruba e recria** o banco de teste a partir das migrations — nunca a rode apontando para um banco que importa.

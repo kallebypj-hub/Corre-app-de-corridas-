@@ -18,9 +18,19 @@ async function conectaDono() {
   return client;
 }
 
-async function conectaApp() {
+const SOBRAL = '00000001-2312-4908-8000-000000000001';
+
+// Cliente DEDICADO de teste (não é pool): a cidade pode ser declarada na
+// sessão dele sem risco, porque a conexão é dele e morre com o teste. Em
+// aplicação isso seria o defeito que a Etapa 4 vigia — cidade presa à
+// conexão vaza para a requisição seguinte —, e é por isso que o código de
+// produção declara por TRANSAÇÃO e tem controle negativo para provar.
+async function conectaApp(cidadeId = SOBRAL) {
   const client = new Client({ connectionString: exigeEnv('DATABASE_URL_APP') });
   await client.connect();
+  if (cidadeId) {
+    await client.query('SELECT set_config($1, $2, false)', ['corre.cidade_id', cidadeId]);
+  }
   return client;
 }
 
@@ -72,6 +82,7 @@ async function insereEvento(client, evento) {
 }
 
 module.exports = {
+  SOBRAL,
   conectaDono,
   conectaApp,
   conectaSuper,

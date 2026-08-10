@@ -10,7 +10,7 @@ const { promisify } = require('node:util');
 const { Pool } = require('pg');
 
 const { calculaFrete } = require('../src/dominio/preco');
-const { poolApp } = require('./ajuda-maquina');
+const { poolApp, SOBRAL } = require('./ajuda-maquina');
 
 const executa = promisify(execFile);
 const IMPORTADOR = path.join(__dirname, '..', 'scripts', 'importar-tabela-preco.js');
@@ -22,15 +22,15 @@ async function publicaTabela(dono, {
 }) {
   const { rows: [tabela] } = await dono.query(
     `INSERT INTO tabelas_preco
-       (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [rotulo, exemplo, metrosPorGrauLat, metrosPorGrauLng, adicionalKmCentavos],
+       (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos, cidade_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [rotulo, exemplo, metrosPorGrauLat, metrosPorGrauLng, adicionalKmCentavos, SOBRAL],
   );
   for (const z of zonas) {
     await dono.query(
-      `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [tabela.id, z.nome, z.ordem, z.preco, z.latMin, z.latMax, z.lngMin, z.lngMax],
+      `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6, cidade_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [tabela.id, z.nome, z.ordem, z.preco, z.latMin, z.latMax, z.lngMin, z.lngMax, SOBRAL],
     );
   }
   return tabela.id;
