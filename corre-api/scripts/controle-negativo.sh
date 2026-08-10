@@ -575,6 +575,36 @@ sabota_codigo "versao_da_tabela_do_payload" src/dominio/corridas.js \
   "s|  'tabela_preco_id',||" \
   test/prazo.test.js "NÃO escolhe a versão da tabela"
 
+# ---------- Lei 11: id não é autorização ----------
+
+# O AUTOR DO EVENTO DEIXA DE SER CONFERIDO: um lojista inventado volta a ser
+# gravado como autor no log append-only, que a Lei 3 torna irreversível.
+sabota_codigo "autor_de_evento_nao_conferido" src/dominio/clientes.js \
+  's|  const autorReal = await exigeAutorReal(pool, lojistaId);|  const autorReal = lojistaId \|\| null;|' \
+  test/clientes.test.js "autor de evento"
+
+# O VÍNCULO DO LOJISTA COM A CORRIDA cai: qualquer lojista da cidade volta a
+# mover o pedido do vizinho.
+sabota_codigo "lojista_alheio_move_corrida" src/dominio/corridas.js \
+  "s|  if (autorTipo === 'lojista' \&\& corridaAtual.lojista_id !== autorId) {|  if (false) {|" \
+  test/maquina.test.js "lojista alheio não move"
+
+# A CHAVE DE TRANSIÇÃO DEIXA DE SER DO AUTOR: dois aparelhos com a mesma
+# chave recebem ambos "venceu", e um motoboy crê que aceitou corrida alheia.
+sabota_codigo "chave_de_transicao_sem_autor" src/dominio/corridas.js \
+  's|  const doMesmoAutor = (payloadDoEvento) => payloadDoEvento.autor_id === (autorId \|\| null);|  const doMesmoAutor = () => true;|' \
+  test/maquina.test.js "chave de idempotência de transição é do AUTOR"
+
+# A CHAVE DO ESTORNO DEIXA DE CONFERIR A CORRIDA: o segundo estorno some.
+sabota_codigo "chave_de_estorno_sem_corrida" src/dominio/contas.js \
+  's|      confereDados: (p) => p.corrida_id === corridaId,||' \
+  test/contas.test.js "estorno"
+
+# AS TRÊS IRMÃS: a chave volta a ignorar os dados pedidos.
+sabota_codigo "chave_de_cartao_sem_dados" src/dominio/contas.js \
+  's|      confereDados: (p) => p.cartao_ref === cartaoRef,||' \
+  test/contas.test.js "cartão"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 
