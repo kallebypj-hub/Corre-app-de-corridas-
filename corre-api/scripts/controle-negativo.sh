@@ -536,7 +536,7 @@ sabota_sql "prazo_sem_versao_da_tabela" "
 # A trava da renumeração de estados removida da migration: substituir a
 # máquina de estados com dado real passa a acontecer em silêncio.
 sabota_codigo "renumeracao_sem_trava" migrations/0012_maquina_de_estados_e_prazo.sql \
-  's|      RAISE EXCEPTION|      RAISE NOTICE|' \
+  's|    RAISE EXCEPTION|    RAISE NOTICE|' \
   test/migrations.test.js "a trava da renumeração de estados morde"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
