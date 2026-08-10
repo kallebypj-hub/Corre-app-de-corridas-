@@ -77,11 +77,17 @@ const CAMINHOS = {
 
 async function aplica(pool, corridaId, tipo, sobrescreve = {}) {
   const autorTipo = sobrescreve.autorTipo || AUTOR_PADRAO[tipo];
+  // Lei 11: lojista tem que ser O lojista da corrida. As corridas da bateria
+  // nascem todas do mesmo lojista (`lojistaApto`), então é ele. Quem quiser
+  // provar a RECUSA de um lojista alheio passa `autorId` explícito.
+  const autorId = 'autorId' in sobrescreve
+    ? sobrescreve.autorId
+    : (autorTipo === 'lojista' ? await lojistaApto(pool) : autorIdPara(autorTipo));
   return transiciona(pool, {
     corridaId,
     tipo,
     autorTipo,
-    autorId: autorIdPara(autorTipo),
+    autorId,
     payload: sobrescreve.payload,
     chaveIdempotencia: sobrescreve.chaveIdempotencia,
   });

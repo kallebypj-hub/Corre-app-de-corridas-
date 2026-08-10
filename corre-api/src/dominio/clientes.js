@@ -45,9 +45,31 @@ async function buscaClientePorTelefone(pool, telefone) {
 //
 // A conta nasce NÃO REIVINDICADA. Só o próprio dono do número a reivindica,
 // entrando pelo código de 6 dígitos.
+// AUTOR DE EVENTO TEM QUE EXISTIR (Lei 11). Antes, um `lojistaId` inventado
+// era gravado como autor do evento de criação — e a Lei 3 torna isso
+// IRREVERSÍVEL: autor falso em log append-only não se apaga. O `CHECK` de
+// autor identificado só exigia que o campo não fosse nulo; não exigia que
+// apontasse para alguém.
+async function exigeAutorReal(pool, lojistaId) {
+  if (!lojistaId) return null;
+  const { rows: [lojista] } = await pool.query(
+    'SELECT id FROM lojistas WHERE id = $1', [lojistaId],
+  );
+  if (!lojista) {
+    throw new ErroDeDominio(
+      CODIGOS.LOJISTA_INEXISTENTE,
+      'autor de evento precisa existir: lojista informado não existe nesta cidade',
+    );
+  }
+  return lojista.id;
+}
+
 async function garanteCliente(pool, { telefone, lojistaId, chaveIdempotencia }) {
   const telefoneLimpo = exigeTexto(telefone, 'telefone');
   const chave = chaveIdempotencia || randomUUID();
+  // Confere ANTES de qualquer escrita: descobrir o autor falso depois de
+  // gravar seria descobrir tarde demais.
+  const autorReal = await exigeAutorReal(pool, lojistaId);
 
   const existente = await buscaClientePorTelefone(pool, telefoneLimpo);
   if (existente) return { cliente: existente, criada: false };
@@ -76,7 +98,7 @@ async function garanteCliente(pool, { telefone, lojistaId, chaveIdempotencia }) 
           // Quem digitou o telefone é o autor. Sem lojista identificado (uso
           // interno, migração), o autor é o sistema — nunca um lojista
           // anônimo, que o CHECK de autor identificado recusa e com razão.
-          lojistaId ? 'lojista' : 'sistema', lojistaId || null,
+          autorReal ? 'lojista' : 'sistema', autorReal,
         ],
       );
       return { cliente, criada: true };

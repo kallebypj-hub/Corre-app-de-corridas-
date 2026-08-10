@@ -259,12 +259,16 @@ test('máquina de estados (Etapa 5)', async (t) => {
         const esperada = ARESTAS.find((a) => a.de === de && a.tipo === tipo);
         const corrida = await corridaNoEstado(de);
         const autorTipo = esperada ? esperada.autor : AUTOR_PADRAO[tipo];
+        // Lei 11: lojista tem que ser O lojista da corrida, senão a recusa
+        // viria por autor não autorizado e a matriz mediria outra coisa.
+        const autorId = autorTipo === 'lojista'
+          ? await lojistaApto(pool) : autorIdPara(autorTipo);
         try {
           const { corrida: depois } = await transiciona(pool, {
             corridaId: corrida.id,
             tipo,
             autorTipo,
-            autorId: autorIdPara(autorTipo),
+            autorId,
             payload: PAYLOAD_COMPLETO,
           });
           assert.ok(esperada, `${tipo} a partir de ${de} (${E.NOMES[de]}) deveria ser recusada, mas passou`);
@@ -306,6 +310,42 @@ test('máquina de estados (Etapa 5)', async (t) => {
         assert.equal(depois.estado, aresta.para, `${aresta.tipo} por ${autorTipo} deveria ser permitida`);
       }
     }
+  });
+
+  await t.test('LEI 11: lojista alheio não move a corrida de outro — e a do motoboy é dívida declarada da Etapa 6', async () => {
+    const { cadastraLojista, registraCartao } = require('../src/dominio/contas');
+    const { conta: outro } = await cadastraLojista(pool, {
+      nome: 'Loja vizinha', telefone: `88 7${randomUUID().slice(0, 10)}`,
+    });
+    await registraCartao(pool, { lojistaId: outro.id, cartaoRef: 'cartao' });
+
+    const corrida = await levaAte(pool, E.A_CAMINHO_DA_LOJA);
+    await assert.rejects(
+      () => aplica(pool, corrida.id, 'coleta_confirmada', { autorTipo: 'lojista', autorId: outro.id }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+      'lojista que não é o dono da corrida não pode movê-la',
+    );
+    // E o dono move.
+    const { corrida: depois } = await aplica(pool, corrida.id, 'coleta_confirmada', { autorTipo: 'lojista' });
+    assert.equal(depois.estado, E.COM_A_MERCADORIA);
+  });
+
+  await t.test('LEI 11: a chave de idempotência de transição é do AUTOR — outro aparelho não herda o aceite', async () => {
+    const corrida = await levaAte(pool, E.PROCURANDO_MOTOBOY);
+    const chave = `aceite-${randomUUID()}`;
+    const primeiro = randomUUID();
+    const vencedor = await aplica(pool, corrida.id, 'motoboy_aceitou', { autorId: primeiro, chaveIdempotencia: chave });
+    assert.equal(vencedor.repetida, false);
+
+    await assert.rejects(
+      () => aplica(pool, corrida.id, 'motoboy_aceitou', { autorId: randomUUID(), chaveIdempotencia: chave }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+      'outro aparelho com a mesma chave não pode receber "venceu"',
+    );
+
+    // O próprio autor continua replayando: a Lei 5 não pode ter quebrado.
+    const repetida = await aplica(pool, corrida.id, 'motoboy_aceitou', { autorId: primeiro, chaveIdempotencia: chave });
+    assert.equal(repetida.repetida, true);
   });
 
   await t.test('estado 7 (em disputa) não tem aresta nenhuma, nem de entrada, até a Etapa 11', async () => {

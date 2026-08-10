@@ -43,12 +43,16 @@ test('idempotência (Lei 5)', async (t) => {
     const corrida = await levaAte(pool, 1);
     const chave = `idem-transicao-${randomUUID()}`;
 
+    // O MESMO autor nas 50: é um aparelho retentando, não 50 aparelhos. A
+    // chave é do autor (Lei 11) — 50 autores diferentes com a mesma chave é
+    // reuso indevido, e tem teste próprio em maquina.test.js.
+    const aparelho = randomUUID();
     const respostas = await Promise.all(
       Array.from({ length: REPETICOES }, () => transiciona(pool, {
         corridaId: corrida.id,
         tipo: 'motoboy_aceitou',
         autorTipo: 'motoboy',
-        autorId: randomUUID(),
+        autorId: aparelho,
         chaveIdempotencia: chave,
       })),
     );

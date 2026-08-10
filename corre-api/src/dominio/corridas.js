@@ -342,14 +342,35 @@ async function transiciona(pool, {
   // Lei 5, caso canônico: a operação original já venceu e moveu o estado;
   // a retentativa que chega DEPOIS do commit seria recusada como transição
   // ilegal se a chave não fosse consultada antes da validação.
+  // Lei 11 na chave: replay é para QUEM FEZ a operação. Sem conferir o
+  // autor, dois aparelhos com a mesma chave recebiam ambos "venceu" — e um
+  // motoboy passava a crer que aceitou a corrida de outro.
+  const doMesmoAutor = (payloadDoEvento) => payloadDoEvento.autor_id === (autorId || null);
   if (chaveIdempotencia) {
-    const replayPrevio = await tentaReplay(pool, { chave, tipo, corridaId });
+    const replayPrevio = await tentaReplay(pool, {
+      chave, tipo, corridaId, confereDados: doMesmoAutor,
+    });
     if (replayPrevio) return replayPrevio;
   }
 
   const corridaAtual = await buscaCorrida(pool, corridaId);
   if (!corridaAtual) {
     throw new ErroDeDominio(CODIGOS.CORRIDA_INEXISTENTE, `corrida ${corridaId} não existe`);
+  }
+
+  // LEI 11: tipo de ator não é ator. Validar que o chamador é UM lojista não
+  // prova que é O lojista daquela corrida — sem isto, qualquer lojista da
+  // cidade movia o pedido do vizinho.
+  //
+  // Fecha-se aqui a metade que dá para fechar hoje. A do MOTOBOY não dá:
+  // `corridas` não tem coluna de motoboy, ela nasce na Etapa 6 — que por
+  // decisão do dono (2026-08-10) ABRE por este vínculo, antes da cascata.
+  // Dívida herdada, declarada, com dono e prazo.
+  if (autorTipo === 'lojista' && corridaAtual.lojista_id !== autorId) {
+    throw new ErroDeDominio(
+      CODIGOS.AUTOR_NAO_AUTORIZADO,
+      'lojista não é o dono desta corrida',
+    );
   }
 
   let regra;
@@ -366,7 +387,9 @@ async function transiciona(pool, {
     // rua, sob carga, e não na bateria de um teste por vez.
     if (chaveIdempotencia && erro instanceof ErroDeDominio
       && erro.codigo === CODIGOS.TRANSICAO_ILEGAL) {
-      const replay = await tentaReplay(pool, { chave, tipo, corridaId });
+      const replay = await tentaReplay(pool, {
+        chave, tipo, corridaId, confereDados: doMesmoAutor,
+      });
       if (replay) return replay;
     }
     throw erro;
@@ -377,9 +400,12 @@ async function transiciona(pool, {
     return await emTransacao(pool, async (conexao) => {
       const agora = await agoraDoBanco(conexao);
       const venceEm = calculaVenceEm(regra, agora);
-      const payloadDoEvento = venceEm === null
-        ? dados
-        : { ...dados, vence_em: venceEm.toISOString() };
+      const payloadDoEvento = {
+        ...dados,
+        // O autor no payload é o que faz a chave valer por chamador.
+        autor_id: autorId || null,
+        ...(venceEm === null ? {} : { vence_em: venceEm.toISOString() }),
+      };
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -401,7 +427,9 @@ async function transiciona(pool, {
     // posição) — por isso o replay é conferido em todas as disputas de
     // posição, sempre pela chave.
     if (ehDisputaDePosicao(erro)) {
-      const replay = await tentaReplay(pool, { chave, tipo, corridaId });
+      const replay = await tentaReplay(pool, {
+        chave, tipo, corridaId, confereDados: doMesmoAutor,
+      });
       if (replay) return replay;
       if (erro.constraint === 'eventos_chave_idempotencia_unica') {
         throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);

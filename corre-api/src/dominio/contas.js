@@ -198,6 +198,12 @@ async function cadastraMotoboy(pool, {
 }
 
 // Ação da operação sobre a conta do motoboy: sempre com evento e autor.
+// Duas operações são a MESMA quando os dados batem. Compara só o que o
+// chamador forneceu: o payload gravado carrega mais coisa (autor, instante).
+function confereMudancas(gravado, pedido) {
+  return Object.entries(pedido || {}).every(([chave, valor]) => gravado[chave] === valor);
+}
+
 async function acaoDaOperacaoSobreMotoboy(pool, {
   motoboyId, autor, papeis, tipo, payload, mudancas, revogaSessoes, chaveIdempotencia,
 }) {
@@ -207,6 +213,10 @@ async function acaoDaOperacaoSobreMotoboy(pool, {
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo, agregadoTipo: 'motoboy', agregadoId: motoboyId,
+      // Lei 11: a chave vale para a MESMA operação, e "mesma" inclui os
+      // dados. Sem isto, a mesma chave com outro aparelho devolvia replay e
+      // a troca nova nunca acontecia — em silêncio.
+      confereDados: (p) => confereMudancas(p, payload),
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -255,6 +265,7 @@ async function acaoDaOperacaoSobreMotoboy(pool, {
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo, agregadoTipo: 'motoboy', agregadoId: motoboyId,
+        confereDados: (p) => confereMudancas(p, payload),
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(
@@ -371,6 +382,7 @@ async function registraCartao(pool, { lojistaId, cartaoRef, chaveIdempotencia })
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'cartao_registrado', agregadoTipo: 'lojista', agregadoId: lojistaId,
+      confereDados: (p) => p.cartao_ref === cartaoRef,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -403,6 +415,7 @@ async function registraCartao(pool, { lojistaId, cartaoRef, chaveIdempotencia })
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'cartao_registrado', agregadoTipo: 'lojista', agregadoId: lojistaId,
+        confereDados: (p) => p.cartao_ref === cartaoRef,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(
@@ -426,6 +439,7 @@ async function criaOperadorGenese(pool, { nome, telefone, chaveIdempotencia }) {
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'operador_cadastrado', agregadoTipo: 'operador', agregadoId: null,
+      confereDados: (p) => p.telefone === telefoneLimpo,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -454,6 +468,7 @@ async function criaOperadorGenese(pool, { nome, telefone, chaveIdempotencia }) {
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'operador_cadastrado', agregadoTipo: 'operador', agregadoId: null,
+        confereDados: (p) => p.telefone === telefoneLimpo,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);
@@ -477,6 +492,7 @@ async function criaOperador(pool, {
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'operador_cadastrado', agregadoTipo: 'operador', agregadoId: null,
+      confereDados: (p) => p.telefone === telefoneLimpo,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -521,6 +537,10 @@ async function autorizaEstornoSemEfeito(pool, { corridaId, autor, chaveIdempoten
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'estorno_autorizado', agregadoTipo: 'operador', agregadoId: autor.id,
+      // A chave era do OPERADOR e não da CORRIDA: o mesmo operador
+      // reautorizando com a mesma chave em outra corrida recebia replay, e o
+      // estorno da segunda nunca era registrado.
+      confereDados: (p) => p.corrida_id === corridaId,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -548,6 +568,7 @@ async function autorizaEstornoSemEfeito(pool, { corridaId, autor, chaveIdempoten
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'estorno_autorizado', agregadoTipo: 'operador', agregadoId: operador.id,
+        confereDados: (p) => p.corrida_id === corridaId,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(
