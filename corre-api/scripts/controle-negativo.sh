@@ -434,6 +434,147 @@ sabota_sql "chave_de_idempotencia_global" "
     ON eventos (chave_idempotencia) WHERE chave_idempotencia IS NOT NULL;
 " test/cidades.test.js "por cidade e não vaza"
 
+# ---------- Etapa 5: máquina de estados nova e prazo estimado ----------
+
+# A INVARIANTE DA ETAPA, camada de cima: aresta ilegal entrando em Entregue
+# direto do estado "com a mercadoria". Existe caminho até Entregue sem passar
+# por Pago — entregar sem receber volta a ser possível.
+sabota_codigo "entregue_sem_passar_por_pago" src/dominio/transicoes.js \
+  's|    de: \[E.PAGO\],|    de: [E.PAGO, E.COM_A_MERCADORIA],|' \
+  test/maquina.test.js "nenhum caminho chega a Entregue sem passar por Pago"
+
+# A MESMA invariante, camada de baixo: o CHECK do banco removido. Mesmo com a
+# tabela declarativa correta, uma linha entregue sem pagamento passa a caber.
+sabota_sql "banco_aceita_entregue_sem_pago" "
+  ALTER TABLE corridas DROP CONSTRAINT corridas_entregue_exige_pago;
+" test/maquina.test.js "o BANCO recusa Entregue sem pagamento"
+
+# O fato do pagamento deixa de ser IMUTÁVEL: o gatilho para de preservar o
+# valor antigo e "despagar" volta a ser possível.
+sabota_sql "pago_se_desfaz" "
+  CREATE OR REPLACE FUNCTION corridas_marca_pago() RETURNS TRIGGER
+  LANGUAGE plpgsql AS \$\$
+  BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.estado = 5 AND OLD.pago_em IS NULL THEN
+      NEW.pago_em := now();
+    ELSIF NEW.estado <> 5 THEN
+      NEW.pago_em := NULL;
+    END IF;
+    RETURN NEW;
+  END;
+  \$\$;
+" test/maquina.test.js "pago não se desfaz"
+
+# A aplicação ganha o privilégio de escrever o fato do pagamento: o que era
+# derivado passa a ser forjável pelo chamador.
+sabota_sql "app_escreve_pago_em" "
+  GRANT UPDATE (pago_em) ON corridas TO corre_app;
+" test/maquina.test.js "não tem privilégio para escrever pago_em"
+
+# Cancelamento depois do Pago liberado: o dinheiro já foi dividido em três
+# contas que não são nossas, e a corrida volta a aceitar cancelamento.
+sabota_codigo "cancela_depois_de_pago" src/dominio/transicoes.js \
+  's|^      E.EM_RETORNO,$|      E.EM_RETORNO,\n      E.PAGO,|' \
+  test/maquina.test.js "não se cancela"
+
+# A declaração do motoboy na saída da porta deixa de ser exigida: "cliente
+# ausente" e "presente e não pagou" viram a mesma coisa, e a reputação do
+# cliente passa a nascer de declaração vazia.
+sabota_codigo "espera_vencida_sem_caso" src/dominio/transicoes.js \
+  's|    exigeCasoDeclarado: CASOS_DE_ESPERA_VENCIDA,||' \
+  test/maquina.test.js "exige o caso declarado"
+
+# O varredor aprende a fechar o Pago por decurso de prazo — exatamente o
+# atalho que a seção 4 proíbe: carimbar como entregue o que talvez não tenha
+# sido.
+sabota_codigo "varredor_fecha_pago_por_prazo" src/dominio/transicoes.js \
+  "s|    autorizados: { \[E.PAGO\]: \['motoboy'\] },|    autorizados: { [E.PAGO]: ['motoboy'] },\n    porPrazo: true,|" \
+  test/prazos.test.js "PROIBIDO"
+
+# A espera na porta perde o prazo gravado: o relógio de 5 minutos vira
+# nenhum relógio, e o vencimento deixa de existir como dado.
+sabota_codigo "espera_na_porta_sem_prazo" src/dominio/transicoes.js \
+  's|    prazoDoDestinoMs: config.prazoEsperaNaPortaMs,||' \
+  test/prazos.test.js "abre a espera de 5 min"
+
+# O prazo volta a valer o anel de DESTINO em vez do maior das duas pontas —
+# o defeito que a regra do par origem-destino existe para evitar.
+sabota_codigo "prazo_do_destino_e_nao_do_maior" src/dominio/prazo.js \
+  's|  return a > b ? a : b;|  return b;|' \
+  test/prazo.test.js "anel MAIOR das duas pontas"
+
+# Fora de zona deixa de somar os km: a ponta distante passa a valer o mesmo
+# que a ponta na borda.
+sabota_codigo "fora_de_zona_sem_km" src/dominio/prazo.js \
+  's|    km: kmTeto(distancia),|    km: 0n,|' \
+  test/prazo.test.js "fora de zona"
+
+# A faixa vira ponto: o teto deixa de ser o múltiplo de 5 estritamente maior
+# e passa a ser o próprio calculado — o número exato volta para a tela.
+sabota_codigo "faixa_vira_ponto" src/dominio/prazo.js \
+  's|  let teto = (calculado / PASSO_DA_FAIXA + 1n) . PASSO_DA_FAIXA;|  let teto = calculado;|' \
+  test/prazo.test.js "teto é o menor múltiplo de 5"
+
+# A aplicação ganha o privilégio de LER o valor pontual do prazo: o que era
+# impossibilidade volta a ser disciplina de quem escreve tela.
+sabota_sql "app_le_prazo_pontual" "
+  GRANT SELECT (prazo_minutos) ON corridas TO corre_app;
+" test/prazo.test.js "NÃO CONSEGUE LER o valor pontual"
+
+# O valor pontual volta para o payload do evento — que a aplicação lê. O
+# privilégio de coluna tiraria pela porta o que o log devolveria pela janela.
+sabota_codigo "prazo_pontual_no_log" src/dominio/corridas.js \
+  's|              tabela_preco_id: prazo.tabela_preco_id,|              tabela_preco_id: prazo.tabela_preco_id,\n              prazo_minutos: prazo.prazo_minutos,|' \
+  test/prazo.test.js "NÃO CONSEGUE LER o valor pontual"
+
+# Prazo sem a versão da tabela passa a caber: o prazo mostrado hoje deixa de
+# ser reconstituível depois, e a auditoria da seção 8 morre em silêncio.
+sabota_sql "prazo_sem_versao_da_tabela" "
+  ALTER TABLE corridas DROP CONSTRAINT corridas_prazo_exige_versao_da_tabela;
+" test/prazo.test.js "nasce sem prazo"
+
+# A trava da renumeração de estados removida da migration: substituir a
+# máquina de estados com dado real passa a acontecer em silêncio.
+sabota_codigo "renumeracao_sem_trava" migrations/0012_maquina_de_estados_e_prazo.sql \
+  's|    RAISE EXCEPTION|    RAISE NOTICE|' \
+  test/migrations.test.js "a trava da renumeração de estados morde"
+
+# -------- Etapa 5, correções da auditoria adversarial --------
+
+# A CHAVE DE IDEMPOTÊNCIA VOLTA A SER CHAVE-MESTRA: a criação para de conferir
+# o dono e a chave repetida devolve a corrida DE OUTRO lojista — antes mesmo
+# da validação de autor.
+sabota_codigo "chave_sem_dono_na_criacao" src/dominio/corridas.js \
+  's|  const doMesmoDono = (payloadDoEvento) => payloadDoEvento.lojista_id === autorId;|  const doMesmoDono = () => true;|' \
+  test/idempotencia.test.js "NÃO é chave-mestra"
+
+# A mensagem de reuso volta a entregar o id do agregado alheio — o mesmo
+# vazamento por HTTP que a auditoria da Etapa 4 achou entre cidades.
+sabota_codigo "mensagem_de_reuso_vaza_id" src/dominio/nucleo.js \
+  's|em ${evento.agregado_tipo})`,|em ${evento.agregado_tipo} ${evento.agregado_id})`,|' \
+  test/idempotencia.test.js "NÃO é chave-mestra"
+
+# A SEGUNDA CAMADA VOLTA A DECIDIR PELO NÚMERO DO ESTADO em vez do fato no
+# log: dois UPDATEs com a credencial da aplicação levam a corrida a Entregue.
+sabota_sql "pago_derivado_do_estado" "
+  CREATE OR REPLACE FUNCTION corridas_marca_pago() RETURNS TRIGGER
+  LANGUAGE plpgsql AS \$\$
+  BEGIN
+    IF TG_OP = 'UPDATE' AND OLD.pago_em IS NOT NULL THEN NEW.pago_em := OLD.pago_em;
+    ELSIF NEW.estado = 5 THEN NEW.pago_em := now();
+    ELSE NEW.pago_em := NULL;
+    END IF;
+    RETURN NEW;
+  END;
+  \$\$;
+" test/maquina.test.js "vem do FATO no log"
+
+# A versão da tabela volta a vir do payload: quem pede escolhe a promessa que
+# a corrida vai carregar, e a âncora de auditoria do preço.
+sabota_codigo "versao_da_tabela_do_payload" src/dominio/corridas.js \
+  "s|  'tabela_preco_id',||" \
+  test/prazo.test.js "NÃO escolhe a versão da tabela"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 

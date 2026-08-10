@@ -121,6 +121,12 @@ test('migrations', async (t) => {
       { column_name: 'mercadoria_centavos', data_type: 'bigint', is_nullable: 'YES' },
       { column_name: 'cidade_id', data_type: 'uuid', is_nullable: 'NO' },
       { column_name: 'cliente_id', data_type: 'uuid', is_nullable: 'YES' },
+      { column_name: 'pago_em', data_type: 'timestamp with time zone', is_nullable: 'YES' },
+      { column_name: 'prazo_minutos', data_type: 'integer', is_nullable: 'YES' },
+      { column_name: 'prazo_min_minutos', data_type: 'integer', is_nullable: 'YES' },
+      { column_name: 'prazo_max_minutos', data_type: 'integer', is_nullable: 'YES' },
+      { column_name: 'origem_zona_nome', data_type: 'text', is_nullable: 'YES' },
+      { column_name: 'destino_zona_nome', data_type: 'text', is_nullable: 'YES' },
     ]);
   });
 
@@ -233,14 +239,35 @@ test('migrations', async (t) => {
     }
   });
 
-  await t.test('corridas: corre_app com SELECT na tabela; INSERT e UPDATE só nas colunas de projeção', async () => {
+  await t.test('corridas: SELECT COLUNA A COLUNA — o valor pontual do prazo e o fato do pagamento ficam de fora', async () => {
+    // Desde a Etapa 5 `corre_app` NÃO tem SELECT na tabela inteira. É o que
+    // torna "o app nunca mostra o prazo pontual" uma impossibilidade em vez
+    // de um cuidado — e faz coluna nova nascer invisível até alguém conceder
+    // o privilégio de propósito.
     const tabela = await dono.query(`
       SELECT privilege_type
       FROM information_schema.role_table_grants
       WHERE table_schema = 'public' AND table_name = 'corridas' AND grantee = 'corre_app'
       ORDER BY privilege_type
     `);
-    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), ['SELECT']);
+    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), [], 'SELECT de tabela inteira em corridas tem que ter sumido');
+
+    const ler = await dono.query(`
+      SELECT column_name
+      FROM information_schema.role_column_grants
+      WHERE table_schema = 'public' AND table_name = 'corridas'
+        AND grantee = 'corre_app' AND privilege_type = 'SELECT'
+      ORDER BY column_name
+    `);
+    const legiveis = ler.rows.map((r) => r.column_name);
+    assert.ok(!legiveis.includes('prazo_minutos'), 'o valor pontual do prazo não pode ser legível pela aplicação');
+    assert.ok(!legiveis.includes('pago_em'), 'o fato do pagamento é derivado; a aplicação não precisa lê-lo');
+    assert.deepEqual(legiveis, [
+      'atualizado_em', 'cidade_id', 'cliente_id', 'configuracao_taxa_id', 'criado_em',
+      'destino_zona_nome', 'estado', 'frete_centavos', 'id', 'lojista_id',
+      'mercadoria_centavos', 'origem_zona_nome', 'prazo_max_minutos', 'prazo_min_minutos',
+      'seq', 'tabela_preco_id', 'vence_em', 'zona_nome',
+    ]);
 
     const inserir = await dono.query(`
       SELECT column_name
@@ -249,10 +276,14 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'INSERT'
       ORDER BY column_name
     `);
+    const inseriveis = inserir.rows.map((r) => r.column_name);
+    assert.ok(!inseriveis.includes('pago_em'), 'pago_em é derivado por trigger; a aplicação não o escreve');
     assert.deepEqual(
-      inserir.rows.map((r) => r.column_name),
-      ['cidade_id', 'cliente_id', 'configuracao_taxa_id', 'estado', 'frete_centavos',
-        'lojista_id', 'mercadoria_centavos', 'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
+      inseriveis,
+      ['cidade_id', 'cliente_id', 'configuracao_taxa_id', 'destino_zona_nome', 'estado',
+        'frete_centavos', 'lojista_id', 'mercadoria_centavos', 'origem_zona_nome',
+        'prazo_max_minutos', 'prazo_min_minutos', 'prazo_minutos', 'seq', 'tabela_preco_id',
+        'vence_em', 'zona_nome'],
     );
 
     const atualizar = await dono.query(`
@@ -262,10 +293,52 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'UPDATE'
       ORDER BY column_name
     `);
-    assert.deepEqual(
-      atualizar.rows.map((r) => r.column_name),
-      ['atualizado_em', 'estado', 'seq', 'vence_em'],
-    );
+    const atualizaveis = atualizar.rows.map((r) => r.column_name);
+    assert.ok(!atualizaveis.includes('pago_em'), 'nem por UPDATE a aplicação toca no fato do pagamento');
+    assert.deepEqual(atualizaveis, ['atualizado_em', 'estado', 'seq', 'vence_em']);
+  });
+
+  await t.test('a trava da renumeração de estados morde: com corrida no banco, a 0012 se recusa a rodar', async () => {
+    // A Etapa 5 substituiu a máquina de estados SEM caminho de migração, e
+    // isso só é legítimo enquanto não houver cliente real (CORRE.md, regime
+    // de trabalho). A regra não fica na cabeça de ninguém: a migration tem um
+    // bloco que RECUSA rodar se `corridas` tiver uma linha sequer.
+    //
+    // Aqui o bloco é extraído do arquivo e executado com o banco povoado —
+    // é o único jeito de exercitá-lo, já que na bateria a tabela nasce vazia.
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const arquivo = path.join(__dirname, '..', 'migrations', '0012_maquina_de_estados_e_prazo.sql');
+    const sql = fs.readFileSync(arquivo, 'utf8');
+    const inicio = sql.indexOf('DO $$');
+    assert.ok(inicio >= 0, 'a trava da renumeração sumiu da migration 0012');
+    const fim = sql.indexOf('$$;', inicio);
+    assert.ok(fim > inicio, 'o bloco da trava está malformado');
+    const trava = sql.slice(inicio, fim + 3);
+    assert.ok(/RAISE EXCEPTION/.test(trava), 'a trava não levanta exceção nenhuma');
+
+    // Com corrida no banco, a trava morde. A corrida é semeada e desfeita
+    // aqui dentro: depender de outro arquivo de teste ter criado alguma
+    // deixaria este verde por acaso quando rodasse sozinho.
+    await dono.query('BEGIN');
+    try {
+      const { rows: [lojista] } = await dono.query(
+        `INSERT INTO lojistas (seq, nome, telefone, situacao, cartao_registrado_em, cidade_id)
+         VALUES (1, 'loja da trava', $1, 'ativa', now(),
+                 (SELECT id FROM cidades WHERE ibge = '2312908')) RETURNING id, cidade_id`,
+        [`trava-${randomUUID()}`],
+      );
+      await dono.query(
+        `INSERT INTO corridas (estado, seq, lojista_id, cidade_id) VALUES (1, 1, $1, $2)`,
+        [lojista.id, lojista.cidade_id],
+      );
+      await assert.rejects(
+        () => dono.query(trava),
+        /caminho de migracao declarado/,
+      );
+    } finally {
+      await dono.query('ROLLBACK');
+    }
   });
 
   await t.test('domínio centavos existe e é inteiro de 64 bits (Lei 1)', async () => {

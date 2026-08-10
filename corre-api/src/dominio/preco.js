@@ -75,8 +75,12 @@ function pontoNaZona(zona, latE6, lngE6) {
 }
 
 async function carregaTabela(pool, tabelaId) {
+  // Carrega preço E prazo da mesma versão: são a mesma tabela versionada
+  // (seção 8), e separar os dois carregamentos abriria a porta para um
+  // preço de uma versão com o prazo de outra.
   const { rows: [tabela] } = await pool.query(
-    `SELECT id, rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos
+    `SELECT id, rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos,
+            tempo_base_coleta_minutos, adicional_km_minutos
      FROM tabelas_preco WHERE id = $1`,
     [tabelaId],
   );
@@ -84,7 +88,7 @@ async function carregaTabela(pool, tabelaId) {
     throw new ErroDeDominio(CODIGOS.TABELA_PRECO_INEXISTENTE, `tabela de preço ${tabelaId} não existe`);
   }
   const { rows: zonas } = await pool.query(
-    `SELECT nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6
+    `SELECT nome, ordem, preco_centavos, minutos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6
      FROM zonas WHERE tabela_id = $1 ORDER BY ordem`,
     [tabelaId],
   );
@@ -185,6 +189,7 @@ async function calculaFrete(pool, { tabelaId, latE6, lngE6 }) {
 module.exports = {
   calculaFrete,
   resolveZona,
+  centroDaUltimaZona,
   distanciaEscalada,
   kmTeto,
   isqrt,

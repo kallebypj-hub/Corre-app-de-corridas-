@@ -29,7 +29,7 @@ async function naCidade(pool, cidadeId, trabalho) {
 // `cidades` não tem RLS: é catálogo, e o app só lê.
 async function buscaCidade(pool, cidadeId) {
   const { rows } = await pool.query(
-    `SELECT id, nome, uf, ibge, tempo_base_coleta_min, exemplo
+    `SELECT id, nome, uf, ibge, exemplo
      FROM cidades WHERE id = $1`,
     [cidadeId],
   );
@@ -41,7 +41,7 @@ async function buscaCidade(pool, cidadeId) {
 
 async function buscaCidadePorIbge(pool, ibge) {
   const { rows } = await pool.query(
-    `SELECT id, nome, uf, ibge, tempo_base_coleta_min, exemplo
+    `SELECT id, nome, uf, ibge, exemplo
      FROM cidades WHERE ibge = $1`,
     [ibge],
   );
@@ -53,7 +53,7 @@ async function buscaCidadePorIbge(pool, ibge) {
 
 async function listaCidades(pool) {
   const { rows } = await pool.query(
-    'SELECT id, nome, uf, ibge, tempo_base_coleta_min, exemplo FROM cidades ORDER BY nome',
+    'SELECT id, nome, uf, ibge, exemplo FROM cidades ORDER BY nome',
   );
   return rows;
 }

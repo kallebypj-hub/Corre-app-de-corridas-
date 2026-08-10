@@ -10,35 +10,53 @@ const { TRANSICOES } = require('../src/dominio/transicoes');
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
 const {
-  poolApp, AUTOR_PADRAO, autorIdPara, aplica, levaAte, lojistaApto,
+  poolApp, AUTOR_PADRAO, PAYLOAD_MINIMO, autorIdPara, aplica, levaAte, lojistaApto,
 } = require('./ajuda-maquina');
 
 // CÓPIA INDEPENDENTE das arestas legais (com autores permitidos), de
 // propósito: o teste é a testemunha da tabela declarativa, não um derivado
 // dela. Se alguém mexer na tabela (sabotagem ou descuido), a divergência
 // aparece aqui.
+//
+// São 14 arestas além da criação (seção 4). A tabela da Etapa 1 tinha 13,
+// começava em "Aguardando pagamento" e chegava a Entregue direto do estado
+// "Com a mercadoria" — esta não chega a Entregue senão pelo Pago.
 const ARESTAS = [
   { de: null, tipo: 'criada', para: 1, autor: 'lojista', autorizados: ['lojista'] },
-  { de: 1, tipo: 'pagamento_confirmado', para: 2, autor: 'sistema', autorizados: ['sistema'] },
-  { de: 1, tipo: 'expirou', para: 8, autor: 'sistema', autorizados: ['sistema'] },
+
+  { de: 1, tipo: 'motoboy_aceitou', para: 2, autor: 'motoboy', autorizados: ['motoboy'] },
+  { de: 1, tipo: 'cascata_esgotada', para: 9, autor: 'sistema', autorizados: ['sistema'] },
   { de: 1, tipo: 'cancelada', para: 10, autor: 'lojista', autorizados: ['lojista', 'cliente', 'painel'] },
-  { de: 2, tipo: 'motoboy_aceitou', para: 3, autor: 'motoboy', autorizados: ['motoboy'] },
-  { de: 2, tipo: 'cascata_esgotada', para: 9, autor: 'sistema', autorizados: ['sistema'] },
-  { de: 2, tipo: 'cancelada', para: 10, autor: 'cliente', autorizados: ['lojista', 'cliente', 'painel'] },
-  { de: 3, tipo: 'coleta_confirmada', para: 4, autor: 'motoboy', autorizados: ['motoboy', 'lojista'] },
-  { de: 3, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'loja fechou no meio' } },
-  { de: 4, tipo: 'pin_validado', para: 7, autor: 'motoboy', autorizados: ['motoboy'] },
-  { de: 4, tipo: 'entrega_falhou', para: 5, autor: 'motoboy', autorizados: ['motoboy'] },
-  { de: 4, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'mercadoria errada' } },
-  { de: 5, tipo: 'devolucao_concluida', para: 11, autor: 'motoboy', autorizados: ['motoboy', 'lojista'] },
-  { de: 5, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'acordo com o cliente' } },
+
+  { de: 2, tipo: 'coleta_confirmada', para: 3, autor: 'motoboy', autorizados: ['motoboy', 'lojista'] },
+  { de: 2, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'loja fechou no meio' } },
+
+  { de: 3, tipo: 'chegada_declarada', para: 4, autor: 'motoboy', autorizados: ['motoboy'] },
+  { de: 3, tipo: 'retorno_sem_contato', para: 6, autor: 'motoboy', autorizados: ['motoboy'], payload: { motivo: 'endereço não localizado' } },
+  { de: 3, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'mercadoria errada' } },
+
+  { de: 4, tipo: 'pagamento_confirmado', para: 5, autor: 'sistema', autorizados: ['sistema'] },
+  { de: 4, tipo: 'espera_vencida', para: 6, autor: 'motoboy', autorizados: ['motoboy'], payload: { caso: 'cliente_ausente' } },
+  { de: 4, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'acordo com o cliente' } },
+
+  { de: 5, tipo: 'entrega_confirmada', para: 8, autor: 'motoboy', autorizados: ['motoboy'] },
+
+  { de: 6, tipo: 'devolucao_concluida', para: 11, autor: 'motoboy', autorizados: ['motoboy', 'lojista'] },
+  { de: 6, tipo: 'cancelada', para: 10, autor: 'painel', autorizados: ['painel'], payload: { motivo: 'lojista desistiu do retorno' } },
 ];
 
-const ESTADOS_ALCANCAVEIS = [1, 2, 3, 4, 5, 7, 8, 9, 10, 11];
+// Estados com prazo gravado: 1 (cascata de 5 min) e 4 (espera na porta).
+const COM_PRAZO = [E.PROCURANDO_MOTOBOY, E.NA_PORTA_COBRANDO];
+
+const ESTADOS_ALCANCAVEIS = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11];
 const TIPOS = Object.keys(AUTOR_PADRAO);
 const PARTES = ['lojista', 'cliente', 'motoboy', 'painel', 'sistema'];
 
-test('máquina de estados', async (t) => {
+// Payload que satisfaz TODAS as exigências de qualquer transição, para que a
+// recusa na matriz venha por ILEGALIDADE e nunca por motivo/caso faltando.
+const PAYLOAD_COMPLETO = { motivo: 'matriz exaustiva', caso: 'cliente_ausente' };
+
+test('máquina de estados (Etapa 5)', async (t) => {
   const pool = poolApp();
   t.after(() => pool.end());
 
@@ -74,9 +92,9 @@ test('máquina de estados', async (t) => {
       assert.equal(evento.tipo, aresta.tipo);
       assert.equal(evento.autor_tipo, aresta.autor);
 
-      // Regra 2: estados com prazo (1 e 2) nascem com vence_em gravado na
-      // corrida E no payload do evento; os demais ficam sem prazo.
-      if (aresta.para === E.AGUARDANDO_PAGAMENTO || aresta.para === E.PROCURANDO_MOTOBOY) {
+      // Prazo é dado gravado, nunca timer: o vencimento vai na corrida E no
+      // payload do evento que abriu o estado.
+      if (COM_PRAZO.includes(aresta.para)) {
         assert.ok(resultado.vence_em, 'estado com prazo tem vence_em');
         assert.equal(new Date(evento.payload.vence_em).getTime(), resultado.vence_em.getTime());
       } else {
@@ -84,6 +102,12 @@ test('máquina de estados', async (t) => {
       }
     });
   }
+
+  await t.test('são exatamente 14 arestas além da criação (seção 4)', () => {
+    const daTabela = Object.values(TRANSICOES).reduce((total, regra) => total + regra.de.length, 0);
+    assert.equal(daTabela - 1, 14, 'a tabela declarativa não tem 14 arestas além da criação');
+    assert.equal(ARESTAS.length - 1, 14, 'a testemunha do teste não tem 14 arestas além da criação');
+  });
 
   await t.test('matriz exaustiva do conjunto: a tabela declarativa tem exatamente os tipos e as arestas esperados', () => {
     const tiposEsperados = [...new Set(ARESTAS.map((a) => a.tipo))].sort();
@@ -105,10 +129,119 @@ test('máquina de estados', async (t) => {
     }
   });
 
+  // ------------------------------------------------ A INVARIANTE DA ETAPA
+  await t.test('INVARIANTE: nenhum caminho chega a Entregue sem passar por Pago — no grafo', () => {
+    // Varredura de todos os caminhos do grafo declarativo a partir da
+    // criação. Não é leitura de código: é busca exaustiva sobre a tabela.
+    const arestas = Object.entries(TRANSICOES)
+      .flatMap(([tipo, regra]) => regra.de.map((de) => ({ de, tipo, para: regra.para })));
+
+    const caminhosAteEntregue = [];
+    const pilha = [{ estado: E.PROCURANDO_MOTOBOY, visitados: [E.PROCURANDO_MOTOBOY] }];
+    while (pilha.length > 0) {
+      const atual = pilha.pop();
+      if (atual.estado === E.ENTREGUE) {
+        caminhosAteEntregue.push(atual.visitados);
+        continue;
+      }
+      for (const aresta of arestas.filter((a) => a.de === atual.estado)) {
+        if (atual.visitados.includes(aresta.para)) continue; // sem ciclo
+        pilha.push({ estado: aresta.para, visitados: [...atual.visitados, aresta.para] });
+      }
+    }
+
+    assert.ok(caminhosAteEntregue.length > 0, 'Entregue tem que ser alcançável');
+    for (const caminho of caminhosAteEntregue) {
+      assert.ok(
+        caminho.includes(E.PAGO),
+        `caminho até Entregue sem passar por Pago: ${caminho.map((e) => E.NOMES[e]).join(' → ')}`,
+      );
+    }
+    // E a forma forte: 8 só tem uma aresta de entrada, e ela vem do 5.
+    const entradasEmEntregue = arestas.filter((a) => a.para === E.ENTREGUE);
+    assert.equal(entradasEmEntregue.length, 1, 'Entregue tem mais de uma aresta de entrada');
+    assert.equal(entradasEmEntregue[0].de, E.PAGO);
+  });
+
+  await t.test('INVARIANTE: o BANCO recusa Entregue sem pagamento, mesmo com a tabela de arestas sabotada', async () => {
+    // A camada de cima (a tabela declarativa) é JavaScript e uma linha
+    // errada a desliga em silêncio. Aqui prova-se a camada de baixo: nem o
+    // DONO consegue gravar uma corrida entregue sem `pago_em`, e `pago_em`
+    // não se escreve — é derivado por trigger quando o estado vira 5.
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    t.after(() => dono.end());
+
+    const naPorta = await levaAte(pool, E.NA_PORTA_COBRANDO);
+    await assert.rejects(
+      () => dono.query('UPDATE corridas SET estado = 8 WHERE id = $1', [naPorta.id]),
+      /corridas_entregue_exige_pago/,
+      'pular do estado 4 direto para Entregue tem que bater na constraint',
+    );
+
+    // E tentar forjar o pagamento junto também não passa: o trigger reescreve
+    // `pago_em` pelo estado, e no estado 8 o estado não é 5.
+    await assert.rejects(
+      () => dono.query('UPDATE corridas SET estado = 8, pago_em = now() WHERE id = $1', [naPorta.id]),
+      /corridas_entregue_exige_pago/,
+      'forjar pago_em na mesma linha não pode funcionar',
+    );
+
+    // O caminho legal grava o fato, e ele é do banco, não do chamador.
+    const pago = await levaAte(pool, E.PAGO);
+    const { rows: [linha] } = await dono.query('SELECT pago_em FROM corridas WHERE id = $1', [pago.id]);
+    assert.ok(linha.pago_em, 'entrar no estado 5 grava pago_em');
+  });
+
+  await t.test('INVARIANTE: pago_em vem do FATO no log, não do número do estado', async () => {
+    // Achado da auditoria da Etapa 5, e é o coração da segunda camada. A
+    // 0012 derivava `pago_em` de `NEW.estado = 5` — e `estado` é a coluna que
+    // o chamador escreve. Duas camadas decidindo pelo mesmo número, com o
+    // mesmo dono, caem juntas: dois UPDATEs levavam qualquer corrida a
+    // Entregue com o log inteiro sendo `criada`. A 0013 deriva do evento
+    // `pagamento_confirmado`.
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    t.after(() => dono.end());
+
+    const corrida = await levaAte(pool, E.PROCURANDO_MOTOBOY);
+
+    // Com a credencial DA APLICAÇÃO, sem tocar em código: mover o estado
+    // para 5 não fabrica o fato, e por isso o 8 continua impossível.
+    await pool.query('UPDATE corridas SET estado = 5 WHERE id = $1', [corrida.id]);
+    const { rows: [semFato] } = await dono.query('SELECT pago_em FROM corridas WHERE id = $1', [corrida.id]);
+    assert.equal(semFato.pago_em, null, 'estado 5 sem evento de pagamento não pode carimbar pago_em');
+    await assert.rejects(
+      () => pool.query('UPDATE corridas SET estado = 8 WHERE id = $1', [corrida.id]),
+      /corridas_entregue_exige_pago/,
+      'dois UPDATEs não podem levar a Entregue',
+    );
+
+    // O caminho legal grava o evento primeiro (Lei 2), e é ele que carimba.
+    const legitima = await levaAte(pool, E.PAGO);
+    const { rows: [comFato] } = await dono.query('SELECT pago_em FROM corridas WHERE id = $1', [legitima.id]);
+    assert.ok(comFato.pago_em, 'com o evento no log, o fato é carimbado');
+  });
+
+  await t.test('INVARIANTE: pago não se desfaz — nem por transição, nem por UPDATE do dono', async () => {
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    t.after(() => dono.end());
+    const pago = await levaAte(pool, E.PAGO);
+    await dono.query('UPDATE corridas SET pago_em = NULL WHERE id = $1', [pago.id]);
+    const { rows: [linha] } = await dono.query('SELECT pago_em FROM corridas WHERE id = $1', [pago.id]);
+    assert.ok(linha.pago_em, 'apagar pago_em não pode surtir efeito');
+  });
+
+  await t.test('a aplicação não tem privilégio para escrever pago_em', async () => {
+    const corrida = await levaAte(pool, 1);
+    await assert.rejects(
+      () => pool.query('UPDATE corridas SET pago_em = now() WHERE id = $1', [corrida.id]),
+      /permission denied|permissão negada/i,
+    );
+  });
+
   await t.test('matriz exaustiva: para cada par estado × transição, ou é permitida ou é recusada — sem terceira possibilidade', async () => {
-    // O estado 6 entra na matriz por semeadura via credencial de dono
-    // (adulteração deliberada da projeção, só para exercitar a recusa do
-    // MOTOR — não existe caminho legal até ele nesta etapa).
+    // O estado 7 (em disputa) entra na matriz por semeadura via credencial de
+    // dono (adulteração deliberada da projeção, só para exercitar a recusa do
+    // MOTOR — não existe caminho legal até ele até a Etapa 11).
     const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
     t.after(() => dono.end());
     async function corridaNoEstado(de) {
@@ -125,8 +258,6 @@ test('máquina de estados', async (t) => {
         if (tipo === 'criada') continue; // criação não parte de estado
         const esperada = ARESTAS.find((a) => a.de === de && a.tipo === tipo);
         const corrida = await corridaNoEstado(de);
-        // Payload com motivo e autor da aresta (ou o natural): quando a
-        // recusa vier, tem que ser por ILEGALIDADE, não por autor/motivo.
         const autorTipo = esperada ? esperada.autor : AUTOR_PADRAO[tipo];
         try {
           const { corrida: depois } = await transiciona(pool, {
@@ -134,7 +265,7 @@ test('máquina de estados', async (t) => {
             tipo,
             autorTipo,
             autorId: autorIdPara(autorTipo),
-            payload: { motivo: 'matriz exaustiva' },
+            payload: PAYLOAD_COMPLETO,
           });
           assert.ok(esperada, `${tipo} a partir de ${de} (${E.NOMES[de]}) deveria ser recusada, mas passou`);
           assert.equal(depois.estado, esperada.para, `${tipo} de ${de} foi para ${depois.estado}, esperava ${esperada.para}`);
@@ -160,7 +291,7 @@ test('máquina de estados', async (t) => {
         await assert.rejects(
           () => aplica(pool, alvoDasRecusas.id, aresta.tipo, {
             autorTipo,
-            payload: { motivo: 'autorização exaustiva' },
+            payload: PAYLOAD_COMPLETO,
           }),
           (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
           `${aresta.tipo} a partir de ${aresta.de} por ${autorTipo} deveria ser recusada`,
@@ -170,14 +301,14 @@ test('máquina de estados', async (t) => {
         const corrida = await levaAte(pool, aresta.de);
         const { corrida: depois } = await aplica(pool, corrida.id, aresta.tipo, {
           autorTipo,
-          payload: aresta.payload || { motivo: 'autorização exaustiva' },
+          payload: aresta.payload || PAYLOAD_COMPLETO,
         });
         assert.equal(depois.estado, aresta.para, `${aresta.tipo} por ${autorTipo} deveria ser permitida`);
       }
     }
   });
 
-  await t.test('estado 6 (em disputa) não tem transições nesta etapa — decisão do dono, 2026-08-09', async () => {
+  await t.test('estado 7 (em disputa) não tem aresta nenhuma, nem de entrada, até a Etapa 11', async () => {
     for (const [tipo, regra] of Object.entries(TRANSICOES)) {
       assert.ok(!regra.de.includes(E.EM_DISPUTA), `${tipo} não pode partir de em_disputa nesta etapa`);
       assert.notEqual(regra.para, E.EM_DISPUTA, `${tipo} não pode levar a em_disputa nesta etapa`);
@@ -191,6 +322,46 @@ test('máquina de estados', async (t) => {
     );
   });
 
+  await t.test('depois do estado 5 (Pago) não se cancela — seção 5', async () => {
+    for (const autorTipo of PARTES) {
+      const corrida = await levaAte(pool, E.PAGO);
+      await assert.rejects(
+        () => aplica(pool, corrida.id, 'cancelada', { autorTipo, payload: PAYLOAD_COMPLETO }),
+        (erro) => erro instanceof ErroDeDominio && erro.codigo === 'transicao_ilegal',
+        `cancelar o estado Pago por ${autorTipo} deveria ser ilegal`,
+      );
+    }
+  });
+
+  await t.test('a saída da porta sem pagamento exige o caso declarado, e só os dois da spec', async () => {
+    for (const payload of [undefined, {}, { caso: '' }, { caso: 'nao_quis' }, { caso: 'cliente ausente' }]) {
+      const corrida = await levaAte(pool, E.NA_PORTA_COBRANDO);
+      await assert.rejects(
+        () => aplica(pool, corrida.id, 'espera_vencida', { payload }),
+        (erro) => erro instanceof ErroDeDominio && erro.codigo === 'caso_obrigatorio',
+        `espera_vencida com caso ${JSON.stringify(payload)} deveria ser recusada`,
+      );
+    }
+    for (const caso of ['cliente_ausente', 'presente_e_nao_pagou']) {
+      const corrida = await levaAte(pool, E.NA_PORTA_COBRANDO);
+      const { corrida: depois } = await aplica(pool, corrida.id, 'espera_vencida', { payload: { caso } });
+      assert.equal(depois.estado, E.EM_RETORNO);
+      const { rows: [evento] } = await pool.query(
+        `SELECT payload FROM eventos WHERE agregado_tipo = 'corrida' AND agregado_id = $1 AND seq = $2`,
+        [depois.id, depois.seq],
+      );
+      assert.equal(evento.payload.caso, caso, 'a declaração do motoboy fica no log');
+    }
+  });
+
+  await t.test('retorno antes da chegada exige motivo registrado', async () => {
+    const corrida = await levaAte(pool, E.COM_A_MERCADORIA);
+    await assert.rejects(
+      () => aplica(pool, corrida.id, 'retorno_sem_contato', { payload: { motivo: '  ' } }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'motivo_obrigatorio',
+    );
+  });
+
   await t.test('criada só por lojista', async () => {
     for (const autorTipo of ['motoboy', 'cliente', 'painel', 'sistema']) {
       await assert.rejects(
@@ -201,24 +372,27 @@ test('máquina de estados', async (t) => {
     }
   });
 
-  await t.test('pagamento_confirmado só pelo sistema', async () => {
-    const corrida = await levaAte(pool, 1);
-    await assert.rejects(
-      () => aplica(pool, corrida.id, 'pagamento_confirmado', { autorTipo: 'lojista' }),
-      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
-    );
+  await t.test('pagamento_confirmado só pelo sistema — não é declaração de parte', async () => {
+    for (const autorTipo of ['lojista', 'cliente', 'motoboy', 'painel']) {
+      const corrida = await levaAte(pool, E.NA_PORTA_COBRANDO);
+      await assert.rejects(
+        () => aplica(pool, corrida.id, 'pagamento_confirmado', { autorTipo }),
+        (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+        `pagamento confirmado por ${autorTipo} deveria ser recusado`,
+      );
+    }
   });
 
   await t.test('aceite só por motoboy', async () => {
-    const corrida = await levaAte(pool, 2);
+    const corrida = await levaAte(pool, 1);
     await assert.rejects(
       () => aplica(pool, corrida.id, 'motoboy_aceitou', { autorTipo: 'lojista' }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
     );
   });
 
-  await t.test('cancelamento do estado 3 em diante: só a operação (seção 5)', async () => {
-    for (const de of [3, 4, 5]) {
+  await t.test('cancelamento do estado 2 em diante: só a operação (seção 5)', async () => {
+    for (const de of [2, 3, 4, 6]) {
       for (const autorTipo of ['lojista', 'cliente', 'motoboy']) {
         const corrida = await levaAte(pool, de);
         await assert.rejects(
@@ -230,8 +404,16 @@ test('máquina de estados', async (t) => {
     }
   });
 
+  await t.test('cancelamento no estado 1 é livre para qualquer parte — ninguém saiu do lugar', async () => {
+    for (const autorTipo of ['lojista', 'cliente', 'painel']) {
+      const corrida = await levaAte(pool, 1);
+      const { corrida: depois } = await aplica(pool, corrida.id, 'cancelada', { autorTipo });
+      assert.equal(depois.estado, E.CANCELADA, `cancelar em 1 por ${autorTipo} tem que ser livre e sem motivo`);
+    }
+  });
+
   await t.test('cancelamento pela operação exige motivo registrado', async () => {
-    for (const de of [3, 4, 5]) {
+    for (const de of [2, 3, 4, 6]) {
       const corrida = await levaAte(pool, de);
       await assert.rejects(
         () => aplica(pool, corrida.id, 'cancelada', { autorTipo: 'painel' }),
@@ -246,10 +428,21 @@ test('máquina de estados', async (t) => {
     }
   });
 
+  await t.test('todo estado alcançável tem caminho legal, e o 7 não tem', () => {
+    const { CAMINHOS } = require('./ajuda-maquina');
+    assert.deepEqual(
+      Object.keys(CAMINHOS).map(Number).sort((a, b) => a - b),
+      ESTADOS_ALCANCAVEIS,
+      'a lista de caminhos legais divergiu dos estados alcançáveis',
+    );
+    assert.equal(CAMINHOS[E.EM_DISPUTA], undefined);
+    assert.ok(PAYLOAD_MINIMO.espera_vencida.caso, 'o caso da espera vencida tem que estar declarado');
+  });
+
   await t.test('transição em corrida inexistente é recusada', async () => {
     await assert.rejects(
       () => transiciona(pool, {
-        corridaId: randomUUID(), tipo: 'pagamento_confirmado', autorTipo: 'sistema', autorId: null,
+        corridaId: randomUUID(), tipo: 'motoboy_aceitou', autorTipo: 'motoboy', autorId: randomUUID(),
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'corrida_inexistente',
     );

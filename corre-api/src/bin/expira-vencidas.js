@@ -1,7 +1,13 @@
 #!/usr/bin/env node
-// Varredor de prazos: aplica expirou (1→8) e cascata_esgotada (2→9) nas
-// corridas cujo vence_em passou. Vencer é consulta ao banco — este processo
-// pode morrer e renascer à vontade que nenhum prazo se perde (regra 2).
+// Varredor de prazos: aplica cascata_esgotada (1→9) nas corridas cujo
+// vence_em passou. Vencer é consulta ao banco — este processo pode morrer e
+// renascer à vontade que nenhum prazo se perde.
+//
+// Depois da Etapa 5 sobrou UMA transição por prazo, e não é esquecimento: o
+// estado 4 (na porta, cobrando) TEM vence_em gravado, mas a saída dele exige
+// que o motoboy declare qual dos dois casos foi (seção 4). Varredor não
+// declara pelos outros — quem aplica o vencimento do 4 é a Etapa 8a, com o
+// aviso registrado. Até lá o 4 vencido aparece em `corridasParadas`.
 //
 // Etapa 4: ele é OPERAÇÃO, não requisição — não tem sessão de onde tirar a
 // cidade. Então varre CIDADE POR CIDADE, dentro do contexto de cada uma.
