@@ -9,6 +9,7 @@ const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const { emTransacao } = require('../src/dominio/nucleo');
 const { transiciona } = require('../src/dominio/corridas');
+const { cadastraMotoboy } = require('../src/dominio/contas');
 const { ErroDeDominio, CODIGOS } = require('../src/dominio/erros');
 
 // Etapa 4: processo de apoio também opera dentro de uma cidade. Sobral tem id
@@ -36,6 +37,32 @@ async function main() {
     connectionString: process.env.DATABASE_URL_APP,
     max: 10,
   }));
+  // LEI 11: autor de evento tem que existir. Um motoboy REAL por processo —
+  // são 4 aparelhos disputando com 50 retentativas cada, que é o cenário da
+  // esquina. Antes cada tentativa inventava um UUID, e o log ficava cheio de
+  // autor que não existe.
+  const cpfDoProcesso = (() => {
+    const base = String(process.pid % 1000).padStart(3, '0') + String(process.hrtime.bigint() % 1000000n).padStart(6, '0');
+    const digito = (fatia, peso) => {
+      let soma = 0;
+      for (let i = 0; i < fatia.length; i += 1) soma += Number(fatia[i]) * (peso - i);
+      const resto = (soma * 10) % 11;
+      return resto === 10 ? 0 : resto;
+    };
+    const d1 = digito(base, 10);
+    return base + String(d1) + String(digito(base + String(d1), 11));
+  })();
+  const { conta: motoboy } = await cadastraMotoboy(pool, {
+    nome: 'Competidor',
+    telefone: `88 9${randomUUID().slice(0, 10)}`,
+    cpf: cpfDoProcesso,
+    chavePix: cpfDoProcesso,
+    cnhRef: 'cnh',
+    crlvRef: 'crlv',
+    selfieRef: 'selfie',
+    aparelhoId: `aparelho-${randomUUID()}`,
+  });
+
   const placar = { vencedoras: 0, conflitos: 0, ilegais: 0 };
   try {
     // Todas as tentativas disparam juntas: é a corrida contra o relógio
@@ -47,7 +74,7 @@ async function main() {
             corridaId,
             tipo: 'motoboy_aceitou',
             autorTipo: 'motoboy',
-            autorId: randomUUID(),
+            autorId: motoboy.id,
             chaveIdempotencia: randomUUID(),
           });
           if (repetida) throw new Error('replay inesperado: chaves são únicas por tentativa');

@@ -592,8 +592,48 @@ sabota_codigo "autor_de_evento_nao_conferido" src/dominio/clientes.js \
 # O VÍNCULO DO LOJISTA COM A CORRIDA cai: qualquer lojista da cidade volta a
 # mover o pedido do vizinho.
 sabota_codigo "lojista_alheio_move_corrida" src/dominio/corridas.js \
-  "s|  if (autorTipo === 'lojista' \&\& corridaAtual.lojista_id !== autorId) {|  if (false) {|" \
+  "s|  if (autorTipo === 'lojista' \&\& corrida.lojista_id !== autorId) {|  if (false) {|" \
   test/maquina.test.js "lojista alheio não move"
+
+# O VÍNCULO DO CLIENTE COM A CORRIDA cai: um cliente qualquer volta a cancelar
+# a entrega de outro. A coluna `cliente_id` existe desde a 0010 e estava sendo
+# ignorada — declarar-se 'cliente' bastava.
+sabota_codigo "cliente_alheio_move_corrida" src/dominio/corridas.js \
+  "s|  if (autorTipo === 'cliente' \&\& corrida.cliente_id !== autorId) {|  if (false) {|" \
+  test/maquina.test.js "cliente alheio não move"
+
+# A EXISTÊNCIA DO AUTOR cai em `corridas.js`: UUID inventado volta a mover
+# corrida nos quatro papéis, e o do 'painel' é o pior — a operação não tem
+# vínculo com a corrida, então a existência era a ÚNICA coisa entre um id
+# qualquer e o cancelamento de uma entrega com a mercadoria na rua.
+sabota_codigo "autor_de_transicao_nao_existe" src/dominio/corridas.js \
+  's|  const { rows } = await pool.query(`SELECT id FROM ${tabela} WHERE id = $1`, \[autorId\]);|  const { rows } = [{}];|' \
+  test/maquina.test.js "autor de evento tem que EXISTIR"
+
+# 'SISTEMA' VOLTA A SER DECLARÁVEL DE FORA: quem escrever "sistema" no corpo
+# da requisição confirma o próprio pagamento.
+sabota_codigo "sistema_declarado_de_fora" src/dominio/corridas.js \
+  's|    if (!interno) {|    if (false) {|' \
+  test/maquina.test.js "'sistema' é tipo, não ator"
+
+# A ORDEM VOLTA A SER A ERRADA: a conferência de autor ANTES do replay passa a
+# aceitar 'sistema' de qualquer origem, então o atalho do replay responde antes
+# de qualquer validação — que é exatamente como a chave derivável do varredor
+# entregava o evento do sistema a um chamador sem id.
+#
+# O endereço de linha (`/async function transiciona/,/const doMesmoAutor/`)
+# não é enfeite: a MESMA chamada existe dentro de `exigeVinculo`, e sabotar as
+# duas de uma vez derrubaria também o teste do 'sistema' — a sabotagem
+# deixaria de dizer qual regra caiu.
+sabota_codigo "replay_antes_do_autor" src/dominio/corridas.js \
+  '/^async function transiciona/,/const doMesmoAutor/ s|  await exigeAutorReal(pool, autorTipo, autorId, interno);|  await exigeAutorReal(pool, autorTipo, autorId, true);|' \
+  test/maquina.test.js "autor é conferido ANTES do replay"
+
+# O DESTINATÁRIO DEIXA DE SER CONFERIDO: `cliente_id` inventado volta a entrar
+# no pedido, e quem decide quem pode mover a corrida como 'cliente' é ele.
+sabota_codigo "destinatario_nao_conferido" src/dominio/corridas.js \
+  's|  await exigeDestinatarioReal(pool, dados.cliente_id);||' \
+  test/maquina.test.js "destinatário inventado não vira corrida"
 
 # A CHAVE DE TRANSIÇÃO DEIXA DE SER DO AUTOR: dois aparelhos com a mesma
 # chave recebem ambos "venceu", e um motoboy crê que aceitou corrida alheia.
