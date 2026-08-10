@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Apoio de teste: cria uma corrida e a leva até o estado pedido, depois
 // MORRE — simulando o processo que reinicia no meio (regra 2 da Etapa 1).
-// Uso: node apoio-de-teste/cria-corrida.js <aguardando_pagamento|procurando_motoboy>
+// Uso: node apoio-de-teste/cria-corrida.js <procurando_motoboy|a_caminho_da_loja>
 // Honra CORRE_PRAZO_*_MS do ambiente. Imprime o id da corrida no stdout.
 'use strict';
 
@@ -27,7 +27,7 @@ function daCidade(cru, cidadeId = process.env.CORRE_CIDADE_ID || SOBRAL) {
 
 async function main() {
   const alvo = process.argv[2];
-  if (!['aguardando_pagamento', 'procurando_motoboy'].includes(alvo)) {
+  if (!['procurando_motoboy', 'a_caminho_da_loja'].includes(alvo)) {
     throw new Error(`alvo inválido: ${alvo}`);
   }
   const pool = daCidade(new Pool({ connectionString: process.env.DATABASE_URL_APP }));
@@ -44,12 +44,12 @@ async function main() {
       autorId: lojista.id,
       payload: { origem: 'apoio_cria_corrida' },
     });
-    if (alvo === 'procurando_motoboy') {
+    if (alvo === 'a_caminho_da_loja') {
       await transiciona(pool, {
         corridaId: corrida.id,
-        tipo: 'pagamento_confirmado',
-        autorTipo: 'sistema',
-        autorId: null,
+        tipo: 'motoboy_aceitou',
+        autorTipo: 'motoboy',
+        autorId: randomUUID(),
       });
     }
     console.log(corrida.id);

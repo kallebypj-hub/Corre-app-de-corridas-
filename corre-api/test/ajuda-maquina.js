@@ -35,13 +35,14 @@ function poolApp(max = 10, cidadeId = SOBRAL) {
 // Autor "natural" de cada tipo, para montar cenários.
 const AUTOR_PADRAO = {
   criada: 'lojista',
-  pagamento_confirmado: 'sistema',
-  expirou: 'sistema',
   motoboy_aceitou: 'motoboy',
   cascata_esgotada: 'sistema',
   coleta_confirmada: 'motoboy',
-  entrega_falhou: 'motoboy',
-  pin_validado: 'motoboy',
+  chegada_declarada: 'motoboy',
+  retorno_sem_contato: 'motoboy',
+  pagamento_confirmado: 'sistema',
+  espera_vencida: 'motoboy',
+  entrega_confirmada: 'motoboy',
   devolucao_concluida: 'motoboy',
   cancelada: 'painel',
 };
@@ -50,19 +51,28 @@ function autorIdPara(autorTipo) {
   return autorTipo === 'sistema' ? null : randomUUID();
 }
 
-// Caminho legal até cada estado alcançável (6 não é alcançável nesta etapa
-// — decisão do dono, 2026-08-09).
+// O mínimo que cada transição exige no payload para ser LEGAL. Só `levaAte`
+// usa isto — `aplica` NÃO completa payload sozinha, senão os testes que
+// provam a exigência (motivo em branco, caso ausente) passariam por engano.
+const PAYLOAD_MINIMO = {
+  retorno_sem_contato: { motivo: 'endereço não localizado' },
+  espera_vencida: { caso: 'cliente_ausente' },
+  cancelada: { motivo: 'cancelamento da bateria' },
+};
+
+// Caminho legal até cada estado alcançável. O 7 (em disputa) NÃO é
+// alcançável: ele nasce sem aresta nenhuma até a Etapa 11 (seção 5).
 const CAMINHOS = {
   1: [],
-  2: ['pagamento_confirmado'],
-  3: ['pagamento_confirmado', 'motoboy_aceitou'],
-  4: ['pagamento_confirmado', 'motoboy_aceitou', 'coleta_confirmada'],
-  5: ['pagamento_confirmado', 'motoboy_aceitou', 'coleta_confirmada', 'entrega_falhou'],
-  7: ['pagamento_confirmado', 'motoboy_aceitou', 'coleta_confirmada', 'pin_validado'],
-  8: ['expirou'],
-  9: ['pagamento_confirmado', 'cascata_esgotada'],
+  2: ['motoboy_aceitou'],
+  3: ['motoboy_aceitou', 'coleta_confirmada'],
+  4: ['motoboy_aceitou', 'coleta_confirmada', 'chegada_declarada'],
+  5: ['motoboy_aceitou', 'coleta_confirmada', 'chegada_declarada', 'pagamento_confirmado'],
+  6: ['motoboy_aceitou', 'coleta_confirmada', 'retorno_sem_contato'],
+  8: ['motoboy_aceitou', 'coleta_confirmada', 'chegada_declarada', 'pagamento_confirmado', 'entrega_confirmada'],
+  9: ['cascata_esgotada'],
   10: ['cancelada'],
-  11: ['pagamento_confirmado', 'motoboy_aceitou', 'coleta_confirmada', 'entrega_falhou', 'devolucao_concluida'],
+  11: ['motoboy_aceitou', 'coleta_confirmada', 'retorno_sem_contato', 'devolucao_concluida'],
 };
 
 async function aplica(pool, corridaId, tipo, sobrescreve = {}) {
@@ -106,7 +116,10 @@ async function levaAte(pool, estadoAlvo, payloadInicial) {
     payload: payloadInicial || { origem: 'bateria_etapa_1' },
   });
   for (const tipo of caminho) {
+    // Cancelar a partir do estado 1 é livre (seção 5) e é o caminho mais
+    // curto até o 10; dali em diante exige operação e motivo.
     const sobrescreve = tipo === 'cancelada' ? { autorTipo: 'lojista' } : {};
+    if (PAYLOAD_MINIMO[tipo]) sobrescreve.payload = { ...PAYLOAD_MINIMO[tipo] };
     ({ corrida } = await aplica(pool, corrida.id, tipo, sobrescreve));
   }
   return corrida;
@@ -133,6 +146,7 @@ module.exports = {
   SOBRAL,
   AUTOR_PADRAO,
   CAMINHOS,
+  PAYLOAD_MINIMO,
   autorIdPara,
   aplica,
   levaAte,

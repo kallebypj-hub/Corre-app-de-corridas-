@@ -51,6 +51,9 @@ const CODIGOS = {
   CIDADE_NAO_DECLARADA: 'cidade_nao_declarada',
   CIDADE_INEXISTENTE: 'cidade_inexistente',
   CLIENTE_INEXISTENTE: 'cliente_inexistente',
+  // Etapa 5 — máquina de estados nova. "Qual dos dois casos foi" na saída da
+  // porta sem pagamento: cliente ausente × presente e não pagou (seção 4).
+  CASO_OBRIGATORIO: 'caso_obrigatorio',
 };
 
 // Falha nossa, não do chamador. Serve para o painel e o log separarem "o

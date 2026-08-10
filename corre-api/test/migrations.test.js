@@ -121,6 +121,12 @@ test('migrations', async (t) => {
       { column_name: 'mercadoria_centavos', data_type: 'bigint', is_nullable: 'YES' },
       { column_name: 'cidade_id', data_type: 'uuid', is_nullable: 'NO' },
       { column_name: 'cliente_id', data_type: 'uuid', is_nullable: 'YES' },
+      { column_name: 'pago_em', data_type: 'timestamp with time zone', is_nullable: 'YES' },
+      { column_name: 'prazo_minutos', data_type: 'integer', is_nullable: 'YES' },
+      { column_name: 'prazo_min_minutos', data_type: 'integer', is_nullable: 'YES' },
+      { column_name: 'prazo_max_minutos', data_type: 'integer', is_nullable: 'YES' },
+      { column_name: 'origem_zona_nome', data_type: 'text', is_nullable: 'YES' },
+      { column_name: 'destino_zona_nome', data_type: 'text', is_nullable: 'YES' },
     ]);
   });
 
@@ -233,14 +239,35 @@ test('migrations', async (t) => {
     }
   });
 
-  await t.test('corridas: corre_app com SELECT na tabela; INSERT e UPDATE só nas colunas de projeção', async () => {
+  await t.test('corridas: SELECT COLUNA A COLUNA — o valor pontual do prazo e o fato do pagamento ficam de fora', async () => {
+    // Desde a Etapa 5 `corre_app` NÃO tem SELECT na tabela inteira. É o que
+    // torna "o app nunca mostra o prazo pontual" uma impossibilidade em vez
+    // de um cuidado — e faz coluna nova nascer invisível até alguém conceder
+    // o privilégio de propósito.
     const tabela = await dono.query(`
       SELECT privilege_type
       FROM information_schema.role_table_grants
       WHERE table_schema = 'public' AND table_name = 'corridas' AND grantee = 'corre_app'
       ORDER BY privilege_type
     `);
-    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), ['SELECT']);
+    assert.deepEqual(tabela.rows.map((r) => r.privilege_type), [], 'SELECT de tabela inteira em corridas tem que ter sumido');
+
+    const ler = await dono.query(`
+      SELECT column_name
+      FROM information_schema.role_column_grants
+      WHERE table_schema = 'public' AND table_name = 'corridas'
+        AND grantee = 'corre_app' AND privilege_type = 'SELECT'
+      ORDER BY column_name
+    `);
+    const legiveis = ler.rows.map((r) => r.column_name);
+    assert.ok(!legiveis.includes('prazo_minutos'), 'o valor pontual do prazo não pode ser legível pela aplicação');
+    assert.ok(!legiveis.includes('pago_em'), 'o fato do pagamento é derivado; a aplicação não precisa lê-lo');
+    assert.deepEqual(legiveis, [
+      'atualizado_em', 'cidade_id', 'cliente_id', 'configuracao_taxa_id', 'criado_em',
+      'destino_zona_nome', 'estado', 'frete_centavos', 'id', 'lojista_id',
+      'mercadoria_centavos', 'origem_zona_nome', 'prazo_max_minutos', 'prazo_min_minutos',
+      'seq', 'tabela_preco_id', 'vence_em', 'zona_nome',
+    ]);
 
     const inserir = await dono.query(`
       SELECT column_name
@@ -249,10 +276,14 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'INSERT'
       ORDER BY column_name
     `);
+    const inseriveis = inserir.rows.map((r) => r.column_name);
+    assert.ok(!inseriveis.includes('pago_em'), 'pago_em é derivado por trigger; a aplicação não o escreve');
     assert.deepEqual(
-      inserir.rows.map((r) => r.column_name),
-      ['cidade_id', 'cliente_id', 'configuracao_taxa_id', 'estado', 'frete_centavos',
-        'lojista_id', 'mercadoria_centavos', 'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
+      inseriveis,
+      ['cidade_id', 'cliente_id', 'configuracao_taxa_id', 'destino_zona_nome', 'estado',
+        'frete_centavos', 'lojista_id', 'mercadoria_centavos', 'origem_zona_nome',
+        'prazo_max_minutos', 'prazo_min_minutos', 'prazo_minutos', 'seq', 'tabela_preco_id',
+        'vence_em', 'zona_nome'],
     );
 
     const atualizar = await dono.query(`
@@ -262,10 +293,9 @@ test('migrations', async (t) => {
         AND grantee = 'corre_app' AND privilege_type = 'UPDATE'
       ORDER BY column_name
     `);
-    assert.deepEqual(
-      atualizar.rows.map((r) => r.column_name),
-      ['atualizado_em', 'estado', 'seq', 'vence_em'],
-    );
+    const atualizaveis = atualizar.rows.map((r) => r.column_name);
+    assert.ok(!atualizaveis.includes('pago_em'), 'nem por UPDATE a aplicação toca no fato do pagamento');
+    assert.deepEqual(atualizaveis, ['atualizado_em', 'estado', 'seq', 'vence_em']);
   });
 
   await t.test('domínio centavos existe e é inteiro de 64 bits (Lei 1)', async () => {

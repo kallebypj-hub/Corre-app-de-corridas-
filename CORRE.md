@@ -17,6 +17,8 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 
 **Toda decisão tomada em sessão entra neste arquivo no mesmo PR**, com data e motivo (o motivo e o texto antes→depois vão para o `HISTORICO.md`). O relatório de cada etapa lista, em seção própria, toda alteração feita na especificação naquela etapa.
 
+**Reescrita de estado sem caminho de migração vale ENQUANTO não houver cliente real.** A Etapa 5 substituiu a máquina de estados inteira sem migrar linha nenhuma — legítimo, porque nada está em produção e a bateria nasce do zero das migrations. **A partir do primeiro cliente real isso acaba:** mudar a numeração, o significado ou o conjunto dos estados exige **caminho de migração declarado na própria migration**, dizendo o que acontece com cada linha que está no estado antigo. Registrado aqui para não virar precedente por esquecimento.
+
 **Correção de etapa já mesclada vai em PR próprio, sempre.** Um defeito em código que já está na `main` nunca viaja junto com a obra de uma etapa nova. E **correção de segurança fura a fila**: entra e é mesclada antes de qualquer obra em andamento, porque enquanto não entra a `main` está quebrada.
 
 **O critério por trás dessa regra é o destino compartilhado, não o tipo de arquivo.** Coisas que podem ser rejeitadas separadamente vão em PRs separados. Quando um código **só faz sentido se a outra metade for aprovada**, separá-lo cria um PR que não pode ser mesclado sozinho — e aí o acoplamento é honesto. Isso é **exceção que se pede e se registra**, com o motivo, nunca conveniência: houve uma em 2026-08-09 (`HISTORICO.md`, decisão 96) e ela não abre a regra.
@@ -359,10 +361,27 @@ Ele **substituiu o "valor declarado"** da versão anterior: antes era uma declar
 
 ### Prazo estimado de entrega
 
-- **Fórmula:** `prazo = tempo base de coleta + tempo do anel de destino`. Dois números, nenhuma API de mapa, nenhuma rota.
-- **Onde os números moram:** os minutos por anel são **coluna da tabela de preço versionada** — mesma versão, mesma imutabilidade, mesma auditoria. O tempo base de coleta é dado da cidade (e, se a operação quiser, da loja).
+- **Fórmula:** `prazo = tempo base de coleta da cidade + tempo do anel max(anel_origem, anel_destino)`. Dois números, nenhuma API de mapa, nenhuma rota.
+- **O prazo é par origem-destino, igual ao preço.** Distância é simétrica: uma entrega do anel 2 para o Centro leva a travessia inteira, e o anel de destino sozinho prometeria o tempo de metade dela. Usar o **anel maior** nunca promete menos tempo do que a viagem leva. *Prometer a menos é o erro caro — o cliente espera 10 minutos, chega em 25, e o prazo criou a reclamação que existia para evitar.*
+- **Fora de zona herda a lógica do preço:** `tempo base + tempo do anel mais externo + minutos por km adicional`, com **a mesma distância em linha reta** já calculada para o preço (centro da última zona, aritmética inteira, sem API).
+- **Onde os números moram:** minutos por anel são **coluna da tabela de preço versionada**; o **tempo base de coleta** e os **minutos por km adicional** são colunas da mesma versão — mesma imutabilidade, mesma auditoria. O tempo base é **dado da cidade**, não da loja.
+- **Um lugar só:** a fórmula, o `max` dos anéis, o teto de km e a faixa vivem em `corre-api/src/dominio/prazo.js`. Nenhum minuto se calcula fora dali, como nenhum arredondamento de preço se calcula fora de `preco.js`.
 - **É estimativa, e o texto na tela diz isso.** Não é SLA, não é promessa, não gera multa, não gera desconto, não entra na reputação de ninguém. Corrida atrasada não é corrida com defeito.
 - **Gravado na criação** junto com a versão da tabela: a mesma corrida mostra o mesmo prazo para lojista, motoboy e cliente, para sempre.
+
+**O prazo se mostra como FAIXA, nunca como ponto.** "20 a 30 minutos", nunca "25 minutos". Número exato vira promessa na cabeça de quem lê, e erro de três minutos vira reclamação.
+
+Como a faixa se forma, num lugar só (`prazo.js`):
+
+| | |
+|---|---|
+| **Teto** | o menor múltiplo de 5 **estritamente maior** que o tempo calculado |
+| **Piso** | teto − 10 |
+| **Faixa mínima** | se o piso cair abaixo de 5, a faixa é **5 a 15** |
+
+Tempo calculado 25 → **20 a 30**. Calculado 23 → **15 a 25**. Calculado 27 → **20 a 30**. A largura é sempre 10 minutos, e **o teto é sempre maior que o calculado** — a faixa nunca promete menos do que a conta disse.
+
+**O app nunca mostra o valor pontual, nem em tela de detalhe.** A garantia não é disciplina de quem escreve tela: o valor pontual fica gravado para auditoria e a aplicação **não tem privilégio de lê-lo** — só o dono do banco lê. O que a API devolve é a faixa. *(Princípio das dez leis: quando dá para tornar impossível, não se pede cuidado.)*
 
 ## 9. Dinheiro
 
@@ -689,7 +708,7 @@ Elas não são detalhe de planejamento: **toda conta desta especificação repou
 2. **Quem paga a taxa do gateway.** É decisão do dono, não do fornecedor. A recomendação da spec é **debitar da parcela de mercadoria** — o Corre continua com comissão zero sobre ela e o motoboy recebe o frete inteiro, mas **o lojista recebe R$ 98,69 num pedido de R$ 100** e precisa saber disso **antes de assinar**. Alternativa a considerar: **embutir a taxa no total cobrado do cliente**, elevando o QR — muda o preço na ponta. **Trava a Etapa 7 junto com o item 1**
 3. **Valor do adicional por km** fora de zona
 4. **Transcrição da tabela de zonas de Sobral** — agora com **duas colunas**: preço por anel **e minutos por anel** (seção 8)
-5. **Tempo base de coleta** — o outro número do prazo estimado
+5. **Tempo base de coleta** — o outro número do prazo estimado. É **dado da cidade**, coluna da versão da tabela (seção 8)
 6. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
 7. **Teto de R$ 500** de valor de mercadoria — sugerido, não confirmado, e agora incide sobre valor cobrado de verdade
 8. **Registro da marca CORRE** (mista, classes 39 e 42) e do **domínio `corre.com.br`** — virou **pré-requisito de publicação**: os pacotes `br.com.corre.*` são definitivos e não se trocam depois de publicados
@@ -708,6 +727,7 @@ Elas não são detalhe de planejamento: **toda conta desta especificação repou
 21. **Ticket médio de mercadoria nunca foi medido** (seção 18). É ele que dimensiona a reserva, o teto de R$ 500 e a exposição por entrega. Entra na lista de medições do piloto ao lado das entregas/dia
 22. **Cadastro de lojista MEI — nenhum fornecedor documenta caminho** (`GATEWAY.md`, 9.3). MEI é CNPJ e **não pode ter sócio** por definição legal, enquanto o candidato melhor colocado exige sócio qualificado no QSA. Em Sobral, MEI é a maioria dos lojistas. **Esta pergunta vai à mesa comercial junto com as duas de preço, e a resposta dela pesa mais que preço na escolha**
 23. **Um documento = um recebedor** (`GATEWAY.md`, 9.3). O candidato está fechando a criação de recebedores com o mesmo documento. **Motoboy que também é lojista não teria as duas contas** — e em Sobral isso não é hipótese
+24. **Tempo base de coleta por LOJA, em vez de por cidade** (seção 8). **Sem etapa dona, de propósito.** Existe loja que separa o pedido em dois minutos e loja que leva quinze, e um dia a operação vai querer distinguir. Quando quiser, isso é **uma versão nova da tabela** — que é exatamente para o que o versionamento existe, e por isso não se constrói nada agora. Construir hoje o campo que ninguém preenche seria "deixar preparado", que é proibido
 
 ## 18. Números de referência
 

@@ -46,9 +46,9 @@ test('idempotência (Lei 5)', async (t) => {
     const respostas = await Promise.all(
       Array.from({ length: REPETICOES }, () => transiciona(pool, {
         corridaId: corrida.id,
-        tipo: 'pagamento_confirmado',
-        autorTipo: 'sistema',
-        autorId: null,
+        tipo: 'motoboy_aceitou',
+        autorTipo: 'motoboy',
+        autorId: randomUUID(),
         chaveIdempotencia: chave,
       })),
     );
@@ -78,8 +78,11 @@ test('idempotência (Lei 5)', async (t) => {
     // chamador re-envia a mesma chave depois do commit. Não é o Promise.all
     // (que disputa antes do commit) — é retry com a corrida já movida.
     const cenarios = [
-      { ate: 1, tipo: 'pagamento_confirmado', autorTipo: 'sistema', estadoFinal: 2 },
-      { ate: 2, tipo: 'motoboy_aceitou', autorTipo: 'motoboy', estadoFinal: 3 },
+      { ate: 1, tipo: 'motoboy_aceitou', autorTipo: 'motoboy', estadoFinal: 2 },
+      { ate: 2, tipo: 'coleta_confirmada', autorTipo: 'motoboy', estadoFinal: 3 },
+      // O par que mais importa: a confirmação do gateway é o caminho do
+      // dinheiro, e é a retentativa dela que não pode virar dois Pagos.
+      { ate: 4, tipo: 'pagamento_confirmado', autorTipo: 'sistema', estadoFinal: 5 },
       { ate: 3, tipo: 'cancelada', autorTipo: 'painel', payload: { motivo: 'retentativa de rede' }, estadoFinal: 10 },
     ];
     for (const cenario of cenarios) {
@@ -114,16 +117,16 @@ test('idempotência (Lei 5)', async (t) => {
     const chave = `idem-reuso-${randomUUID()}`;
     await transiciona(pool, {
       corridaId: corrida.id,
-      tipo: 'pagamento_confirmado',
-      autorTipo: 'sistema',
-      autorId: null,
+      tipo: 'motoboy_aceitou',
+      autorTipo: 'motoboy',
+      autorId: randomUUID(),
       chaveIdempotencia: chave,
     });
 
     await assert.rejects(
       () => transiciona(pool, {
         corridaId: corrida.id,
-        tipo: 'motoboy_aceitou',
+        tipo: 'coleta_confirmada',
         autorTipo: 'motoboy',
         autorId: randomUUID(),
         chaveIdempotencia: chave,
@@ -135,9 +138,9 @@ test('idempotência (Lei 5)', async (t) => {
     await assert.rejects(
       () => transiciona(pool, {
         corridaId: outra.id,
-        tipo: 'pagamento_confirmado',
-        autorTipo: 'sistema',
-        autorId: null,
+        tipo: 'motoboy_aceitou',
+        autorTipo: 'motoboy',
+        autorId: randomUUID(),
         chaveIdempotencia: chave,
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',

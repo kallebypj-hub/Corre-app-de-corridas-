@@ -17,19 +17,22 @@ const TOTAL = 5000;
 // vivas — o estado gravado tem que bater com o reconstruído em TODAS.
 const PASSOS = {
   1: [
-    ['pagamento_confirmado', 0.55], ['expirou', 0.15], ['cancelada', 0.15], [null, 0.15],
+    ['motoboy_aceitou', 0.6], ['cascata_esgotada', 0.15], ['cancelada', 0.12], [null, 0.13],
   ],
   2: [
-    ['motoboy_aceitou', 0.55], ['cascata_esgotada', 0.15], ['cancelada', 0.15], [null, 0.15],
+    ['coleta_confirmada', 0.7], ['cancelada', 0.15], [null, 0.15],
   ],
   3: [
-    ['coleta_confirmada', 0.65], ['cancelada', 0.2], [null, 0.15],
+    ['chegada_declarada', 0.6], ['retorno_sem_contato', 0.15], ['cancelada', 0.1], [null, 0.15],
   ],
   4: [
-    ['pin_validado', 0.45], ['entrega_falhou', 0.3], ['cancelada', 0.1], [null, 0.15],
+    ['pagamento_confirmado', 0.55], ['espera_vencida', 0.2], ['cancelada', 0.1], [null, 0.15],
   ],
   5: [
-    ['devolucao_concluida', 0.65], ['cancelada', 0.2], [null, 0.15],
+    ['entrega_confirmada', 0.75], [null, 0.25],
+  ],
+  6: [
+    ['devolucao_concluida', 0.6], ['cancelada', 0.2], [null, 0.2],
   ],
 };
 
@@ -44,9 +47,17 @@ function sorteiaPasso(estado) {
   return opcoes[opcoes.length - 1][0];
 }
 
+// Cancelar é livre no estado 1 e só da operação do 2 em diante (seção 5).
 function autorDeCancelamento(estado) {
-  return estado >= 3 ? 'painel' : 'lojista';
+  return estado >= 2 ? 'painel' : 'lojista';
 }
+
+// O que cada transição exige no payload para ser legal.
+const EXIGE = {
+  cancelada: { motivo: 'passeio sintético' },
+  retorno_sem_contato: { motivo: 'endereço não localizado no passeio' },
+  espera_vencida: { caso: 'cliente_ausente' },
+};
 
 test(`reconstrução: ${TOTAL} corridas sintéticas, estado derivado dos eventos bate com o gravado`, async (t) => {
   const pool = poolApp(16);
@@ -62,9 +73,9 @@ test(`reconstrução: ${TOTAL} corridas sintéticas, estado derivado dos eventos
     for (;;) {
       const tipo = sorteiaPasso(corrida.estado);
       if (!tipo) break;
-      const sobrescreve = tipo === 'cancelada'
-        ? { autorTipo: autorDeCancelamento(corrida.estado), payload: { motivo: 'passeio sintético' } }
-        : {};
+      const sobrescreve = {};
+      if (tipo === 'cancelada') sobrescreve.autorTipo = autorDeCancelamento(corrida.estado);
+      if (EXIGE[tipo]) sobrescreve.payload = { ...EXIGE[tipo] };
       ({ corrida } = await aplica(pool, corrida.id, tipo, sobrescreve));
     }
     return corrida.id;
@@ -106,6 +117,9 @@ test('controle interno da reconstrução: projeção adulterada por fora é dete
     autorId: await lojistaApto(pool),
     payload: { origem: 'controle_interno_reconstrucao' },
   });
+  // Adulteração para o estado 7 (em disputa): é o estado sem aresta nenhuma,
+  // logo impossível de alcançar pelo log — e não exige `pago_em`, que o
+  // banco cobraria se a mentira fosse "entregue".
   await dono.query('UPDATE corridas SET estado = 7 WHERE id = $1', [corrida.id]);
 
   const derivado = await reconstroiEstado(pool, corrida.id);
