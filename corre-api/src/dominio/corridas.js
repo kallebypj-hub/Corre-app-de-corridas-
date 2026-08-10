@@ -140,6 +140,88 @@ async function tentaReplay(pool, { chave, tipo, corridaId, confereDados }) {
   return respostaDeReplay(pool, evento);
 }
 
+// AUTOR DE EVENTO TEM QUE EXISTIR — Lei 11, e é o mesmo que `clientes.js` já
+// fazia. `eventos.autor_id` é polimórfico e não tem FK: o `CHECK` só exige
+// campo não nulo, não exige que aponte para alguém. A única defesa possível
+// é esta, e sem ela o motor que MAIS grava log gravava autor inventado —
+// irreversível pela Lei 3.
+const TABELA_DO_ATOR = {
+  lojista: 'lojistas',
+  motoboy: 'motoboys',
+  cliente: 'clientes',
+  painel: 'operadores',
+};
+
+async function exigeAutorReal(pool, autorTipo, autorId, interno) {
+  // 'SISTEMA' É TIPO, NÃO ATOR: ninguém prova ser o sistema, porque não há
+  // credencial de sistema. Quem o declara está afirmando algo que não se
+  // verifica — e a auditoria mostrou o preço disso: a chave do varredor é
+  // `vencimento:<corrida>:<seq>`, DERIVÁVEL, e como o evento do sistema tem
+  // autor nulo, a conferência de autor comparava null com null e entregava o
+  // replay a qualquer chamador. Reproduzido: "chamador sem id RECEBEU replay
+  // do evento do sistema? repetida = true".
+  //
+  // A partir daqui 'sistema' só vale para caminho INTERNO — o varredor de
+  // prazos hoje, o webhook do gateway na Etapa 7. Nada que receba entrada de
+  // fora pode passar `interno`.
+  if (autorTipo === 'sistema') {
+    if (!interno) {
+      throw new ErroDeDominio(
+        CODIGOS.AUTOR_NAO_AUTORIZADO,
+        "'sistema' não é ator: só caminho interno aplica transição de sistema",
+      );
+    }
+    return;
+  }
+  const tabela = TABELA_DO_ATOR[autorTipo];
+  if (!tabela) {
+    throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, `autor de tipo desconhecido: ${autorTipo}`);
+  }
+  if (!autorId) {
+    throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, `${autorTipo} precisa ser identificado`);
+  }
+  const { rows } = await pool.query(`SELECT id FROM ${tabela} WHERE id = $1`, [autorId]);
+  if (rows.length === 0) {
+    // Não diz QUAL id: quem só acertou o formato não sai sabendo se existe.
+    throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, `${autorTipo} do evento não existe`);
+  }
+}
+
+// O VÍNCULO com a corrida, por tipo de ator.
+async function exigeVinculo(pool, corrida, autorTipo, autorId, interno) {
+  await exigeAutorReal(pool, autorTipo, autorId, interno);
+  if (autorTipo === 'lojista' && corrida.lojista_id !== autorId) {
+    throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, 'lojista não é o dono desta corrida');
+  }
+  if (autorTipo === 'cliente' && corrida.cliente_id !== autorId) {
+    throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, 'cliente não é o destinatário desta corrida');
+  }
+  // 'painel' não tem vínculo com a corrida — a operação age sobre qualquer
+  // uma da cidade dela, por desenho. O que ela precisa é ser operador DE
+  // VERDADE, e é o que `exigeAutorReal` acabou de exigir: antes disto, um
+  // UUID inventado cancelava corrida com a mercadoria já na rua.
+  // O 'motoboy' fica sem vínculo até a Etapa 6 (dívida declarada), mas a
+  // EXISTÊNCIA já é exigida acima.
+}
+
+// O DESTINATÁRIO da corrida, quando o pedido traz um. É `cliente_id` que
+// decide, lá na frente, quem pode mover a corrida como 'cliente' — então um
+// id que não aponta para ninguém não pode entrar. Hoje só a FK barraria, e
+// FK devolve erro de driver, não erro de domínio: o chamador receberia 500
+// no lugar de "esse cliente não existe".
+//
+// Não há dono a conferir aqui: cliente é da plataforma, não do lojista
+// (seção 20) — dois lojistas mandam para o mesmo número e é o caso normal.
+// O que se conferiria é OUTRA coisa (se aquele número autorizou receber
+// daquela loja), e isso ninguém desenhou ainda. Fica dito, não fingido.
+async function exigeDestinatarioReal(pool, clienteId) {
+  if (clienteId === undefined || clienteId === null) return;
+  const { rows } = await pool.query('SELECT id FROM clientes WHERE id = $1', [clienteId]);
+  if (rows.length === 0) {
+    throw new ErroDeDominio(CODIGOS.CLIENTE_INEXISTENTE, 'destinatário do pedido não existe');
+  }
+}
+
 // Pode ENTRAR é uma coisa; pode PEDIR é outra (seção 10). O pedido exige
 // lojista real, ativo e com cartão de garantia registrado.
 async function exigeLojistaApto(pool, lojistaId) {
@@ -255,6 +337,7 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
   // Validação no domínio dá erro claro ao chamador; o trigger de banco
   // (migration 0006) é a garantia por construção, defesa em profundidade.
   const lojista = await exigeLojistaApto(pool, autorId);
+  await exigeDestinatarioReal(pool, dados.cliente_id);
   const configuracao = await exigeConfiguracaoQueFecha(pool, dados);
   const prazo = await prazoDaCriacao(pool, dados);
 
@@ -332,8 +415,10 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
 
 // Aplica uma transição. Concorrência: todos os disputantes leem o mesmo seq
 // e tentam gravar seq+1; o UNIQUE do banco escolhe exatamente um vencedor.
+// `interno` é o que separa o varredor (e, na Etapa 7, o webhook do gateway)
+// de qualquer chamador que declare 'sistema'. Ver `exigeAutorReal`.
 async function transiciona(pool, {
-  corridaId, tipo, autorTipo, autorId, payload, chaveIdempotencia,
+  corridaId, tipo, autorTipo, autorId, payload, chaveIdempotencia, interno = false,
 }) {
   const chave = chaveIdempotencia || randomUUID();
   const dados = higienizaPayload(payload);
@@ -342,8 +427,25 @@ async function transiciona(pool, {
   // Lei 5, caso canônico: a operação original já venceu e moveu o estado;
   // a retentativa que chega DEPOIS do commit seria recusada como transição
   // ilegal se a chave não fosse consultada antes da validação.
+  // O AUTOR É CONFERIDO ANTES DO REPLAY, e a ordem é o ponto.
+  //
+  // O replay é um atalho que devolve resultado sem passar pela validação de
+  // estado — e enquanto ele vinha primeiro, quem acertasse a chave recebia a
+  // resposta sem provar nada. Foi assim que a chave da criação virou
+  // chave-mestra entre lojistas, e foi assim que o evento do 'sistema' (com
+  // a chave derivável do varredor) era entregue a qualquer chamador sem id.
+  // A Lei 11 diz isso com todas as letras: a conferência vale também para a
+  // RESPOSTA REPETIDA.
+  await exigeAutorReal(pool, autorTipo, autorId, interno);
+
+  // Lei 11 na chave: replay é para QUEM FEZ a operação. Sem conferir o
+  // autor, dois aparelhos com a mesma chave recebiam ambos "venceu" — e um
+  // motoboy passava a crer que aceitou a corrida de outro.
+  const doMesmoAutor = (payloadDoEvento) => payloadDoEvento.autor_id === (autorId || null);
   if (chaveIdempotencia) {
-    const replayPrevio = await tentaReplay(pool, { chave, tipo, corridaId });
+    const replayPrevio = await tentaReplay(pool, {
+      chave, tipo, corridaId, confereDados: doMesmoAutor,
+    });
     if (replayPrevio) return replayPrevio;
   }
 
@@ -351,6 +453,20 @@ async function transiciona(pool, {
   if (!corridaAtual) {
     throw new ErroDeDominio(CODIGOS.CORRIDA_INEXISTENTE, `corrida ${corridaId} não existe`);
   }
+
+  // LEI 11: tipo de ator não é ator. Validar que o chamador é UM lojista não
+  // prova que é O lojista daquela corrida.
+  //
+  // Duas conferências, e a auditoria mostrou que a primeira versão desta
+  // correção só fez a do lojista, alegando ser "a metade que dá para fechar
+  // hoje". Era falso: `corridas.cliente_id` existe desde a migration 0010 e
+  // estava sendo ignorado — um id qualquer declarado 'cliente' cancelava a
+  // corrida alheia.
+  //
+  // A do MOTOBOY é a única que NÃO dá hoje: `corridas` não tem coluna de
+  // motoboy, ela nasce na Etapa 6 — que por decisão do dono ABRE por este
+  // vínculo, antes da cascata. Dívida declarada, com dono e prazo.
+  await exigeVinculo(pool, corridaAtual, autorTipo, autorId, interno);
 
   let regra;
   try {
@@ -366,7 +482,9 @@ async function transiciona(pool, {
     // rua, sob carga, e não na bateria de um teste por vez.
     if (chaveIdempotencia && erro instanceof ErroDeDominio
       && erro.codigo === CODIGOS.TRANSICAO_ILEGAL) {
-      const replay = await tentaReplay(pool, { chave, tipo, corridaId });
+      const replay = await tentaReplay(pool, {
+        chave, tipo, corridaId, confereDados: doMesmoAutor,
+      });
       if (replay) return replay;
     }
     throw erro;
@@ -377,9 +495,12 @@ async function transiciona(pool, {
     return await emTransacao(pool, async (conexao) => {
       const agora = await agoraDoBanco(conexao);
       const venceEm = calculaVenceEm(regra, agora);
-      const payloadDoEvento = venceEm === null
-        ? dados
-        : { ...dados, vence_em: venceEm.toISOString() };
+      const payloadDoEvento = {
+        ...dados,
+        // O autor no payload é o que faz a chave valer por chamador.
+        autor_id: autorId || null,
+        ...(venceEm === null ? {} : { vence_em: venceEm.toISOString() }),
+      };
       await conexao.query(
         `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id, chave_idempotencia)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -401,7 +522,9 @@ async function transiciona(pool, {
     // posição) — por isso o replay é conferido em todas as disputas de
     // posição, sempre pela chave.
     if (ehDisputaDePosicao(erro)) {
-      const replay = await tentaReplay(pool, { chave, tipo, corridaId });
+      const replay = await tentaReplay(pool, {
+        chave, tipo, corridaId, confereDados: doMesmoAutor,
+      });
       if (replay) return replay;
       if (erro.constraint === 'eventos_chave_idempotencia_unica') {
         throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);
@@ -469,6 +592,7 @@ async function expiraVencidas(pool) {
         autorTipo: 'sistema',
         autorId: null,
         payload: {},
+        interno: true,
         chaveIdempotencia: `vencimento:${corrida.id}:${corrida.seq}`,
       });
       if (!repetida) aplicadas += 1;

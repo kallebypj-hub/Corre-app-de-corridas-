@@ -291,7 +291,13 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/painel/corridas/:id/estorno', exigeSessao('operador'), exigeUuid('id', 'corrida_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
-    await contas.autorizaEstornoSemEfeito(pool, {
+    // O POOL É O DA CIDADE DO OPERADOR, como em todas as outras rotas do
+    // painel. Antes era o pool cru, e a rota nunca funcionou: a checagem da
+    // corrida rodava sem cidade declarada e o RLS cegava tudo. Ela "estava
+    // fechada" por acidente — e proteção que ninguém desenhou não é
+    // proteção. Com o pool certo, corrida de outra cidade continua invisível,
+    // mas agora POR DESENHO, e a rota volta a funcionar.
+    await contas.autorizaEstornoSemEfeito(req.poolDaCidade, {
       corridaId: req.params.id,
       autor,
       chaveIdempotencia: (req.body || {}).chave_idempotencia,

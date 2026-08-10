@@ -291,6 +291,48 @@ Quatro achados, todos reproduzidos por mim antes de aceitar. Os dois primeiros s
 | 152 | **Uma corrida envenenada parava a varredura da cidade** | Qualquer erro fora dos dois esperados abortava o laço de `expiraVencidas` | O erro é **registrado** e a varredura segue; se a lista **inteira** falhar, aí sim sobe — porque não é uma corrida ruim, é o varredor quebrado | A chave determinística do varredor pode ser queimada por um chamador (defeito aberto, capítulo 3). Enquanto isso não se resolve, uma corrida não pode parar o vencimento de todas as outras |
 | 153 | **Guarda de estouro do prazo no número errado** | `Number.MAX_SAFE_INTEGER`, enquanto a coluna é `INTEGER` | Teto de sanidade de **um ano de minutos**, com `ErroDeDominio` | Daqui para cima não é corrida longa, é coordenada errada — e o certo é dizer isso, não estourar cru no `INSERT` |
 
+## Lei 11 — id não é autorização (2026-08-10)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 157 | **Lei 11** | Dez leis. Nenhuma dizia que receber um id não é receber permissão | **Toda função de domínio que recebe um identificador confere de quem ele é antes de operar.** Tipo de ator não é ator. Vale para chave de idempotência, resposta repetida e mensagem de erro. **Função exportada sem chamador segue a mesma regra** | Quatro furos da varredura, todos executados: a chave de criação devolvia a corrida de outro lojista **antes** da validação de autor; `transiciona` conferia o tipo e nunca o autor; a chave de transição dava replay a autor diferente; e `reivindica` tomava conta de cliente por id, **sem chamador nenhum** |
+| 158 | **O padrão, registrado** | — | A Etapa 2 passou não por cuidado, mas porque ali **a identidade estava no dado conferido** (CPF, telefone). Onde o id sozinho pareceu bastar, não bastou em lugar nenhum | **Id é endereço, não credencial.** Sem isso escrito, cada etapa nova redescobre o mesmo buraco |
+| 159 | **Enumeração no cadastro fechada** | `cpf_ja_cadastrado` e `telefone_ja_cadastrado` respondiam **409** — qualquer um descobria se um CPF é motoboy do Corre | Cadastro responde **sempre 202**, como o OTP. Colisão só se revela a quem **prova ser dono**, pelo código de 6 dígitos que já existe | Erro que revela existência é vazamento. Custa uma tela a mais no cadastro duplicado, que é raro, e fecha a enumeração. *Decisão do dono, 2026-08-10* |
+
+## A rodada da Lei 11 — o que foi corrigido, e uma decisão revertida (2026-08-10)
+
+### As chaves de replay: o que cada uma passou a conferir
+
+A chave de idempotência dizia "mesma operação" e conferia só **tipo + agregado**. Faltava conferir os **dados** — e sem isso a segunda operação era engolida em silêncio, com o chamador achando que ela aconteceu. Todas reproduzidas executando antes de corrigir.
+
+| Função | O que a chave NÃO conferia | O que passou a conferir | O que acontecia |
+|---|---|---|---|
+| `criaCorrida` | o **dono** | `lojista_id` no payload | A chave repetida por outro lojista devolvia **a corrida dele**, antes da validação de autor |
+| `transiciona` | o **autor** | `autor_id` no payload | Dois aparelhos com a mesma chave recebiam ambos "venceu": um motoboy cria que aceitou a corrida de outro |
+| `autorizaEstornoSemEfeito` | a **corrida** | `corrida_id` no payload | Mesmo operador, mesma chave, outra corrida → replay; **o segundo estorno nunca foi registrado** |
+| `registraCartao` | o **cartão** | `cartao_ref` | Cartão novo com chave reaproveitada → replay; o cartão B nunca entrou |
+| `trocaAparelho` | o **aparelho** | as mudanças pedidas | Aparelho novo com chave reaproveitada → replay; o motoboy ficava preso ao aparelho antigo |
+| `criaOperador` | o **telefone** | `telefone` | Telefone e papel diferentes → devolvia **o primeiro operador**; o segundo nunca foi criado |
+
+*As três últimas não estavam na varredura original: apareceram quando o dono mandou "aplique a Lei 11 e verifique se existe uma terceira". Não havia uma terceira — havia três.*
+
+### Decisão revertida: cadastro sempre 202
+
+| # | Tema | Aprovado em | Revertido em | Motivo |
+|---|---|---|---|---|
+| 160 | **Cadastro respondendo sempre 202 para fechar a enumeração** | 2026-08-10, com a estimativa de que custaria "uma tela a mais no cadastro duplicado" | 2026-08-10, no mesmo dia, pelo dono | **O custo real é outro.** Se o cadastro novo devolve token e o repetido não, **a diferença entre as duas respostas É a enumeração** — meia fechadura não fecha nada. Fechar de verdade exige que o cadastro **pare de emitir sessão para todo mundo**, tornando o login passo obrigatório sempre. Isso é **atrito no cadastro do motoboy**, a peça que menos pode ter atrito na largada. A tentativa foi implementada e abriu 20 falhas na bateria — não por defeito, mas porque o desenho mudava de verdade. Revertida antes de virar entrega |
+
+*Registro do processo, porque é o mais útil aqui:* o dono aprovou um meio-termo com uma estimativa de custo, a implementação mostrou que a estimativa estava errada, e a decisão voltou à mesa **antes** de ser mesclada. É o que a exigência de "prove executando" serve para produzir.
+
+### O fechamento da Lei 11 no motor de transições (2026-08-10)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 161 | **Teste que depende do defeito** | Nada dizia o que fazer quando a correção quebra a bateria | **"Teste que depende do defeito para passar é pior que teste ausente: ele defende o defeito."** Quando corrigir a regra quebra a bateria, a leitura certa é *"o auxiliar estava errado"*, e o auxiliar se conserta **antes** da correção | Os 232 testes geravam `autorId: randomUUID()`. Exigir autor real quebrou 7 de uma vez, e a pressão de ver vermelho empurra para afrouxar exatamente a trava que se quer instalar |
+| 162 | **`'sistema'` é tipo, não ator** | Qualquer chamador que escrevesse `autorTipo:'sistema'` era o sistema | Só **caminho interno** (`interno: true`) declara `'sistema'` — hoje o varredor de prazos, na Etapa 7 o webhook do gateway. **Nada que receba entrada de fora passa `interno`** | Ninguém prova ser o sistema, porque não existe credencial de sistema. Quem o declara está afirmando algo que não se verifica — e o autor nulo dele casava com o autor nulo de qualquer chamador |
+| 163 | **Autorização vem antes do atalho** | O replay de idempotência respondia **antes** de qualquer validação de autor | `exigeAutorReal` roda **antes** da tentativa de replay, em `transiciona` | O replay devolve resultado sem passar pela validação de estado. Enquanto vinha primeiro, quem acertasse a chave recebia a resposta sem provar nada — foi assim que a chave de criação virou chave-mestra e assim que o evento do sistema vazou |
+| 164 | **A corrida nasce com destinatário conferido** | `criaCorrida` gravava o `cliente_id` do pedido sem olhar; só a FK barrava, com erro de driver | `exigeDestinatarioReal` antes de qualquer escrita, com erro de domínio | É `cliente_id` que decide quem pode mover a corrida como cliente. Id que não aponta para ninguém não pode entrar por uma porta que decide autorização |
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:
@@ -339,11 +381,116 @@ Registro exigido pelo dono: defeito conhecido e não registrado é defeito que v
 
 *(Este capítulo era o arquivo `DEFEITOS_ABERTOS.md`, incorporado aqui na reorganização de 2026-08-09. Nenhuma entrada foi alterada.)*
 
+## 2026-08-10 — A Lei 11 aplicada pela metade: os cinco achados, FECHADOS (PR #9)
+
+A auditoria adversarial da própria rodada da Lei 11 achou **29 itens**; **quatro foram confirmados por reprodução minha** e um quinto estava por reproduzir. Ficaram aqui, e não só no relatório, porque **defeito confirmado que só existe em conversa é defeito perdido** — e a sessão de fato virou entre a confirmação e a correção.
+
+Reprodução dos quatro primeiros, com a credencial da aplicação, num banco nascido das migrations:
+
+```
+(1) CLIENTE fantasma cancelou a corrida alheia          -> estado 10
+(2) PAINEL fantasma cancelou com mercadoria na rua      -> estado 10
+(3) log: cancelada         autor cliente  existe? não
+    log: motoboy_aceitou   autor motoboy  existe? não
+    log: coleta_confirmada autor motoboy  existe? não
+    log: cancelada         autor painel   existe? não
+```
+
+| # | O que era | Como se reproduzia | Como foi fechado |
+|---|---|---|---|
+| **A** | **`transiciona` conferia só o LOJISTA.** O `cliente` ficou de fora, e `corridas.cliente_id` **existe desde a migration `0010`** — era fechável e foi ignorado. O comentário no código dizia "fecha-se aqui a metade que dá para fechar hoje": **era falso**, havia duas metades fecháveis | Criar corrida, chamar `transiciona` com `autorTipo:'cliente'` e um UUID qualquer: cancelava | `exigeVinculo` confere `corrida.cliente_id === autorId`. Sabotagem irmã da do lojista: `cliente_alheio_move_corrida` |
+| **B** | **`painel` não era conferido de forma alguma.** Um UUID inventado cancelava corrida **com a mercadoria já na rua** — o estado em que só a operação pode cancelar, justamente porque há mercadoria de terceiro fora da loja | Levar a corrida até `com_a_mercadoria` e cancelar com `autorTipo:'painel'` e UUID inventado | O painel **não tem vínculo com a corrida por desenho** (a operação age sobre qualquer uma da cidade dela), então o que faltava era a **existência** — `exigeAutorReal` a exige, e era a única coisa entre um id qualquer e o cancelamento |
+| **C** | **`corridas.js` gravava autor INEXISTENTE no log append-only.** Palavra por palavra o defeito fechado em `clientes.js` na mesma rodada, deixado aberto no motor que mais grava log. A Lei 3 torna irreversível; `eventos.autor_id` é polimórfico e não tem FK, então a única defesa possível é o código | Qualquer transição de motoboy/cliente/painel; conferir com `LEFT JOIN` nas tabelas de conta | `exigeAutorReal` por tipo de ator, **antes de qualquer escrita**, nos quatro papéis. A recusa **não devolve o id** — quem acertou só o formato não sai sabendo se ele existe |
+| **D** | **A bateria DEPENDIA do defeito para passar.** `test/ajuda-maquina.js` gerava `autorId: randomUUID()` para motoboy, cliente e painel — **todos os eventos dos 232 testes tinham autor inexistente**. Nenhuma regressão futura seria vista | Ler o auxiliar | Atores reais por processo (`criaAtor`/`atorPara`/`atorNovo`). Foi a **primeira** correção, de propósito: quebrou 7 testes, e cada um deles era um teste que protegia o defeito |
+| **E** | **CONFIRMADO, não refutado.** `doMesmoAutor` comparava `payload.autor_id === (autorId \|\| null)`, então **`null` casava com `null`** — o replay do evento do `sistema` era entregue a qualquer chamador sem id, e a chave do varredor (`vencimento:<id>:<seq>`) é determinística e derivável | `chave derivada bate? true` / `chamador sem id RECEBEU replay do evento do sistema? repetida = true` | Duas correções, porque eram dois defeitos: **(1)** `'sistema'` é tipo, não ator — só caminho `interno` o declara; **(2)** o autor é conferido **ANTES** do replay. A flag sozinha não bastava: **o replay respondia primeiro e a validação nunca rodava** |
+
+**Ordem de correção decidida e cumprida:** D (o auxiliar) → A e B → C → E.
+
+**O que E ensinou, e é o mais reaproveitável:** o replay é um **atalho que devolve resultado sem passar pela validação**. Enquanto ele vinha primeiro, quem acertasse a chave recebia resposta sem provar nada — foi assim que a chave de criação virou chave-mestra entre lojistas e assim que o evento do sistema saía para qualquer um. **Toda conferência de autorização tem que vir antes do atalho, não depois.**
+
+**Um sexto, achado ao fechar os cinco:** `criaCorrida` aceitava `cliente_id` do pedido e o gravava sem conferir nada — a FK barrava o inexistente, mas devolvendo erro de driver (500), não erro de domínio. E é `cliente_id` que decide, em `exigeVinculo`, quem pode mover a corrida como cliente. Fechado com `exigeDestinatarioReal`. *Não há dono a conferir aqui: cliente é da plataforma, não do lojista (seção 20). O que se conferiria é outra coisa — se aquele número autorizou receber daquela loja — e **isso ninguém desenhou ainda**. Fica dito, não fingido.*
+
+**Prova:** bateria **237 testes, 237 verdes**; controle negativo **82 sabotagens**, todas vermelhas no teste certo — as 77 antigas re-verificadas junto (Lei 10), **nenhuma cegada** pelas camadas novas.
+
+## 2026-08-10 — A auditoria do PR #9: 11 defeitos, e o pior não estava no PR
+
+Cinco lentes adversariais sobre o fechamento da Lei 11, cada achado passando por um verificador cético obrigado a reproduzir. Vinte achados sobreviveram à verificação; **reproduzi todos por conta própria** antes de registrar, e a redação abaixo é a minha, não a do agente — **um dos títulos originais estava errado** e está corrigido aqui (item 4).
+
+Todas as reproduções: credencial da aplicação, banco nascido das migrations, sem editar o repositório.
+
+### 🔴 1. CRÍTICO — a chave de idempotência do cadastro é uma credencial de login (Etapa 2, JÁ NA `main`)
+
+`cadastraLojista`/`cadastraMotoboy` consultam o replay com `agregadoId: null`, e o `confereDados` compara **só dado que o próprio chamador forneceu** (`p.telefone === telefone`, `p.cpf === cpf`). Quem apresentar **(telefone + chave)** ou **(CPF + chave)** recebe `repetida: true` **com a conta da vítima** — e `POST /lojistas` e `POST /motoboys` emitem sessão a partir de `conta` sem distinguir criação de replay:
+
+```
+conta da vítima: 3df3c83e-c1c4-48db-a00e-6799aa61e83c repetida = false
+atacante com (telefone + chave) da vítima -> {"repetida":true,"mesma_conta":true}
+atacante SEM a chave (controle)           -> RECUSADO telefone_ja_cadastrado
+atacante com (CPF + chave) e OUTRO aparelho -> {"repetida":true,"mesma_conta":true,
+                                               "aparelho_devolvido":"ap-da-vitima"}
+```
+
+No motoboy é pior: a rota emite `emiteSessao(..., aparelhoId: conta.aparelho_id)` — **o aparelho gravado, o da vítima** —, então a trava de posse de aparelho (`/sessoes/motoboy` responde `aparelho_nao_autorizado` a aparelho diferente) é **contornada por uma string que ninguém desenhou como segredo**. É a Lei 11 literal: *a conferência vale também para a resposta repetida*. Esta rodada fechou exatamente esse padrão em `transiciona` e o deixou intacto no único lugar que **emite credencial**.
+
+### 🔴 2. REGRESSÃO INTRODUZIDA NESTE PR — a Lei 5 morreu na troca de aparelho e no cartão
+
+O `confereDados` que esta rodada acrescentou compara o payload gravado com um payload **recalculado no instante da retentativa**. Em `trocaAparelho`, o `de` sai de `buscaMotoboy` — a projeção **já mudada** pela primeira chamada:
+
+```
+1ª troca de aparelho                          -> {"repetida":false}
+2ª troca IDÊNTICA (Lei 5: operação nula)      -> RECUSADO chave_reutilizada
+1º registro de cartão com espaços             -> {"repetida":false}
+2º registro IDÊNTICO com espaços              -> RECUSADO chave_reutilizada
+```
+
+No cartão a causa é outra e igualmente boba: compara o parâmetro **cru** com o valor **aparado** que foi gravado. O operador cuja resposta se perdeu recebe erro e tende a repetir **com chave nova**, gravando um segundo evento num log que a Lei 3 torna irreversível. **Nenhum teste de retentativa idêntica existia para essas duas funções** — a bateria passou verde por cima da regressão.
+
+### O que esta rodada declarou fechado e fechou pela metade
+
+| # | O que é | Prova |
+|---|---|---|
+| **3** | **Existência não é aptidão.** `exigeAutorReal` pergunta `SELECT id ... WHERE id = $1` e **nunca olha `situacao`**. As quatro tabelas têm a coluna, o schema dá `UPDATE (situacao)` ao app de propósito, e o bloqueio é a única ferramenta de expulsão da plataforma (seção 13) | Motoboy bloqueado **pelo caminho legítimo do painel**, por roubo: `aceita a corrida -> estado 2`, `confirma a coleta -> estado 3`. Lojista bloqueado: `cria pedido NOVO -> RECUSADO conta_bloqueada` mas `move a corrida que já tem -> estado 10`. **A mesma conta, no mesmo arquivo, com dois critérios de aptidão a 40 linhas de distância** |
+| **4** | **`criaCorrida` nunca passa por `exigeAutorReal`.** O replay responde antes de tudo e o `doMesmoDono` compara **só o id**, nunca o `autorTipo`. *(O título do agente dizia "qualquer autorTipo recebe o pedido alheio" — **falso**: com `autorId` alheio a recusa vem correta. O defeito real é o tipo nunca conferido.)* | Com o id do lojista + a chave dele: `REPLAY autorTipo='motoboy'\|'cliente'\|'painel'\|'sistema'\|'tipo-inventado' -> repetida=true, mesma=true`, enquanto **o mesmo pedido com chave nova** é recusado: `autor_nao_autorizado: <tipo> não pode aplicar criada a partir de ∅`. E `exigeLojistaApto` roda **depois** do atalho, então lojista bloqueado e lojista sem cartão também recebem replay |
+| **5** | **`painel` sem papel e sem situação.** O comentário do código diz que basta "ser operador DE VERDADE" — virou "ter uma linha em `operadores`". Libera a transição mais cara do sistema: `cancelada` a partir de 2, 3, 4 e 6, exclusiva do painel porque **a mercadoria de terceiro já saiu da loja** | O contraste está dentro do repositório: `autorizaEstornoSemEfeito` exige papel `dono` **e** `situacao = 'ativa'` para registrar um ato que o próprio código descreve como `efeito: 'nenhum_ate_a_etapa_4'`. **Registrar um estorno que não move um centavo exige mais autorização do que cancelar corrida com a mercadoria na rua** |
+| **6** | **`'sistema'` continua declarável de fora em `clientes.js`: basta OMITIR o lojista.** A rodada fechou isso em `transiciona` e não olhou a função ao lado | `garanteCliente(pool, { telefone })` sem `lojistaId` grava `{"autor_tipo":"sistema","autor_id":null}` |
+| **7** | **`exigeLojistaApto` devolve o id na recusa** (`lojista ${lojistaId} não existe`) e **separa três estados de conta** para o mesmo palpite: inexistente, bloqueada, sem cartão. A propriedade "a recusa não diz QUAL id" foi escrita, testada e sabotada numa porta e deixada aberta e sem teste **na porta ao lado — a porta pela qual TODA corrida passa** | Leitura direta; `contas.test.js:111` assere só o código de erro, sem a asserção-gêmea que `maquina.test.js` faz para `transiciona` |
+
+### O controle negativo desta rodada é fraco em três das cinco sabotagens
+
+A lente que auditou a Lei 8 encontrou o defeito que o próprio cabeçalho do script proíbe: **"vermelho por motivo alheio não conta"**.
+
+| Sabotagem | O que está errado |
+|---|---|
+| `autor_de_transicao_nao_existe` | `const { rows } = [{}]` é desestruturação de **objeto sobre array**: `rows` fica `undefined` e a linha seguinte estoura `TypeError`. A regra **não é desligada** — o módulo passa a explodir em toda transição. Medido: **34 subtestes vermelhos**, 30 ocorrências de `TypeError` no log; o teste-alvo morre no `levaAte` do setup, **antes de chegar à asserção**. A mutação honesta é `const rows = [{}]` (achar sempre uma linha), e com ela fica vermelho **exatamente 1** subteste, pelo motivo certo |
+| `replay_antes_do_autor` | Não sabota a **ordem**: desliga outra vez a trava `interno`, que já tem sabotagem própria e mais ampla. `sistema_declarado_de_fora` deixa vermelhos os subtestes 28 **e** 29; esta deixa só o 29 — é **subconjunto estrito** da outra e não acrescenta cobertura. A ordem, que é a regra central do quinto achado, fica **sem controle negativo próprio** |
+| `destinatario_nao_conferido` | Fica vermelha pela **forma** do erro, não pelo perigo declarado. Sem a checagem, quem barra o destinatário inventado é a **FK** `corridas_cliente_id_fkey` (`23503`), e a corrida não nasce de qualquer jeito. O conteúdo real do item 6 da rodada é só *"erro de domínio em vez de 500 do driver"* — legítimo, mas **é outra coisa**. Vender isso como fechamento de furo da Lei 11 é o inverso de "proteção que ninguém desenhou não é proteção": é **creditar à camada nova uma proteção que já era do banco** |
+
+### E o teste que eu escrevi nesta rodada tem o defeito sobre o qual escrevi a lição
+
+**`LEI 11: autor de evento tem que EXISTIR — em todos os quatro papéis` prova dois.** Nos casos `lojista` e `cliente` a recusa **não vem de `exigeAutorReal`**: vem de `exigeVinculo`, comparando `corrida.lojista_id`/`corrida.cliente_id` com o UUID inventado — e devolvendo **o mesmo código**, `autor_nao_autorizado`. A asserção é indistinguível entre as duas causas. Se alguém restringir `exigeAutorReal` "para não pagar duas consultas quando o vínculo já confere" — otimização natural —, **a bateria não acusa**.
+
+O discriminador existe e é barato, porque `exigeAutorReal` roda antes de `buscaCorrida`:
+
+```
+autor INEXISTENTE + corrida inexistente -> autor_nao_autorizado
+autor REAL        + corrida inexistente -> corrida_inexistente
+```
+
+*Escrever a lei no mesmo dia não imuniza contra ela.*
+
+### Vazamento aceito, com a conta feita
+
+**A ordem de conferência é um oráculo de existência de ator.** Com um `corridaId` sabidamente fantasma, o desfecho depende só do `autorId`: existe → `corrida_inexistente`; não existe → `autor_nao_autorizado`. Uma chamada responde *"este UUID é um operador do Corre?"*. E para **`operadores` e `clientes` a sonda atravessa cidades**, porque essas duas tabelas não têm RLS por decisão de desenho (são da plataforma, não da cidade).
+
+**Aceito por ora, e o motivo é o espaço de busca, não a regra:** UUID aleatório é impraticável de enumerar às cegas. O que fica confirmável é **um id já conhecido** (recebido por engano, herdado de vínculo antigo, visto num print). **Inverter a ordem não resolve — troca de vazamento:** conferir a corrida primeiro devolve a existência de corrida alheia a qualquer ator, que é pior. **Condição de revisão:** quando existir rota HTTP de corridas (Etapa 6/7), medir se o par 403/404 continua distinguível na resposta.
+
 ## 2026-08-10 — A chave determinística do varredor pode ser queimada por um chamador (Etapa 5, aberto)
 
 `expiraVencidas` usa a chave `vencimento:<corrida_id>:<seq>` para ser idempotente entre varredores concorrentes. Ela é **derivável**: quem souber o id e o seq de uma corrida pode gravar um evento com essa chave antes do varredor e, a partir daí, aquele vencimento nunca mais se aplica àquela corrida — a chave está queimada para sempre, porque é determinística.
 
 **O que já foi feito:** o varredor deixou de **abortar a cidade inteira** por causa de uma corrida assim (decisão 152). Antes, uma única corrida envenenada parava o vencimento de todas as outras.
+
+**Meia porta fechada em 2026-08-10 (PR #9):** a chave derivável não **entrega** mais nada. Antes, quem a acertasse recebia o replay do evento do sistema, porque o autor nulo do sistema casava com o autor nulo do chamador e o replay respondia antes de qualquer validação. Agora `'sistema'` só existe por caminho interno e o autor é conferido antes do atalho. O que sobra é só **queimar** a chave, não colher com ela.
 
 **O que continua aberto:** a corrida envenenada não vence. Ela aparece em `corridasParadas` e vira trabalho de gente. Corrigir de verdade exige repensar a chave (por exemplo derivá-la de algo que o chamador não escreve, ou marcar o evento do varredor com um autor que só ele usa e conferir isso no replay) — e isso é mexer no núcleo da Lei 5, que é código da Etapa 1 já na `main`. Vai em **PR próprio**, pela regra do regime de trabalho.
 

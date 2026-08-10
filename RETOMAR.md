@@ -4,7 +4,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 **Regime:** uma sessão por etapa, **uma branch por etapa, um PR por etapa** — abre no prompt da etapa, fecha no merge. Raciocínio máximo em auditoria adversarial e nas três categorias de caminho: **dinheiro** (7, 8b, 9, 11), **isolamento e identidade**, **autenticação e autorização** (`CORRE.md`, regime de trabalho).
 
-**Duas regras que se esquecem com facilidade:** **Lei 10** — camada de defesa nova cega controle negativo antigo, então ao acrescentar política/trigger/constraint/privilégio, rode a bateria inteira de sabotagens de novo. E **relatório de etapa só sai depois que a auditoria adversarial encerra** — número reportado antes é provisório e não vale como entrega.
+**Duas regras que se esquecem com facilidade:** **Lei 11** — id não é autorização: toda função que recebe um identificador confere de quem ele é, inclusive em chave de idempotência e em mensagem de erro. E **Lei 10** — camada de defesa nova cega controle negativo antigo, então ao acrescentar política/trigger/constraint/privilégio, rode a bateria inteira de sabotagens de novo. E **relatório de etapa só sai depois que a auditoria adversarial encerra** — número reportado antes é provisório e não vale como entrega.
 
 ---
 
@@ -21,15 +21,17 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 | | |
 |---|---|
-| **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço). **4 (multi-cidade e cliente) está no PR #6; 5 (máquina de estados nova e prazo) no PR #7, empilhado sobre ele** |
+| **Etapas na `main`** | 0, 1, 2, 3 e **4 (multi-cidade e cliente, PR #6 mesclado em 2026-08-10)** |
 | **O que a revisão invalidou** | **Etapa 1:** o motor vale, **a tabela de estados não** — é reescrita na Etapa 5. **Etapa 2:** vale, falta o cliente como ator. **Etapas 0 e 3:** valem |
-| **Próxima etapa** | **6 — Despacho: cascata, timer de 30s, regras de recusa.** Ela herda o critério da Etapa 4: corrida cujo **motoboy** seja de outra cidade é recusada pelo banco |
-| **Situação da Etapa 5** | **entregue, aguardando aprovação.** 11 estados novos, 14 arestas, prazo par origem-destino em faixa. A auditoria achou 4 defeitos, dois deles com os testes verdes — o pior era a chave de idempotência da criação funcionar como chave-mestra entre lojistas. Todos corrigidos (migration `0013`) |
-| **Situação da Etapa 4** | **aprovada pelo dono em 2026-08-10, aguardando merge do PR #6.** RLS por cidade no banco, cliente como quarto ator, cidade na sessão. Auditoria adversarial feita — ela achou um vazamento (o log de eventos ficou fora do isolamento) e ele foi corrigido na migration `0011` |
+| **Fila de PRs, nesta ordem** | **#9 (Lei 11) → #8 (matriz de preço) → Etapa 6.** Decidida em 2026-08-10 e não é sugestão: o #9 fecha um buraco de autorização, e a Etapa 6 depende do #8 para o sistema parar de prometer tempo de travessia e cobrar preço de destino |
+| **Situação do PR #9 — Lei 11** | **aberto, auditado, NÃO PRONTO PARA MESCLAR.** A auditoria achou 11 defeitos, todos reproduzidos por mim — inclusive **um crítico na `main`** (a chave de idempotência do cadastro emite sessão da conta alheia) e **uma regressão deste próprio PR** (a Lei 5 morreu na troca de aparelho e no cartão). Lista completa no `HISTORICO.md`, capítulo 3. A obra da rodada está feita: A aplicação em `transiciona` fechou: vínculo do cliente, existência do autor nos quatro papéis, `'sistema'` só por caminho interno e o autor conferido **antes** do replay. A bateria deixou de ser cega — gerava autor inexistente em todos os eventos. Os cinco achados e a prova estão no `HISTORICO.md`, capítulo 3 |
+| **Situação do PR #8 — matriz de preço** | **próximo da fila, NÃO travado.** Roda com a tabela de exemplo, como a Etapa 3 fez; a tabela real de Sobral entra depois, sem mudar código. Leva junto o teto de km sobre o piso da raiz e a chave do varredor |
+| **Próxima etapa** | **6 — Despacho**, e ela **abre pelo vínculo do motoboy com a corrida** (`CORRE.md`, tabela de etapas): pré-requisito, não sugestão de ordem |
+| **Situação da Etapa 5** | **aprovada, no PR #7 apontado para a `main`, CI verde.** 11 estados novos, 14 arestas, prazo par origem-destino em faixa. A auditoria achou 4 defeitos, dois deles com os testes verdes — o pior era a chave de idempotência da criação funcionar como chave-mestra entre lojistas. Todos corrigidos (migration `0013`) |
+| **Situação da Etapa 4** | **mesclada.** RLS por cidade no banco, cliente como quarto ator, cidade na sessão. Auditoria adversarial feita — ela achou um vazamento (o log de eventos ficou fora do isolamento) e ele foi corrigido na migration `0011` |
 | **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa*. A pesquisa está feita ([`GATEWAY.md`](GATEWAY.md)); faltam **duas respostas comerciais por escrito**. As Etapas 4, 5 e 6 rodam sem nada disso — a 5 usa a tabela de exemplo, como a Etapa 3 fez |
-| **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
-| **Última bateria verde** | **227 testes**, 0 falhas · controle negativo: **72 sabotagens**, todas vermelhas no teste certo |
-| **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 |
+| **Última bateria verde** | **237 testes**, 0 falhas · controle negativo: **82 sabotagens**, todas vermelhas no teste certo |
+| **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 · **#6 revisão da spec + Etapa 4** |
 
 ## O que já está na `main`
 
@@ -45,8 +47,8 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 ```bash
 cd corre-api && npm ci
-npm run bateria            # banco nasce do zero das migrations + 227 testes
-npm run controle-negativo  # 72 sabotagens; cada uma tem que ficar vermelha no teste certo
+npm run bateria            # banco nasce do zero das migrations + 237 testes
+npm run controle-negativo  # 82 sabotagens; cada uma tem que ficar vermelha no teste certo
 ```
 Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postgres`. A bateria **derruba e recria** o banco `corre_teste` — nunca aponte para um banco que importa.
 
@@ -94,4 +96,4 @@ Depois dela: **Etapa 7** (cobrança na porta), que **não começa** antes das re
 |---|---|---|
 | **Preço é par origem-destino** (matriz 6×6 de anéis) | Etapa 3, `preco.js` | Travada na tabela real de Sobral. **O prazo já é par origem-destino; o preço ainda não** — a assimetria está declarada |
 | **Teto de km sobre o piso da raiz** | Etapa 3, `preco.js` | Código já na `main`; viaja junto com a correção acima (`HISTORICO.md`, capítulo 3) |
-| **Chave determinística do varredor pode ser queimada** | Etapa 1, `corridas.js` | Mexe no núcleo da Lei 5. O efeito pior — parar a varredura da cidade inteira — já foi contido |
+| **Chave determinística do varredor pode ser queimada** | Etapa 1, `corridas.js` | Mexe no núcleo da Lei 5. O efeito pior — parar a varredura da cidade inteira — já foi contido, e o PR #9 fechou a outra metade: a chave derivável não **entrega** mais o evento do sistema a quem a acertar. Sobra poder **queimá-la** |

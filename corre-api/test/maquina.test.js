@@ -10,7 +10,7 @@ const { TRANSICOES } = require('../src/dominio/transicoes');
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
 const {
-  poolApp, AUTOR_PADRAO, PAYLOAD_MINIMO, autorIdPara, aplica, levaAte, lojistaApto,
+  poolApp, AUTOR_PADRAO, PAYLOAD_MINIMO, atorPara, atorNovo, aplica, levaAte, lojistaApto,
 } = require('./ajuda-maquina');
 
 // CÓPIA INDEPENDENTE das arestas legais (com autores permitidos), de
@@ -259,13 +259,19 @@ test('máquina de estados (Etapa 5)', async (t) => {
         const esperada = ARESTAS.find((a) => a.de === de && a.tipo === tipo);
         const corrida = await corridaNoEstado(de);
         const autorTipo = esperada ? esperada.autor : AUTOR_PADRAO[tipo];
+        // Lei 11: lojista tem que ser O lojista da corrida, senão a recusa
+        // viria por autor não autorizado e a matriz mediria outra coisa.
+        const autorId = await atorPara(pool, autorTipo);
         try {
           const { corrida: depois } = await transiciona(pool, {
             corridaId: corrida.id,
             tipo,
             autorTipo,
-            autorId: autorIdPara(autorTipo),
+            autorId,
             payload: PAYLOAD_COMPLETO,
+            // 'sistema' só existe por caminho interno (Lei 11); a matriz
+            // mede LEGALIDADE de aresta, não a porta de entrada.
+            interno: autorTipo === 'sistema',
           });
           assert.ok(esperada, `${tipo} a partir de ${de} (${E.NOMES[de]}) deveria ser recusada, mas passou`);
           assert.equal(depois.estado, esperada.para, `${tipo} de ${de} foi para ${depois.estado}, esperava ${esperada.para}`);
@@ -308,15 +314,176 @@ test('máquina de estados (Etapa 5)', async (t) => {
     }
   });
 
+  await t.test('LEI 11: lojista alheio não move a corrida de outro — e a do motoboy é dívida declarada da Etapa 6', async () => {
+    const { cadastraLojista, registraCartao } = require('../src/dominio/contas');
+    const { conta: outro } = await cadastraLojista(pool, {
+      nome: 'Loja vizinha', telefone: `88 7${randomUUID().slice(0, 10)}`,
+    });
+    await registraCartao(pool, { lojistaId: outro.id, cartaoRef: 'cartao' });
+
+    const corrida = await levaAte(pool, E.A_CAMINHO_DA_LOJA);
+    await assert.rejects(
+      () => aplica(pool, corrida.id, 'coleta_confirmada', { autorTipo: 'lojista', autorId: outro.id }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+      'lojista que não é o dono da corrida não pode movê-la',
+    );
+    // E o dono move.
+    const { corrida: depois } = await aplica(pool, corrida.id, 'coleta_confirmada', { autorTipo: 'lojista' });
+    assert.equal(depois.estado, E.COM_A_MERCADORIA);
+  });
+
+  await t.test('LEI 11: cliente alheio não move a corrida de outro — o vínculo é `corridas.cliente_id`', async () => {
+    const outro = await atorNovo(pool, 'cliente');
+    const corrida = await levaAte(pool, E.PROCURANDO_MOTOBOY);
+
+    await assert.rejects(
+      () => aplica(pool, corrida.id, 'cancelada', { autorTipo: 'cliente', autorId: outro }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+      'cliente que não é o destinatário não pode cancelar a corrida',
+    );
+    // E não é que o cancelamento esteja fechado: o DESTINATÁRIO cancela.
+    const { corrida: depois } = await aplica(pool, corrida.id, 'cancelada', { autorTipo: 'cliente' });
+    assert.equal(depois.estado, E.CANCELADA);
+  });
+
+  await t.test('LEI 11: autor de evento tem que EXISTIR — em todos os quatro papéis, e nada é gravado', async () => {
+    // O log é append-only (Lei 3): autor forjado gravado não se apaga. Por
+    // isso a conferência é ANTES de qualquer escrita, e vale para os quatro
+    // papéis — inclusive 'painel', que não tem vínculo com a corrida e por
+    // isso dependia SÓ da existência para não ser um UUID qualquer
+    // cancelando corrida com a mercadoria na rua.
+    const casos = [
+      { autorTipo: 'lojista', tipo: 'coleta_confirmada', ate: E.A_CAMINHO_DA_LOJA },
+      { autorTipo: 'motoboy', tipo: 'motoboy_aceitou', ate: E.PROCURANDO_MOTOBOY },
+      { autorTipo: 'cliente', tipo: 'cancelada', ate: E.PROCURANDO_MOTOBOY },
+      { autorTipo: 'painel', tipo: 'cancelada', ate: E.PROCURANDO_MOTOBOY },
+    ];
+    for (const caso of casos) {
+      const corrida = await levaAte(pool, caso.ate);
+      const inventado = randomUUID();
+      await assert.rejects(
+        () => aplica(pool, corrida.id, caso.tipo, {
+          autorTipo: caso.autorTipo, autorId: inventado, payload: PAYLOAD_COMPLETO,
+        }),
+        (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+        `${caso.autorTipo} inventado não pode mover corrida`,
+      );
+      const { rows } = await pool.query(
+        'SELECT count(*) AS n FROM eventos WHERE autor_id = $1', [inventado],
+      );
+      assert.equal(rows[0].n, '0', 'autor forjado não pode ter chegado ao log');
+      // A recusa não diz QUAL id: quem acertou só o formato não sai sabendo
+      // se aquele id existe em algum lugar.
+      const mensagem = await aplica(pool, corrida.id, caso.tipo, {
+        autorTipo: caso.autorTipo, autorId: inventado, payload: PAYLOAD_COMPLETO,
+      }).then(() => null, (erro) => erro.message);
+      assert.ok(mensagem && !mensagem.includes(inventado), `a recusa devolveu o id: ${mensagem}`);
+    }
+  });
+
+  await t.test("LEI 11: 'sistema' é tipo, não ator — só caminho interno o declara", async () => {
+    const corrida = await levaAte(pool, E.NA_PORTA_COBRANDO);
+    // Sem `interno`, é o que um chamador de fora consegue mandar.
+    await assert.rejects(
+      () => transiciona(pool, {
+        corridaId: corrida.id, tipo: 'pagamento_confirmado', autorTipo: 'sistema', autorId: null,
+      }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+      "chamador de fora não vira 'sistema' só por declarar",
+    );
+    // Nem com um id qualquer no lugar do nulo.
+    await assert.rejects(
+      () => transiciona(pool, {
+        corridaId: corrida.id, tipo: 'pagamento_confirmado', autorTipo: 'sistema', autorId: randomUUID(),
+      }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+    );
+    // O caminho interno continua funcionando: a trava é de origem, não de tipo.
+    const { corrida: paga } = await transiciona(pool, {
+      corridaId: corrida.id, tipo: 'pagamento_confirmado', autorTipo: 'sistema', autorId: null, interno: true,
+    });
+    assert.equal(paga.estado, E.PAGO);
+  });
+
+  await t.test('LEI 11: o autor é conferido ANTES do replay — chave derivável não entrega evento alheio', async () => {
+    // O quinto achado da auditoria, reproduzido antes de corrigido: a chave
+    // do varredor é `vencimento:<corrida>:<seq>`, e os dois campos saem da
+    // resposta que o próprio chamador recebe. Como o evento do sistema tem
+    // autor nulo, `payload.autor_id === (autorId || null)` comparava null com
+    // null e o replay era entregue a qualquer um que acertasse a chave —
+    // antes de qualquer validação, porque o replay vinha primeiro.
+    const corrida = await levaAte(pool, E.PROCURANDO_MOTOBOY);
+    const chaveDerivada = `vencimento:${corrida.id}:${corrida.seq}`;
+    const doVarredor = {
+      corridaId: corrida.id,
+      tipo: 'cascata_esgotada',
+      autorTipo: 'sistema',
+      autorId: null,
+      chaveIdempotencia: chaveDerivada,
+    };
+    await transiciona(pool, { ...doVarredor, interno: true });
+
+    // Mesma chave, mesmo tipo, sem id — o formato exato do que passava. E o
+    // estado JÁ ANDOU: sem a conferência de autor antes do replay, a resposta
+    // voltaria pelo atalho, sem passar por validação nenhuma.
+    await assert.rejects(
+      () => transiciona(pool, doVarredor),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'autor_nao_autorizado',
+      'a chave derivável não pode devolver o evento do sistema a quem não é o sistema',
+    );
+
+    // E não é a chave que está quebrada: o varredor repete e recebe replay.
+    const replay = await transiciona(pool, { ...doVarredor, interno: true });
+    assert.equal(replay.repetida, true);
+  });
+
+  await t.test('LEI 11: destinatário inventado não vira corrida — e o pedido não é gravado', async () => {
+    const inventado = randomUUID();
+    const dono = await lojistaApto(pool);
+    await assert.rejects(
+      () => criaCorrida(pool, {
+        autorTipo: 'lojista',
+        autorId: dono,
+        payload: { origem: 'destinatario_falso', cliente_id: inventado },
+      }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'cliente_inexistente',
+      'id de cliente que não aponta para ninguém não pode virar destinatário',
+    );
+    const { rows } = await pool.query(
+      'SELECT count(*) AS n FROM corridas WHERE cliente_id = $1', [inventado],
+    );
+    assert.equal(rows[0].n, '0');
+  });
+
+  await t.test('LEI 11: a chave de idempotência de transição é do AUTOR — outro aparelho não herda o aceite', async () => {
+    const corrida = await levaAte(pool, E.PROCURANDO_MOTOBOY);
+    const chave = `aceite-${randomUUID()}`;
+    const primeiro = await atorPara(pool, 'motoboy');
+    const outroAparelho = await atorNovo(pool, 'motoboy');
+    const vencedor = await aplica(pool, corrida.id, 'motoboy_aceitou', { autorId: primeiro, chaveIdempotencia: chave });
+    assert.equal(vencedor.repetida, false);
+
+    await assert.rejects(
+      () => aplica(pool, corrida.id, 'motoboy_aceitou', { autorId: outroAparelho, chaveIdempotencia: chave }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+      'outro aparelho com a mesma chave não pode receber "venceu"',
+    );
+
+    // O próprio autor continua replayando: a Lei 5 não pode ter quebrado.
+    const repetida = await aplica(pool, corrida.id, 'motoboy_aceitou', { autorId: primeiro, chaveIdempotencia: chave });
+    assert.equal(repetida.repetida, true);
+  });
+
   await t.test('estado 7 (em disputa) não tem aresta nenhuma, nem de entrada, até a Etapa 11', async () => {
     for (const [tipo, regra] of Object.entries(TRANSICOES)) {
       assert.ok(!regra.de.includes(E.EM_DISPUTA), `${tipo} não pode partir de em_disputa nesta etapa`);
       assert.notEqual(regra.para, E.EM_DISPUTA, `${tipo} não pode levar a em_disputa nesta etapa`);
     }
     const corrida = await levaAte(pool, 4);
+    const operador = await atorPara(pool, 'painel');
     await assert.rejects(
       () => transiciona(pool, {
-        corridaId: corrida.id, tipo: 'disputa_aberta', autorTipo: 'painel', autorId: randomUUID(),
+        corridaId: corrida.id, tipo: 'disputa_aberta', autorTipo: 'painel', autorId: operador,
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'tipo_desconhecido',
     );
@@ -440,9 +607,10 @@ test('máquina de estados (Etapa 5)', async (t) => {
   });
 
   await t.test('transição em corrida inexistente é recusada', async () => {
+    const motoboy = await atorPara(pool, 'motoboy');
     await assert.rejects(
       () => transiciona(pool, {
-        corridaId: randomUUID(), tipo: 'motoboy_aceitou', autorTipo: 'motoboy', autorId: randomUUID(),
+        corridaId: randomUUID(), tipo: 'motoboy_aceitou', autorTipo: 'motoboy', autorId: motoboy,
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'corrida_inexistente',
     );

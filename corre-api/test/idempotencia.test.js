@@ -6,7 +6,7 @@ const { randomUUID } = require('node:crypto');
 
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const { ErroDeDominio } = require('../src/dominio/erros');
-const { poolApp, levaAte, lojistaApto } = require('./ajuda-maquina');
+const { poolApp, levaAte, lojistaApto, atorPara } = require('./ajuda-maquina');
 
 const REPETICOES = 50;
 
@@ -43,12 +43,18 @@ test('idempotência (Lei 5)', async (t) => {
     const corrida = await levaAte(pool, 1);
     const chave = `idem-transicao-${randomUUID()}`;
 
+    // O MESMO autor nas 50: é um aparelho retentando, não 50 aparelhos. A
+    // chave é do autor (Lei 11) — 50 autores diferentes com a mesma chave é
+    // reuso indevido, e tem teste próprio em maquina.test.js.
+    // E é um motoboy DE VERDADE: com UUID inventado a bateria provava a Lei 5
+    // sobre um evento que o banco nem deveria ter aceitado.
+    const aparelho = await atorPara(pool, 'motoboy');
     const respostas = await Promise.all(
       Array.from({ length: REPETICOES }, () => transiciona(pool, {
         corridaId: corrida.id,
         tipo: 'motoboy_aceitou',
         autorTipo: 'motoboy',
-        autorId: randomUUID(),
+        autorId: aparelho,
         chaveIdempotencia: chave,
       })),
     );
@@ -88,11 +94,13 @@ test('idempotência (Lei 5)', async (t) => {
     for (const cenario of cenarios) {
       const corrida = await levaAte(pool, cenario.ate);
       const chave = `idem-sequencial-${randomUUID()}`;
+      const autor = await atorPara(pool, cenario.autorTipo);
       const argumentos = {
         corridaId: corrida.id,
         tipo: cenario.tipo,
         autorTipo: cenario.autorTipo,
-        autorId: cenario.autorTipo === 'sistema' ? null : randomUUID(),
+        autorId: autor,
+        interno: cenario.autorTipo === 'sistema',
         payload: cenario.payload,
         chaveIdempotencia: chave,
       };
@@ -143,9 +151,10 @@ test('idempotência (Lei 5)', async (t) => {
 
     // Nem por outro tipo de autor — que sem chave já seria recusado.
     for (const autorTipo of ['motoboy', 'cliente', 'painel', 'sistema']) {
+      const autor = await atorPara(pool, autorTipo);
       await assert.rejects(
         () => criaCorrida(pool, {
-          autorTipo, autorId: randomUUID(), payload: {}, chaveIdempotencia: chave,
+          autorTipo, autorId: autor, payload: {}, chaveIdempotencia: chave,
         }),
         (erro) => erro instanceof ErroDeDominio
           && ['chave_reutilizada', 'autor_nao_autorizado'].includes(erro.codigo),
@@ -170,11 +179,12 @@ test('idempotência (Lei 5)', async (t) => {
   await t.test('a mesma chave em OUTRA operação é reuso indevido, não replay', async () => {
     const corrida = await levaAte(pool, 1);
     const chave = `idem-reuso-${randomUUID()}`;
+    const aparelhoUnico = await atorPara(pool, 'motoboy');
     await transiciona(pool, {
       corridaId: corrida.id,
       tipo: 'motoboy_aceitou',
       autorTipo: 'motoboy',
-      autorId: randomUUID(),
+      autorId: aparelhoUnico,
       chaveIdempotencia: chave,
     });
 
@@ -183,7 +193,7 @@ test('idempotência (Lei 5)', async (t) => {
         corridaId: corrida.id,
         tipo: 'coleta_confirmada',
         autorTipo: 'motoboy',
-        autorId: randomUUID(),
+        autorId: aparelhoUnico,
         chaveIdempotencia: chave,
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
@@ -195,7 +205,7 @@ test('idempotência (Lei 5)', async (t) => {
         corridaId: outra.id,
         tipo: 'motoboy_aceitou',
         autorTipo: 'motoboy',
-        autorId: randomUUID(),
+        autorId: aparelhoUnico,
         chaveIdempotencia: chave,
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',

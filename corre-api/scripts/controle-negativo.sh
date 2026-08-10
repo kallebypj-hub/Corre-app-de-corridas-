@@ -136,8 +136,14 @@ sabota_codigo "aresta_ilegal_na_tabela" src/dominio/transicoes.js \
 
 # UNIQUE da sequência removido: o banco deixa de arbitrar a corrida pelo
 # aceite — mais de um vencedor passa a ser possível.
+# São DOIS os árbitros da posição no log: o UNIQUE e o trigger anti-buraco,
+# que também recusa quem não chega na posição seguinte. Derrubar só o UNIQUE
+# deixava o trigger segurando, e a sabotagem virava LOTERIA — vermelha em
+# isolamento, verde sob a carga do próprio controle negativo. Falso positivo
+# intermitente, que é o pior tipo. Lei 10: derruba AS DUAS camadas.
 sabota_sql "sem_unique_de_sequencia" "
   ALTER TABLE eventos DROP CONSTRAINT eventos_agregado_seq_unico;
+  DROP TRIGGER eventos_bloqueia_buraco ON eventos;
 " test/concorrencia.test.js "exatamente uma vencedora"
 
 # UNIQUE da chave de idempotência removido: retentativa duplica evento.
@@ -574,6 +580,76 @@ sabota_sql "pago_derivado_do_estado" "
 sabota_codigo "versao_da_tabela_do_payload" src/dominio/corridas.js \
   "s|  'tabela_preco_id',||" \
   test/prazo.test.js "NÃO escolhe a versão da tabela"
+
+# ---------- Lei 11: id não é autorização ----------
+
+# O AUTOR DO EVENTO DEIXA DE SER CONFERIDO: um lojista inventado volta a ser
+# gravado como autor no log append-only, que a Lei 3 torna irreversível.
+sabota_codigo "autor_de_evento_nao_conferido" src/dominio/clientes.js \
+  's|  const autorReal = await exigeAutorReal(pool, lojistaId);|  const autorReal = lojistaId \|\| null;|' \
+  test/cidades.test.js "autor de evento"
+
+# O VÍNCULO DO LOJISTA COM A CORRIDA cai: qualquer lojista da cidade volta a
+# mover o pedido do vizinho.
+sabota_codigo "lojista_alheio_move_corrida" src/dominio/corridas.js \
+  "s|  if (autorTipo === 'lojista' \&\& corrida.lojista_id !== autorId) {|  if (false) {|" \
+  test/maquina.test.js "lojista alheio não move"
+
+# O VÍNCULO DO CLIENTE COM A CORRIDA cai: um cliente qualquer volta a cancelar
+# a entrega de outro. A coluna `cliente_id` existe desde a 0010 e estava sendo
+# ignorada — declarar-se 'cliente' bastava.
+sabota_codigo "cliente_alheio_move_corrida" src/dominio/corridas.js \
+  "s|  if (autorTipo === 'cliente' \&\& corrida.cliente_id !== autorId) {|  if (false) {|" \
+  test/maquina.test.js "cliente alheio não move"
+
+# A EXISTÊNCIA DO AUTOR cai em `corridas.js`: UUID inventado volta a mover
+# corrida nos quatro papéis, e o do 'painel' é o pior — a operação não tem
+# vínculo com a corrida, então a existência era a ÚNICA coisa entre um id
+# qualquer e o cancelamento de uma entrega com a mercadoria na rua.
+sabota_codigo "autor_de_transicao_nao_existe" src/dominio/corridas.js \
+  's|  const { rows } = await pool.query(`SELECT id FROM ${tabela} WHERE id = $1`, \[autorId\]);|  const { rows } = [{}];|' \
+  test/maquina.test.js "autor de evento tem que EXISTIR"
+
+# 'SISTEMA' VOLTA A SER DECLARÁVEL DE FORA: quem escrever "sistema" no corpo
+# da requisição confirma o próprio pagamento.
+sabota_codigo "sistema_declarado_de_fora" src/dominio/corridas.js \
+  's|    if (!interno) {|    if (false) {|' \
+  test/maquina.test.js "'sistema' é tipo, não ator"
+
+# A ORDEM VOLTA A SER A ERRADA: a conferência de autor ANTES do replay passa a
+# aceitar 'sistema' de qualquer origem, então o atalho do replay responde antes
+# de qualquer validação — que é exatamente como a chave derivável do varredor
+# entregava o evento do sistema a um chamador sem id.
+#
+# O endereço de linha (`/async function transiciona/,/const doMesmoAutor/`)
+# não é enfeite: a MESMA chamada existe dentro de `exigeVinculo`, e sabotar as
+# duas de uma vez derrubaria também o teste do 'sistema' — a sabotagem
+# deixaria de dizer qual regra caiu.
+sabota_codigo "replay_antes_do_autor" src/dominio/corridas.js \
+  '/^async function transiciona/,/const doMesmoAutor/ s|  await exigeAutorReal(pool, autorTipo, autorId, interno);|  await exigeAutorReal(pool, autorTipo, autorId, true);|' \
+  test/maquina.test.js "autor é conferido ANTES do replay"
+
+# O DESTINATÁRIO DEIXA DE SER CONFERIDO: `cliente_id` inventado volta a entrar
+# no pedido, e quem decide quem pode mover a corrida como 'cliente' é ele.
+sabota_codigo "destinatario_nao_conferido" src/dominio/corridas.js \
+  's|  await exigeDestinatarioReal(pool, dados.cliente_id);||' \
+  test/maquina.test.js "destinatário inventado não vira corrida"
+
+# A CHAVE DE TRANSIÇÃO DEIXA DE SER DO AUTOR: dois aparelhos com a mesma
+# chave recebem ambos "venceu", e um motoboy crê que aceitou corrida alheia.
+sabota_codigo "chave_de_transicao_sem_autor" src/dominio/corridas.js \
+  's|  const doMesmoAutor = (payloadDoEvento) => payloadDoEvento.autor_id === (autorId \|\| null);|  const doMesmoAutor = () => true;|' \
+  test/maquina.test.js "chave de idempotência de transição é do AUTOR"
+
+# A CHAVE DO ESTORNO DEIXA DE CONFERIR A CORRIDA: o segundo estorno some.
+sabota_codigo "chave_de_estorno_sem_corrida" src/dominio/contas.js \
+  's|      confereDados: (p) => p.corrida_id === corridaId,||' \
+  test/contas.test.js "chave do ESTORNO"
+
+# AS TRÊS IRMÃS: a chave volta a ignorar os dados pedidos.
+sabota_codigo "chave_de_cartao_sem_dados" src/dominio/contas.js \
+  's|      confereDados: (p) => p.cartao_ref === cartaoRef,||' \
+  test/contas.test.js "chave do CARTÃO"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero

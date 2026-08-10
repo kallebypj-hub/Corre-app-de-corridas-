@@ -387,3 +387,33 @@ test('a corrida guarda cidade e cliente', async (t) => {
   assert.equal(corrida.cidade_id, SOBRAL);
   assert.equal(corrida.cliente_id, cliente.id);
 });
+
+test('LEI 11: autor de evento tem que existir — log não aceita autor forjado', async (t) => {
+  const { poolApp } = require('./ajuda-maquina');
+  const { garanteCliente } = require('../src/dominio/clientes');
+  const { cadastraLojista } = require('../src/dominio/contas');
+  const { ErroDeDominio } = require('../src/dominio/erros');
+  const { randomUUID: uuid } = require('node:crypto');
+  const pool = poolApp(4);
+  t.after(() => pool.end());
+
+  // Um lojista inventado virava `autor_id` do evento de criação do cliente —
+  // e a Lei 3 torna isso IRREVERSÍVEL: autor falso em log append-only não se
+  // apaga. O `CHECK` de autor identificado só exigia campo não nulo; não
+  // exigia que apontasse para alguém.
+  await assert.rejects(
+    () => garanteCliente(pool, { telefone: `88 9${uuid().slice(0, 10)}`, lojistaId: uuid() }),
+    (erro) => erro instanceof ErroDeDominio && erro.codigo === 'lojista_inexistente',
+    'autor de evento inexistente tem que ser recusado ANTES da escrita',
+  );
+
+  // E o autor real passa, gravado como autor do evento.
+  const { conta } = await cadastraLojista(pool, { nome: 'Loja real', telefone: `88 7${uuid().slice(0, 10)}` });
+  const { cliente } = await garanteCliente(pool, { telefone: `88 9${uuid().slice(0, 10)}`, lojistaId: conta.id });
+  const { rows: [evento] } = await pool.query(
+    `SELECT autor_tipo, autor_id FROM eventos WHERE agregado_tipo = 'cliente' AND agregado_id = $1`,
+    [cliente.id],
+  );
+  assert.equal(evento.autor_tipo, 'lojista');
+  assert.equal(evento.autor_id, conta.id);
+});

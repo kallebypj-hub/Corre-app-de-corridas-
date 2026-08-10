@@ -242,3 +242,61 @@ test('cadastro e travas (Etapa 2)', async (t) => {
     assert.equal(gravado.seq, 4);
   });
 });
+
+test('LEI 11: a chave do CARTÃO confere o cartão', async (t) => {
+  const { poolApp } = require('./ajuda-maquina');
+  const { randomUUID: uuid } = require('node:crypto');
+  const contas = require('../src/dominio/contas');
+  const { criaCorrida } = require('../src/dominio/corridas');
+  const { ErroDeDominio } = require('../src/dominio/erros');
+  const pool = poolApp(4);
+  t.after(() => pool.end());
+  const tel = () => `88 9${uuid().slice(0, 10)}`;
+
+  // A chave dizia "mesma operação" e conferia só tipo + agregado. Sem
+  // conferir os DADOS, a segunda operação era engolida em silêncio e o
+  // chamador achava que ela tinha acontecido.
+
+  // (a) cartão: mesma chave, MESMO lojista, cartão DIFERENTE.
+  const { conta: lj } = await contas.cadastraLojista(pool, { nome: 'L', telefone: tel() });
+  const chaveCartao = `cartao-${uuid()}`;
+  await contas.registraCartao(pool, { lojistaId: lj.id, cartaoRef: 'cartao-A', chaveIdempotencia: chaveCartao });
+  await assert.rejects(
+    () => contas.registraCartao(pool, { lojistaId: lj.id, cartaoRef: 'cartao-B', chaveIdempotencia: chaveCartao }),
+    (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+    'cartão diferente com a mesma chave não pode virar replay silencioso',
+  );
+  // O MESMO cartão continua replayando: a Lei 5 não pode ter quebrado.
+  const repetida = await contas.registraCartao(pool, {
+    lojistaId: lj.id, cartaoRef: 'cartao-A', chaveIdempotencia: chaveCartao,
+  });
+  assert.equal(repetida.repetida, true);
+
+});
+
+test('LEI 11: a chave do ESTORNO confere a corrida', async (t) => {
+  const { poolApp } = require('./ajuda-maquina');
+  const { randomUUID: uuid } = require('node:crypto');
+  const contas = require('../src/dominio/contas');
+  const { criaCorrida } = require('../src/dominio/corridas');
+  const { ErroDeDominio } = require('../src/dominio/erros');
+  const { donoDeTeste } = require('./ajuda-contas');
+  const pool = poolApp(4);
+  t.after(() => pool.end());
+  const tel = () => `88 9${uuid().slice(0, 10)}`;
+
+  // Mesmo operador, mesma chave, OUTRA corrida: sem conferir a corrida, o
+  // segundo estorno virava replay e nunca era registrado.
+  const dono = await donoDeTeste(pool);
+  const { conta: lojaApta } = await contas.cadastraLojista(pool, { nome: 'LA', telefone: tel() });
+  await contas.registraCartao(pool, { lojistaId: lojaApta.id, cartaoRef: 'c' });
+  const { corrida: c1 } = await criaCorrida(pool, { autorTipo: 'lojista', autorId: lojaApta.id, payload: {} });
+  const { corrida: c2 } = await criaCorrida(pool, { autorTipo: 'lojista', autorId: lojaApta.id, payload: {} });
+  const chaveEstorno = `estorno-${uuid()}`;
+  await contas.autorizaEstornoSemEfeito(pool, { corridaId: c1.id, autor: dono, chaveIdempotencia: chaveEstorno });
+  await assert.rejects(
+    () => contas.autorizaEstornoSemEfeito(pool, { corridaId: c2.id, autor: dono, chaveIdempotencia: chaveEstorno }),
+    (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+    'estorno de outra corrida com a mesma chave não pode sumir em replay',
+  );
+});
