@@ -324,6 +324,15 @@ A chave de idempotência dizia "mesma operação" e conferia só **tipo + agrega
 
 *Registro do processo, porque é o mais útil aqui:* o dono aprovou um meio-termo com uma estimativa de custo, a implementação mostrou que a estimativa estava errada, e a decisão voltou à mesa **antes** de ser mesclada. É o que a exigência de "prove executando" serve para produzir.
 
+### O fechamento da Lei 11 no motor de transições (2026-08-10)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 161 | **Teste que depende do defeito** | Nada dizia o que fazer quando a correção quebra a bateria | **"Teste que depende do defeito para passar é pior que teste ausente: ele defende o defeito."** Quando corrigir a regra quebra a bateria, a leitura certa é *"o auxiliar estava errado"*, e o auxiliar se conserta **antes** da correção | Os 232 testes geravam `autorId: randomUUID()`. Exigir autor real quebrou 7 de uma vez, e a pressão de ver vermelho empurra para afrouxar exatamente a trava que se quer instalar |
+| 162 | **`'sistema'` é tipo, não ator** | Qualquer chamador que escrevesse `autorTipo:'sistema'` era o sistema | Só **caminho interno** (`interno: true`) declara `'sistema'` — hoje o varredor de prazos, na Etapa 7 o webhook do gateway. **Nada que receba entrada de fora passa `interno`** | Ninguém prova ser o sistema, porque não existe credencial de sistema. Quem o declara está afirmando algo que não se verifica — e o autor nulo dele casava com o autor nulo de qualquer chamador |
+| 163 | **Autorização vem antes do atalho** | O replay de idempotência respondia **antes** de qualquer validação de autor | `exigeAutorReal` roda **antes** da tentativa de replay, em `transiciona` | O replay devolve resultado sem passar pela validação de estado. Enquanto vinha primeiro, quem acertasse a chave recebia a resposta sem provar nada — foi assim que a chave de criação virou chave-mestra e assim que o evento do sistema vazou |
+| 164 | **A corrida nasce com destinatário conferido** | `criaCorrida` gravava o `cliente_id` do pedido sem olhar; só a FK barrava, com erro de driver | `exigeDestinatarioReal` antes de qualquer escrita, com erro de domínio | É `cliente_id` que decide quem pode mover a corrida como cliente. Id que não aponta para ninguém não pode entrar por uma porta que decide autorização |
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:
@@ -372,9 +381,9 @@ Registro exigido pelo dono: defeito conhecido e não registrado é defeito que v
 
 *(Este capítulo era o arquivo `DEFEITOS_ABERTOS.md`, incorporado aqui na reorganização de 2026-08-09. Nenhuma entrada foi alterada.)*
 
-## 2026-08-10 — A Lei 11 está aplicada PELA METADE (PR #9, ABERTO)
+## 2026-08-10 — A Lei 11 aplicada pela metade: os cinco achados, FECHADOS (PR #9)
 
-A auditoria adversarial da própria rodada da Lei 11 achou **29 itens**; **quatro foram confirmados por reprodução minha** e um quinto está por reproduzir. Estão aqui, e não só no relatório, porque **defeito confirmado que só existe em conversa é defeito perdido**.
+A auditoria adversarial da própria rodada da Lei 11 achou **29 itens**; **quatro foram confirmados por reprodução minha** e um quinto estava por reproduzir. Ficaram aqui, e não só no relatório, porque **defeito confirmado que só existe em conversa é defeito perdido** — e a sessão de fato virou entre a confirmação e a correção.
 
 Reprodução dos quatro primeiros, com a credencial da aplicação, num banco nascido das migrations:
 
@@ -387,21 +396,29 @@ Reprodução dos quatro primeiros, com a credencial da aplicação, num banco na
     log: cancelada         autor painel   existe? não
 ```
 
-| # | O que é | Como se reproduz | O que falta |
+| # | O que era | Como se reproduzia | Como foi fechado |
 |---|---|---|---|
-| **A** | **`transiciona` confere só o LOJISTA.** O `cliente` ficou de fora, e `corridas.cliente_id` **existe desde a migration `0010`** — era fechável e foi ignorado. O comentário no código diz "fecha-se aqui a metade que dá para fechar hoje": **era falso**, havia duas metades fecháveis | Criar corrida, chamar `transiciona` com `autorTipo:'cliente'` e um UUID qualquer: cancela | Conferir `corridas.cliente_id === autorId`, com sabotagem irmã da do lojista |
-| **B** | **`painel` não é conferido de forma alguma.** Um UUID inventado cancela corrida **com a mercadoria já na rua** — o estado em que só a operação pode cancelar, justamente porque há mercadoria de terceiro fora da loja. `contas.js` recusa autor forjado na troca de aparelho, que é a autorização mais barata do sistema | Levar a corrida até `com_a_mercadoria` e cancelar com `autorTipo:'painel'` e UUID inventado | Carregar o operador e passar por `exigePapelDoOperador`, como `contas.js` já faz |
-| **C** | **`corridas.js` grava autor INEXISTENTE no log append-only.** É palavra por palavra o defeito fechado em `clientes.js` na mesma rodada, deixado aberto no motor que mais grava log. A Lei 3 torna irreversível; `eventos.autor_id` é polimórfico e não tem FK, então a única defesa possível é o código | Qualquer transição de motoboy/cliente/painel; conferir com `LEFT JOIN` nas tabelas de conta | `exigeAutorReal` por tipo de ator, antes de qualquer escrita |
-| **D** | **A bateria DEPENDE do defeito para passar.** `test/ajuda-maquina.js` gera `autorId: randomUUID()` para motoboy, cliente e painel — **todos os eventos dos 232 testes têm autor inexistente**. Nenhuma regressão futura seria vista | Ler o auxiliar | Auxiliar cria atores reais. **Vem primeiro**: com o gerador inventando UUID, qualquer correção de autor quebra a bateria e a pressão vira afrouxar a correção |
-| **E** | **Por reproduzir:** `doMesmoAutor` compara `payload.autor_id === (autorId \|\| null)`, então **`null` casa com `null`** — o replay de evento do `sistema` seria entregue a qualquer chamador sem id, e a chave do varredor (`vencimento:<id>:<seq>`) é determinística e derivável | — | Reproduzir antes de corrigir; se não confirmar, **registrar como refutado** |
+| **A** | **`transiciona` conferia só o LOJISTA.** O `cliente` ficou de fora, e `corridas.cliente_id` **existe desde a migration `0010`** — era fechável e foi ignorado. O comentário no código dizia "fecha-se aqui a metade que dá para fechar hoje": **era falso**, havia duas metades fecháveis | Criar corrida, chamar `transiciona` com `autorTipo:'cliente'` e um UUID qualquer: cancelava | `exigeVinculo` confere `corrida.cliente_id === autorId`. Sabotagem irmã da do lojista: `cliente_alheio_move_corrida` |
+| **B** | **`painel` não era conferido de forma alguma.** Um UUID inventado cancelava corrida **com a mercadoria já na rua** — o estado em que só a operação pode cancelar, justamente porque há mercadoria de terceiro fora da loja | Levar a corrida até `com_a_mercadoria` e cancelar com `autorTipo:'painel'` e UUID inventado | O painel **não tem vínculo com a corrida por desenho** (a operação age sobre qualquer uma da cidade dela), então o que faltava era a **existência** — `exigeAutorReal` a exige, e era a única coisa entre um id qualquer e o cancelamento |
+| **C** | **`corridas.js` gravava autor INEXISTENTE no log append-only.** Palavra por palavra o defeito fechado em `clientes.js` na mesma rodada, deixado aberto no motor que mais grava log. A Lei 3 torna irreversível; `eventos.autor_id` é polimórfico e não tem FK, então a única defesa possível é o código | Qualquer transição de motoboy/cliente/painel; conferir com `LEFT JOIN` nas tabelas de conta | `exigeAutorReal` por tipo de ator, **antes de qualquer escrita**, nos quatro papéis. A recusa **não devolve o id** — quem acertou só o formato não sai sabendo se ele existe |
+| **D** | **A bateria DEPENDIA do defeito para passar.** `test/ajuda-maquina.js` gerava `autorId: randomUUID()` para motoboy, cliente e painel — **todos os eventos dos 232 testes tinham autor inexistente**. Nenhuma regressão futura seria vista | Ler o auxiliar | Atores reais por processo (`criaAtor`/`atorPara`/`atorNovo`). Foi a **primeira** correção, de propósito: quebrou 7 testes, e cada um deles era um teste que protegia o defeito |
+| **E** | **CONFIRMADO, não refutado.** `doMesmoAutor` comparava `payload.autor_id === (autorId \|\| null)`, então **`null` casava com `null`** — o replay do evento do `sistema` era entregue a qualquer chamador sem id, e a chave do varredor (`vencimento:<id>:<seq>`) é determinística e derivável | `chave derivada bate? true` / `chamador sem id RECEBEU replay do evento do sistema? repetida = true` | Duas correções, porque eram dois defeitos: **(1)** `'sistema'` é tipo, não ator — só caminho `interno` o declara; **(2)** o autor é conferido **ANTES** do replay. A flag sozinha não bastava: **o replay respondia primeiro e a validação nunca rodava** |
 
-**Ordem de correção decidida:** D (o auxiliar) → A e B → C → E. O auxiliar primeiro **de propósito**.
+**Ordem de correção decidida e cumprida:** D (o auxiliar) → A e B → C → E.
+
+**O que E ensinou, e é o mais reaproveitável:** o replay é um **atalho que devolve resultado sem passar pela validação**. Enquanto ele vinha primeiro, quem acertasse a chave recebia resposta sem provar nada — foi assim que a chave de criação virou chave-mestra entre lojistas e assim que o evento do sistema saía para qualquer um. **Toda conferência de autorização tem que vir antes do atalho, não depois.**
+
+**Um sexto, achado ao fechar os cinco:** `criaCorrida` aceitava `cliente_id` do pedido e o gravava sem conferir nada — a FK barrava o inexistente, mas devolvendo erro de driver (500), não erro de domínio. E é `cliente_id` que decide, em `exigeVinculo`, quem pode mover a corrida como cliente. Fechado com `exigeDestinatarioReal`. *Não há dono a conferir aqui: cliente é da plataforma, não do lojista (seção 20). O que se conferiria é outra coisa — se aquele número autorizou receber daquela loja — e **isso ninguém desenhou ainda**. Fica dito, não fingido.*
+
+**Prova:** bateria **237 testes, 237 verdes**; controle negativo **82 sabotagens**, todas vermelhas no teste certo — as 77 antigas re-verificadas junto (Lei 10), **nenhuma cegada** pelas camadas novas.
 
 ## 2026-08-10 — A chave determinística do varredor pode ser queimada por um chamador (Etapa 5, aberto)
 
 `expiraVencidas` usa a chave `vencimento:<corrida_id>:<seq>` para ser idempotente entre varredores concorrentes. Ela é **derivável**: quem souber o id e o seq de uma corrida pode gravar um evento com essa chave antes do varredor e, a partir daí, aquele vencimento nunca mais se aplica àquela corrida — a chave está queimada para sempre, porque é determinística.
 
 **O que já foi feito:** o varredor deixou de **abortar a cidade inteira** por causa de uma corrida assim (decisão 152). Antes, uma única corrida envenenada parava o vencimento de todas as outras.
+
+**Meia porta fechada em 2026-08-10 (PR #9):** a chave derivável não **entrega** mais nada. Antes, quem a acertasse recebia o replay do evento do sistema, porque o autor nulo do sistema casava com o autor nulo do chamador e o replay respondia antes de qualquer validação. Agora `'sistema'` só existe por caminho interno e o autor é conferido antes do atalho. O que sobra é só **queimar** a chave, não colher com ela.
 
 **O que continua aberto:** a corrida envenenada não vence. Ela aparece em `corridasParadas` e vira trabalho de gente. Corrigir de verdade exige repensar a chave (por exemplo derivá-la de algo que o chamador não escreve, ou marcar o evento do varredor com um autor que só ele usa e conferir isso no replay) — e isso é mexer no núcleo da Lei 5, que é código da Etapa 1 já na `main`. Vai em **PR próprio**, pela regra do regime de trabalho.
 
