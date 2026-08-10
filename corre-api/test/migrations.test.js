@@ -76,6 +76,10 @@ test('migrations', async (t) => {
       { column_name: 'criado_em', data_type: 'timestamp with time zone', is_nullable: 'NO' },
       { column_name: 'seq', data_type: 'integer', is_nullable: 'NO' },
       { column_name: 'chave_idempotencia', data_type: 'text', is_nullable: 'YES' },
+      // Migration 0011: a cidade do evento é DERIVADA do agregado por trigger,
+      // e a aplicação não tem GRANT para escrevê-la. Anulável porque agregado
+      // sem cidade (cliente, operador) e evento órfão não têm de onde derivar.
+      { column_name: 'cidade_id', data_type: 'uuid', is_nullable: 'YES' },
     ]);
   });
 
@@ -85,10 +89,14 @@ test('migrations', async (t) => {
       WHERE conrelid = 'eventos'::regclass AND contype = 'u'
       ORDER BY conname
     `);
-    assert.deepEqual(
-      rows.map((r) => r.conname),
-      ['eventos_agregado_seq_unico', 'eventos_chave_idempotencia_unica'],
-    );
+    // A idempotência virou ÍNDICE único POR CIDADE (migration 0011), não mais
+    // constraint — mesmo nome, mesma garantia, escopo certo.
+    assert.deepEqual(rows.map((r) => r.conname), ['eventos_agregado_seq_unico']);
+    const { rows: indices } = await dono.query(`
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'eventos' AND indexname = 'eventos_chave_idempotencia_unica'
+    `);
+    assert.equal(indices.length, 1, 'o índice único da chave de idempotência sumiu');
   });
 
   await t.test('corridas tem exatamente as colunas esperadas', async () => {
@@ -304,6 +312,9 @@ test('migrations', async (t) => {
       { tgname: 'eventos_bloqueia_buraco', tgenabled: 'O' },
       { tgname: 'eventos_bloqueia_truncate', tgenabled: 'O' },
       { tgname: 'eventos_bloqueia_update_delete', tgenabled: 'O' },
+      // Migration 0011: carimba a cidade do agregado no evento. Sem ele, o
+      // log — que é a fonte da verdade da Lei 2 — fica fora do isolamento.
+      { tgname: 'eventos_deriva_cidade', tgenabled: 'O' },
     ]);
   });
 

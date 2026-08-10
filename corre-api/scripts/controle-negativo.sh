@@ -141,8 +141,9 @@ sabota_sql "sem_unique_de_sequencia" "
 " test/concorrencia.test.js "exatamente uma vencedora"
 
 # UNIQUE da chave de idempotência removido: retentativa duplica evento.
+# (Desde a 0011 a idempotência é ÍNDICE único por cidade, não constraint.)
 sabota_sql "sem_unique_de_idempotencia" "
-  ALTER TABLE eventos DROP CONSTRAINT eventos_chave_idempotencia_unica;
+  DROP INDEX eventos_chave_idempotencia_unica;
 " test/idempotencia.test.js "um único evento"
 
 # Guarda de tempo removida: o payload do cliente passa a poder trazer
@@ -409,6 +410,29 @@ sabota_sql "telefone_de_cliente_repetido" "
 sabota_codigo "reivindicacao_nao_condicional" src/dominio/clientes.js \
   's|WHERE id = \$1 AND reivindicado_em IS NULL|WHERE id = $1|' \
   test/cidades.test.js "UM evento só"
+
+# O LOG fora do isolamento: foi o furo que a auditoria adversarial achou na
+# primeira versão da Etapa 4. `eventos` é a fonte da verdade da Lei 2, e sem
+# política nela o recorte por cidade era enfeite.
+sabota_sql "log_fora_do_isolamento" "
+  ALTER TABLE eventos DISABLE ROW LEVEL SECURITY;
+" test/cidades.test.js "CEGA"
+
+# A cidade do evento deixa de ser DERIVADA do agregado: o gatilho some e a
+# coluna fica no que o chamador (não) mandou. Sem derivação, escrever no log
+# de outra cidade volta a passar pela política.
+sabota_sql "cidade_do_evento_nao_derivada" "
+  DROP TRIGGER eventos_deriva_cidade ON eventos;
+" test/cidades.test.js "não se lê nem se escreve"
+
+# A chave de idempotência volta a ser global entre cidades: repetir numa
+# cidade uma chave usada noutra volta a colidir — e a mensagem do conflito
+# entregava o id do agregado alheio.
+sabota_sql "chave_de_idempotencia_global" "
+  DROP INDEX eventos_chave_idempotencia_unica;
+  CREATE UNIQUE INDEX eventos_chave_idempotencia_unica
+    ON eventos (chave_idempotencia) WHERE chave_idempotencia IS NOT NULL;
+" test/cidades.test.js "por cidade e não vaza"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero

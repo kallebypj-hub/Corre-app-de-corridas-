@@ -13,7 +13,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 > **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
 > **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
 >
-> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 128.
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 133.
 
 ## Onde o projeto está
 
@@ -25,12 +25,12 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 | **Situação da Etapa 4** | **entregue, aguardando merge.** RLS por cidade no banco, cliente como quarto ator, cidade na sessão. Auditoria adversarial feita |
 | **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa*. A pesquisa está feita ([`GATEWAY.md`](GATEWAY.md)); faltam **duas respostas comerciais por escrito**. As Etapas 4, 5 e 6 rodam sem nada disso — a 5 usa a tabela de exemplo, como a Etapa 3 fez |
 | **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
-| **Última bateria verde** | **186 testes**, 0 falhas · controle negativo: **50 sabotagens**, todas vermelhas no teste certo |
+| **Última bateria verde** | **188 testes**, 0 falhas · controle negativo: **53 sabotagens**, todas vermelhas no teste certo |
 | **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 |
 
 ## O que já está na `main`
 
-**Migrations** (`corre-api/migrations/`): `0001` domínio centavos · `0002` eventos append-only · `0003` corridas + sequência + idempotência · `0004` log sem buraco · `0005` cadastro e sessão · `0006` travas no banco · `0007` re-login OTP · `0008` zonas e preço · `0009` trava de configuração de taxa · `0010` multi-cidade, RLS e cliente.
+**Migrations** (`corre-api/migrations/`): `0001` domínio centavos · `0002` eventos append-only · `0003` corridas + sequência + idempotência · `0004` log sem buraco · `0005` cadastro e sessão · `0006` travas no banco · `0007` re-login OTP · `0008` zonas e preço · `0009` trava de configuração de taxa · `0010` multi-cidade, RLS e cliente · `0011` o log dentro do isolamento.
 
 **Domínio** (`corre-api/src/dominio/`): `transicoes.js` (tabela declarativa — **será reescrita na Etapa 5**) · `corridas.js` (motor de estados, prazos, `corridasParadas`) · `contas.js` (motoboy, lojista, operador, painel) · `otp.js` (re-login) · `preco.js` (motor de preço) · `split.js` (split triplo e trava de taxa) · `cidades.js` (pool por cidade, RLS) · `clientes.js` (o quarto ator) · `nucleo.js` (transação, replay, disputa de posição) · `estados.js`, `cpf.js`, `erros.js`.
 
@@ -42,8 +42,8 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 ```bash
 cd corre-api && npm ci
-npm run bateria            # banco nasce do zero das migrations + 186 testes
-npm run controle-negativo  # 50 sabotagens; cada uma tem que ficar vermelha no teste certo
+npm run bateria            # banco nasce do zero das migrations + 188 testes
+npm run controle-negativo  # 53 sabotagens; cada uma tem que ficar vermelha no teste certo
 ```
 Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postgres`. A bateria **derruba e recria** o banco `corre_teste` — nunca aponte para um banco que importa.
 

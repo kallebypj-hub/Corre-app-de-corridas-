@@ -65,11 +65,93 @@ test('sem cidade declarada, a consulta CEGA — não vaza', async (t) => {
   const { rows: semCidade } = await cru.query('SELECT id FROM lojistas WHERE id = $1', [conta.id]);
   assert.equal(semCidade.length, 0, 'sem cidade a política tem que devolver ZERO linhas, não todas');
 
-  // E não é só o lojista: vale para toda tabela por cidade.
-  for (const tabela of ['motoboys', 'lojistas', 'corridas', 'tabelas_preco', 'zonas', 'configuracoes_taxa']) {
+  // E não é só o lojista. A lista NAO e escrita à mão: ela é DESCOBERTA no
+  // catálogo, porque foi exatamente uma lista escrita à mão que deixou
+  // `eventos` de fora na primeira versão desta etapa — e `eventos` é a fonte
+  // da verdade da Lei 2. Tabela nova sem política reprova aqui sozinha.
+  const { rows: tabelas } = await cru.query(`
+    SELECT c.relname AS tabela, c.relrowsecurity AS tem_rls
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r'
+    ORDER BY c.relname
+  `);
+  // As que ficam fora do isolamento estão DECLARADAS, uma a uma, com motivo:
+  //   cidades           catálogo, o app só lê
+  //   clientes          o cliente é da plataforma (seção 20)
+  //   operadores        a operação é da plataforma
+  //   sessoes           é onde se DESCOBRE a cidade; com política, cegaria
+  //   otp_envios        o limite de SMS é da plataforma, não da cidade
+  //   schema_migrations infraestrutura
+  const FORA = new Set(['cidades', 'clientes', 'operadores', 'sessoes', 'otp_envios', 'schema_migrations']);
+  const semPolitica = tabelas.filter((t) => !t.tem_rls && !FORA.has(t.tabela)).map((t) => t.tabela);
+  assert.deepEqual(semPolitica, [], `tabela por cidade sem política: ${semPolitica.join(', ')}`);
+
+  for (const { tabela, tem_rls: temRls } of tabelas) {
+    if (!temRls) continue;
     const { rows } = await cru.query(`SELECT count(*)::int AS n FROM ${tabela}`);
     assert.equal(rows[0].n, 0, `${tabela} devolveu linha sem cidade declarada`);
   }
+});
+
+test('o LOG de outra cidade não se lê nem se escreve — nem sem cidade nenhuma', async (t) => {
+  const dono = await conectaDono();
+  const poolA = poolApp();
+  const cru = poolCru();
+  t.after(async () => { await dono.end(); await poolA.end(); await cru.end(); });
+
+  const cidadeB = await criaSegundaCidade(dono);
+  const poolB = poolDaCidade(poolA.cru, cidadeB);
+  const { conta: lojistaB } = await cadastraLojista(poolB, { nome: 'Sigilo B', telefone: telefoneNovo() });
+  await registraCartao(poolB, { lojistaId: lojistaB.id, cartaoRef: 'cartao' });
+  const { corrida: corridaB } = await criaCorrida(poolB, {
+    autorTipo: 'lojista', autorId: lojistaB.id, payload: {}, chaveIdempotencia: randomUUID(),
+  });
+
+  // LEITURA: o log da corrida de B não aparece em A, nem sem cidade nenhuma.
+  for (const [nome, pool] of [['cidade A', poolA], ['sem cidade', cru]]) {
+    const { rows } = await pool.query('SELECT tipo FROM eventos WHERE agregado_id = $1', [corridaB.id]);
+    assert.equal(rows.length, 0, `${nome} leu o log da corrida de outra cidade`);
+  }
+
+  // ESCRITA: anexar evento no log de B, estando em A, tem que ser recusado.
+  // É o pior caso: a Lei 3 proíbe apagar, então um evento intruso destruiria
+  // a corrida alheia para sempre.
+  const erro = await emTransacao(poolA.cru, async (c) => {
+    await c.query('SELECT set_config($1,$2,true)', ['corre.cidade_id', SOBRAL]);
+    return c.query(
+      `INSERT INTO eventos (tipo, agregado_tipo, agregado_id, seq, payload, autor_tipo, autor_id)
+       VALUES ('cancelada', 'corrida', $1, 2, '{}', 'sistema', NULL)`,
+      [corridaB.id],
+    );
+  }).then(() => null, (e) => e);
+  // Recusa por RLS ou pelo trigger anti-buraco — que, sob a política, nem
+  // enxerga o log alheio para contar a próxima posição. Os dois são recusa;
+  // o que importa é o EFEITO, e o efeito está na asserção seguinte.
+  assert.ok(erro, 'escrever no log de outra cidade tinha que falhar');
+
+  // E a corrida de B continua intacta: a posição 2 do log dela está livre.
+  const { rows: [{ n }] } = await poolB.query(
+    'SELECT count(*)::int AS n FROM eventos WHERE agregado_id = $1', [corridaB.id],
+  );
+  assert.equal(Number(n), 1, 'o log da corrida alheia foi tocado');
+});
+
+test('a chave de idempotência é por cidade e não vaza id de agregado alheio', async (t) => {
+  const dono = await conectaDono();
+  const poolA = poolApp();
+  t.after(async () => { await dono.end(); await poolA.end(); });
+
+  const cidadeB = await criaSegundaCidade(dono);
+  const poolB = poolDaCidade(poolA.cru, cidadeB);
+
+  const chave = randomUUID();
+  const emB = await cadastraLojista(poolB, { nome: 'B', telefone: telefoneNovo(), chaveIdempotencia: chave });
+  // A MESMA chave, noutra cidade, é outra operação — não colide e não conta
+  // nada sobre a de lá.
+  const emA = await cadastraLojista(poolA, { nome: 'A', telefone: telefoneNovo(), chaveIdempotencia: chave });
+
+  assert.notEqual(emA.conta.id, emB.conta.id);
+  assert.equal(emA.repetida, false, 'chave de outra cidade não pode virar replay');
 });
 
 test('o pool de cidade recusa nascer sem cidade — falha cedo, não silenciosa', () => {

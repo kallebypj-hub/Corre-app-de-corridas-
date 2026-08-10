@@ -82,7 +82,10 @@ test('eventos append-only', async (t) => {
     `);
     assert.deepEqual(
       rows.map((r) => r.tgname),
-      ['eventos_bloqueia_buraco', 'eventos_bloqueia_truncate', 'eventos_bloqueia_update_delete'],
+      // `eventos_deriva_cidade` entrou na 0011: é ele que carimba a cidade do
+      // agregado no evento, e é por ele que o log ficou dentro do isolamento.
+      ['eventos_bloqueia_buraco', 'eventos_bloqueia_truncate',
+        'eventos_bloqueia_update_delete', 'eventos_deriva_cidade'],
     );
   });
 
