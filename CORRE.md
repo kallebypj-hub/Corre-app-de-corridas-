@@ -7,7 +7,7 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
-> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 133.
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 137.
 
 ---
 
@@ -17,11 +17,15 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 
 **Toda decisão tomada em sessão entra neste arquivo no mesmo PR**, com data e motivo (o motivo e o texto antes→depois vão para o `HISTORICO.md`). O relatório de cada etapa lista, em seção própria, toda alteração feita na especificação naquela etapa.
 
+**Reescrita de estado sem caminho de migração vale ENQUANTO não houver cliente real.** A Etapa 5 substituiu a máquina de estados inteira sem migrar linha nenhuma — legítimo, porque nada está em produção e a bateria nasce do zero das migrations. **A partir do primeiro cliente real isso acaba:** mudar a numeração, o significado ou o conjunto dos estados exige **caminho de migração declarado na própria migration**, dizendo o que acontece com cada linha que está no estado antigo. Registrado aqui para não virar precedente por esquecimento.
+
 **Correção de etapa já mesclada vai em PR próprio, sempre.** Um defeito em código que já está na `main` nunca viaja junto com a obra de uma etapa nova. E **correção de segurança fura a fila**: entra e é mesclada antes de qualquer obra em andamento, porque enquanto não entra a `main` está quebrada.
 
 **O critério por trás dessa regra é o destino compartilhado, não o tipo de arquivo.** Coisas que podem ser rejeitadas separadamente vão em PRs separados. Quando um código **só faz sentido se a outra metade for aprovada**, separá-lo cria um PR que não pode ser mesclado sozinho — e aí o acoplamento é honesto. Isso é **exceção que se pede e se registra**, com o motivo, nunca conveniência: houve uma em 2026-08-09 (`HISTORICO.md`, decisão 96) e ela não abre a regra.
 
-**Uma etapa por vez, PR separado por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
+**Uma etapa por vez, uma branch por etapa, um PR por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
+
+**A branch nasce com a etapa e morre no merge.** Etapa nova nunca continua a branch da anterior, mesmo que a anterior ainda não tenha sido mesclada — nesse caso a nova sai do topo da anterior e o PR fica em fila, mas **é PR próprio**. *(Regra de 2026-08-10, e o motivo é um caso concreto: o PR #6 acumulou revisão de spec, trava de configuração de taxa, Etapa 4 e correção de vazamento — 39 arquivos. Revisão humana num PR desse tamanho é teatro: o revisor aprova o conjunto porque não consegue reprovar uma parte.)*
 
 **Regime de esforço:** raciocínio máximo em auditoria adversarial e em **três categorias de caminho**:
 
@@ -39,7 +43,7 @@ Nas demais, esforço normal.
 
 ---
 
-## As 9 leis inegociáveis
+## As 10 leis inegociáveis
 
 Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
@@ -61,6 +65,20 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 **Lei 9 — Toda escrita nasce com teste de concorrência.** Todo caminho que grava tem teste de concorrência real, sem precisar ser pedido. Leitura-e-depois-escrita é sempre suspeita de lost update: contador, limite, cap de tentativas, reserva de vaga, saldo. Prove com processos concorrentes de verdade contra o servidor rodando, nunca com cliente de teste single-thread. Se a garantia depende de ordem de execução, ela não existe — a garantia mora no banco (`UNIQUE`, constraint, `UPDATE` condicional atômico, advisory lock).
 
+**Lei 10 — Camada de defesa nova exige re-verificação de todos os controles negativos existentes.** Quando uma segunda camada passa a proteger a mesma regra, a sabotagem antiga deixa de deixar o teste vermelho — e o verde parece correto. Ao adicionar qualquer camada (política, trigger, constraint, privilégio), rode a bateria inteira de sabotagens e prove que **cada uma** continua vermelha no teste certo. As que ficarem verdes precisam ser reescritas para derrubar **todas** as camadas que protegem aquela regra.
+
+**Camada que deriva de dado controlado pelo chamador não é camada — é a mesma camada com outro nome.** Uma segunda defesa só vale se a **fonte** dela for independente da primeira: fato no log, privilégio de banco, constraint sobre coluna que a aplicação não escreve. Antes de chamar algo de segunda camada, responda a uma pergunta: **quem escreve o dado de que ela deriva?** Se a resposta for "o chamador", não é camada.
+
+*Origem, 2026-08-10 (Etapa 5):* a invariante "nenhum caminho chega a Entregue sem passar por Pago" tinha, no papel, a tabela de arestas em cima e o banco embaixo. Só que o banco derivava `pago_em` de `NEW.estado = 5` — e `estado` é a coluna que o chamador escreve. **Dois `UPDATE`s com a credencial da aplicação punham a corrida em Entregue com o log inteiro sendo `criada`**, e um único token errado na tabela de arestas derrubava as duas de uma vez. A correção foi derivar do **fato**: o evento `pagamento_confirmado` no log (`HISTORICO.md`, decisão 149).
+
+**Corolário — teste com nome de garantia exige controle negativo próprio.** *Três* testes se chamavam **INVARIANTE** e os três ficavam verdes enquanto a invariante era falsa. Nome de prova desliga a desconfiança de quem lê: **ninguém revisita o que já se chama de prova.** Todo teste batizado de invariante, garantia, prova ou impossibilidade nasce com a sabotagem que o derruba — e a sabotagem tem que atacar a **fonte** da garantia, não o caminho que o teste calhou de exercitar.
+
+*Origem, 2026-08-09 (Etapa 4):* a sabotagem `app_publica_preco` provava, desde a Etapa 3, que a aplicação não publica tabela de preço. O RLS da Etapa 4 virou **segunda camada** sobre a mesma regra: removido o `GRANT`, a política ainda barrava, o teste ficava verde e a sabotagem parou de acusar. **Lei 8 continuava obedecida no papel e o controle negativo estava cego.** A correção foi derrubar as duas camadas na mesma sabotagem (`HISTORICO.md`, decisão 128).
+
+---
+
+**O princípio por trás das dez.** Não se confia em alguém lembrar. Onde couber, a regra vira **impossibilidade estrutural**: configuração ruim não publica, tabela sem política nasce vermelha, evento não se apaga, coluna sem `GRANT` não se forja. Toda vez que uma proteção depender de disciplina — de revisar com atenção, de lembrar de incluir, de não esquecer —, **procure a versão que depende do banco**. Se ela não existir, diga isso em voz alta em vez de fingir que a disciplina basta.
+
 ## Como testar
 
 - **Teste executando, não lendo.** Leitura de código não prova nada.
@@ -70,6 +88,7 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 - **Volume, não amostra.** Milhares de corridas sintéticas, não dez.
 - **Prove a trava pelo EFEITO, não pelo nome.** Conferir que a constraint existe não prova nada: tente a operação proibida e exija o erro.
 - **Nunca escreva em banco de produção.**
+- **Relatório de etapa só sai depois que a auditoria adversarial encerra** e os achados são confirmados por reprodução. Número reportado antes disso é **provisório e não vale como entrega** — e o risco não é o número estar desatualizado, é a **promessa da etapa estar falsa**. *(Aconteceu em 2026-08-09: a Etapa 4 foi reportada com 186 testes e "nenhuma consulta devolve dado de outra cidade" enquanto a auditoria ainda rodava. Ela achou o vazamento de `eventos` logo depois: a frase central do relatório era mentira, e os números certos eram 188 e 53.)*
 - **NUNCA rode o controle negativo com código não commitado.** Ele sabota o arquivo e restaura com `git checkout` — e `git checkout` **não devolve arquivo que o git não conhece**. Arquivo novo fica com a sabotagem dentro; arquivo alterado e não commitado **volta para o HEAD e perde o trabalho da sessão**. Commite antes, sempre. *(Aconteceu em 2026-08-09: a trava de configuração de taxa foi apagada pelo próprio controle negativo que ia prová-la.)*
 
 ## Além do funcionamento
@@ -101,6 +120,8 @@ Ao fim de cada etapa, nesta ordem, curto:
 5. O que trava a próxima etapa
 
 Sem relatório longo. Sem adjetivo. Número e fato.
+
+**E depois da auditoria, nunca antes** — ver "Como testar". Etapa com auditoria obrigatória não tem relatório parcial: enquanto a auditoria roda, o que existe é obra em andamento.
 
 ---
 
@@ -134,7 +155,7 @@ As etapas 0 a 3 estão na `main`. A revisão de 2026-08-09 **invalidou parte do 
 | 2 | Cadastro e sessão (lojista, motoboy, painel) | Chave Pix de CPF diferente é recusada. Segundo aparelho na mesma conta é recusado. Primeiro saque nasce travado. Atendimento recebe 403 em estorno e bloqueio | **na `main`** (PR #3 + correção #5) — vale; falta o **cliente** como ator (Etapa 4) |
 | 3 | Zonas e preço | Tabela carregada. Mesmo endereço dá sempre o mesmo preço. Fora de zona calcula por linha reta sem API externa | **na `main`** (PR #4) — vale; tem **correção pendente** (matriz 6×6, PR próprio, travada na tabela real) |
 | 4 | Multi-cidade e o cliente como ator | Corrida com **lojista** da cidade A e **zona/tabela de preço** da cidade B é recusada **pelo banco**. Duas cidades com tabelas de preço e **configurações de taxa** diferentes coexistem sem se misturar. Cliente nasce por telefone, é da plataforma e não da cidade. **Nenhuma consulta devolve dado de outra cidade — por RLS, provado com pool de conexões e requisições concorrentes de cidades diferentes, em milhares intercaladas** | **entregue, aguardando merge** — RLS no banco, cliente como ator, cidade na sessão |
-| 5 | Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado | As **14 arestas** cobertas; par fora da tabela é recusado. **Nenhum caminho chega a Entregue sem passar por Pago.** Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. Prazo estimado é gravado na criação com a versão da tabela; mesma corrida, mesmo prazo | não iniciada |
+| 5 | Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado | As **14 arestas** cobertas; par fora da tabela é recusado. **Nenhum caminho chega a Entregue sem passar por Pago** — no grafo E no banco, por `pago_em` derivado do evento de pagamento. Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. Prazo estimado é gravado na criação com a versão **vigente** da tabela; mesma corrida, mesmo prazo; e o prazo se mostra em **faixa**, nunca em ponto | **entregue, aguardando merge** |
 | 6 | Despacho: cascata, timer de 30s, regras de recusa | 50 aparelhos disputando a mesma corrida resultam em exatamente 1 aceite. Cascata de 5 min sem aceite leva a Sem motoboy **sem nenhum movimento de dinheiro**. 4 recusas seguidas → offline por 15 min. Teto de 2 corridas ativas. **⬅ Critério herdado da Etapa 4:** corrida cujo **motoboy** seja de outra cidade é recusada **pelo banco** — não coube na Etapa 4 porque `corridas` só ganha coluna de motoboy aqui | não iniciada |
 | 7 | **Cobrança na porta: QR dinâmico, confirmação e split triplo** | A cobrança nasce com os **três recebedores declarados** e a soma bate com o total ao centavo. Webhook duplicado + consulta ativa simultânea produzem **um único** Pago. **Com o webhook desligado, a corrida ainda fecha** (a consulta ativa é o caminho primário). Entrega é impossível antes da confirmação. **Frete ímpar fecha ao centavo** e o centavo vai para o motoboy. **Mercadoria zero** e **mercadoria menor que a taxa** caem na regra da seção 9 e ninguém fica negativo. 10.000 corridas: mercadoria + frete = soma das três parcelas + taxa, ao centavo. Lei 9 em três pares: geração×geração, confirmação×confirmação, e **cancelamento da cobrança × confirmação** (a saída do estado 4) | não iniciada — **dinheiro; auditoria obrigatória; 🔒 depende de resposta comercial** |
 | **8a** | Entrega, espera na porta e retorno | Sem pagamento confirmado não existe transição para Entregue. 5 min de espera + **1 aviso registrado como evento** habilita o retorno (o canal é das Etapas 10 e 14). **Retorno lança a dívida do lojista no valor do frete, sem comissão — e não toca cartão nenhum.** **Corrida em retorno nunca carrega dinheiro pago.** Sair do estado 4 sem pagamento cancela a cobrança **antes** de gravar a transição | não iniciada |
@@ -278,6 +299,8 @@ Fica **sem transições até a Etapa 11** (painel), que definirá abertura e res
 
 Prazo é **dado gravado**, nunca timer em memória: o instante de vencimento vai no evento e na projeção, e vencer é consulta ao banco. Reinício de processo não perde vencimento. Tempo é **sempre do servidor** — instante vindo do cliente é recusado.
 
+**O estado 4 tem prazo gravado, e ninguém o aplica sozinho — de propósito.** A espera de 5 minutos vai para `vence_em` na chegada declarada, mas a saída do estado 4 exige que o **motoboy declare qual dos dois casos foi**, e varredor não declara pelos outros: preencher a declaração no lugar dele seria fabricar prova de parte. Quem aplica o vencimento do 4 é a **Etapa 8a**, com o aviso registrado. Até lá, corrida parada na porta aparece em `corridasParadas`.
+
 **Medida provisória até a Etapa 8:** os estados **2, 3, 5 e 6** ainda não têm prazo. A consulta `corridasParadas` (`corre-api/src/dominio/corridas.js`, coberta por teste) lista toda corrida em estado vivo há mais de 24 horas. O risco encolheu com a revisão — nesses estados **não há mais dinheiro de terceiro retido** —, mas continua havendo **mercadoria de terceiro** na mão do motoboy, que é pior de perder de vista. A consulta continua obrigatória.
 
 **O estado 5 (Pago) merece atenção própria.** Ele é o único estado vivo em que o dinheiro **já foi dividido** e o único fato ainda em aberto é se a mercadoria mudou de mão. **A saída fácil seria fechar em Entregue sozinho depois de N minutos, e ela está proibida:** fechar por decurso de prazo é carimbar como entregue uma corrida que talvez não tenha sido. Enquanto a Etapa 8 não definir o destino, corrida parada em Pago aparece em `corridasParadas` e é resolvida por gente.
@@ -346,10 +369,29 @@ Ele **substituiu o "valor declarado"** da versão anterior: antes era uma declar
 
 ### Prazo estimado de entrega
 
-- **Fórmula:** `prazo = tempo base de coleta + tempo do anel de destino`. Dois números, nenhuma API de mapa, nenhuma rota.
-- **Onde os números moram:** os minutos por anel são **coluna da tabela de preço versionada** — mesma versão, mesma imutabilidade, mesma auditoria. O tempo base de coleta é dado da cidade (e, se a operação quiser, da loja).
+- **Fórmula:** `prazo = tempo base de coleta da cidade + tempo do anel max(anel_origem, anel_destino)`. Dois números, nenhuma API de mapa, nenhuma rota.
+- **O prazo é par origem-destino, igual ao preço.** Distância é simétrica: uma entrega do anel 2 para o Centro leva a travessia inteira, e o anel de destino sozinho prometeria o tempo de metade dela. Usar o **anel maior** nunca promete menos tempo do que a viagem leva. *Prometer a menos é o erro caro — o cliente espera 10 minutos, chega em 25, e o prazo criou a reclamação que existia para evitar.*
+- **Fora de zona herda a lógica do preço:** `tempo base + tempo do anel mais externo + minutos por km adicional`, com **a mesma distância em linha reta** já calculada para o preço (centro da última zona, aritmética inteira, sem API).
+- **Onde os números moram:** minutos por anel são **coluna da tabela de preço versionada**; o **tempo base de coleta** e os **minutos por km adicional** são colunas da mesma versão — mesma imutabilidade, mesma auditoria. O tempo base é **dado da cidade**, não da loja.
+- **Um lugar só:** a fórmula, o `max` dos anéis, o teto de km e a faixa vivem em `corre-api/src/dominio/prazo.js`. Nenhum minuto se calcula fora dali, como nenhum arredondamento de preço se calcula fora de `preco.js`.
 - **É estimativa, e o texto na tela diz isso.** Não é SLA, não é promessa, não gera multa, não gera desconto, não entra na reputação de ninguém. Corrida atrasada não é corrida com defeito.
 - **Gravado na criação** junto com a versão da tabela: a mesma corrida mostra o mesmo prazo para lojista, motoboy e cliente, para sempre.
+
+**O prazo se mostra como FAIXA, nunca como ponto.** "20 a 30 minutos", nunca "25 minutos". Número exato vira promessa na cabeça de quem lê, e erro de três minutos vira reclamação.
+
+Como a faixa se forma, num lugar só (`prazo.js`):
+
+| | |
+|---|---|
+| **Teto** | o menor múltiplo de 5 **estritamente maior** que o tempo calculado |
+| **Piso** | teto − 10 |
+| **Faixa mínima** | se o piso cair abaixo de 5, a faixa é **5 a 15** |
+
+Tempo calculado 25 → **20 a 30**. Calculado 23 → **15 a 25**. Calculado 27 → **20 a 30**. A largura é sempre 10 minutos, e **o teto é sempre maior que o calculado** — a faixa nunca promete menos do que a conta disse.
+
+**O app nunca mostra o valor pontual, nem em tela de detalhe.** O valor pontual fica gravado para auditoria e a aplicação **não tem privilégio de lê-lo** — só o dono do banco lê —, e o log carrega só a faixa. O que a API devolve é a faixa.
+
+> **O alcance dessa trava, dito com precisão** (a auditoria da Etapa 5 derrubou a versão exagerada). Ela torna impossível **vazar por descuido**: `SELECT *` em `corridas` falha, coluna nova nasce invisível, e nenhuma resposta carrega o pontual sem alguém ter ido buscá-lo de propósito. Ela **não** torna o número irrecuperável: as coordenadas e a versão da tabela estão no log, e quem chamar o motor de prazo de novo chega ao mesmo minuto. **É limite declarado, não trava furada** — guardar as coordenadas é o que torna o prazo auditável, e trocar auditoria por sigilo de um número que é só estimativa seria mau negócio.
 
 ## 9. Dinheiro
 
@@ -676,7 +718,7 @@ Elas não são detalhe de planejamento: **toda conta desta especificação repou
 2. **Quem paga a taxa do gateway.** É decisão do dono, não do fornecedor. A recomendação da spec é **debitar da parcela de mercadoria** — o Corre continua com comissão zero sobre ela e o motoboy recebe o frete inteiro, mas **o lojista recebe R$ 98,69 num pedido de R$ 100** e precisa saber disso **antes de assinar**. Alternativa a considerar: **embutir a taxa no total cobrado do cliente**, elevando o QR — muda o preço na ponta. **Trava a Etapa 7 junto com o item 1**
 3. **Valor do adicional por km** fora de zona
 4. **Transcrição da tabela de zonas de Sobral** — agora com **duas colunas**: preço por anel **e minutos por anel** (seção 8)
-5. **Tempo base de coleta** — o outro número do prazo estimado
+5. **Tempo base de coleta** — o outro número do prazo estimado. É **dado da cidade**, coluna da versão da tabela (seção 8)
 6. **Taxa zero nos primeiros 90 dias** — carta de lançamento não decidida
 7. **Teto de R$ 500** de valor de mercadoria — sugerido, não confirmado, e agora incide sobre valor cobrado de verdade
 8. **Registro da marca CORRE** (mista, classes 39 e 42) e do **domínio `corre.com.br`** — virou **pré-requisito de publicação**: os pacotes `br.com.corre.*` são definitivos e não se trocam depois de publicados
@@ -695,6 +737,7 @@ Elas não são detalhe de planejamento: **toda conta desta especificação repou
 21. **Ticket médio de mercadoria nunca foi medido** (seção 18). É ele que dimensiona a reserva, o teto de R$ 500 e a exposição por entrega. Entra na lista de medições do piloto ao lado das entregas/dia
 22. **Cadastro de lojista MEI — nenhum fornecedor documenta caminho** (`GATEWAY.md`, 9.3). MEI é CNPJ e **não pode ter sócio** por definição legal, enquanto o candidato melhor colocado exige sócio qualificado no QSA. Em Sobral, MEI é a maioria dos lojistas. **Esta pergunta vai à mesa comercial junto com as duas de preço, e a resposta dela pesa mais que preço na escolha**
 23. **Um documento = um recebedor** (`GATEWAY.md`, 9.3). O candidato está fechando a criação de recebedores com o mesmo documento. **Motoboy que também é lojista não teria as duas contas** — e em Sobral isso não é hipótese
+24. **Tempo base de coleta por LOJA, em vez de por cidade** (seção 8). **Sem etapa dona, de propósito.** Existe loja que separa o pedido em dois minutos e loja que leva quinze, e um dia a operação vai querer distinguir. Quando quiser, isso é **uma versão nova da tabela** — que é exatamente para o que o versionamento existe, e por isso não se constrói nada agora. Construir hoje o campo que ninguém preenche seria "deixar preparado", que é proibido
 
 ## 18. Números de referência
 

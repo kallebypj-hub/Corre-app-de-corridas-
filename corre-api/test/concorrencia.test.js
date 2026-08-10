@@ -17,7 +17,10 @@ test('concorrência: 200 tentativas de aceite na mesma corrida, exatamente uma v
   const pool = poolApp();
   t.after(() => pool.end());
 
-  const corrida = await levaAte(pool, 2);
+  // A corrida NASCE procurando motoboy (estado 1): depois da Etapa 5 não há
+  // mais pagamento antes do aceite, então a disputa começa na posição 2 do
+  // log, não na 3.
+  const corrida = await levaAte(pool, 1);
 
   // Concorrência real: 4 PROCESSOS separados disputando a mesma corrida,
   // 50 tentativas cada — como aparelhos de motoboy numa esquina.
@@ -36,11 +39,11 @@ test('concorrência: 200 tentativas de aceite na mesma corrida, exatamente uma v
   assert.equal(vencedoras, 1, `esperava exatamente 1 vencedora, houve ${vencedoras}`);
   assert.equal(perdedoras, PROCESSOS * TENTATIVAS_POR_PROCESSO - 1);
 
-  // O banco conta a mesma história: um único evento na posição 3 do log,
+  // O banco conta a mesma história: um único evento na posição 2 do log,
   // e a corrida aceita uma única vez.
   const { rows: [{ n: eventosNaPosicao }] } = await pool.query(
     `SELECT count(*) AS n FROM eventos
-     WHERE agregado_tipo = 'corrida' AND agregado_id = $1 AND seq = 3`,
+     WHERE agregado_tipo = 'corrida' AND agregado_id = $1 AND seq = 2`,
     [corrida.id],
   );
   assert.equal(eventosNaPosicao, '1');
@@ -49,6 +52,6 @@ test('concorrência: 200 tentativas de aceite na mesma corrida, exatamente uma v
     'SELECT estado, seq FROM corridas WHERE id = $1',
     [corrida.id],
   );
-  assert.equal(final.estado, 3);
-  assert.equal(final.seq, 3);
+  assert.equal(final.estado, 2);
+  assert.equal(final.seq, 2);
 });

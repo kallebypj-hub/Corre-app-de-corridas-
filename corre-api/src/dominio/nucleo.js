@@ -82,7 +82,10 @@ async function tentaReplayEvento(pool, {
   if (!mesmaOperacao) {
     throw new ErroDeDominio(
       CODIGOS.CHAVE_REUTILIZADA,
-      `chave de idempotência já usada em outra operação (${evento.tipo} em ${evento.agregado_tipo} ${evento.agregado_id})`,
+      // A MENSAGEM NÃO DIZ QUAL AGREGADO. Dizer entregaria o id do pedido de
+      // outra pessoa a quem só acertou uma chave — é a mesma classe de
+      // vazamento que a auditoria da Etapa 4 achou no 409 entre cidades.
+      `chave de idempotência já usada em outra operação (${evento.tipo} em ${evento.agregado_tipo})`,
     );
   }
   return evento;

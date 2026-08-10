@@ -15,34 +15,10 @@ const { poolApp, SOBRAL } = require('./ajuda-maquina');
 const executa = promisify(execFile);
 const IMPORTADOR = path.join(__dirname, '..', 'scripts', 'importar-tabela-preco.js');
 
-// Publica uma versão de tabela de preço como dono (publicar é ato de dono).
-async function publicaTabela(dono, {
-  rotulo, adicionalKmCentavos = 150, zonas, exemplo = true,
-  metrosPorGrauLat = 111320, metrosPorGrauLng = 111100,
-}) {
-  const { rows: [tabela] } = await dono.query(
-    `INSERT INTO tabelas_preco
-       (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos, cidade_id)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [rotulo, exemplo, metrosPorGrauLat, metrosPorGrauLng, adicionalKmCentavos, SOBRAL],
-  );
-  for (const z of zonas) {
-    await dono.query(
-      `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6, cidade_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [tabela.id, z.nome, z.ordem, z.preco, z.latMin, z.latMax, z.lngMin, z.lngMax, SOBRAL],
-    );
-  }
-  return tabela.id;
-}
-
-// Três zonas aninhadas (centro dentro do anel 1 dentro do anel 2), como a
-// tabela de exemplo. Menor ordem vence na sobreposição/fronteira.
-const ZONAS = [
-  { nome: 'Centro', ordem: 0, preco: 500, latMin: -3690000, latMax: -3682000, lngMin: -40353000, lngMax: -40345000 },
-  { nome: 'Anel 1', ordem: 1, preco: 700, latMin: -3700000, latMax: -3672000, lngMin: -40363000, lngMax: -40335000 },
-  { nome: 'Anel 2', ordem: 2, preco: 900, latMin: -3720000, latMax: -3652000, lngMin: -40383000, lngMax: -40315000 },
-];
+// A publicação de versões e as três zonas vivem em `ajuda-preco.js` desde a
+// Etapa 5: a mesma versão carrega preço E prazo, e duas cópias do INSERT
+// divergiriam no dia em que a tabela ganhasse coluna.
+const { publicaTabela, ZONAS } = require('./ajuda-preco');
 
 test('motor de preço (Etapa 3)', async (t) => {
   const pool = poolApp();

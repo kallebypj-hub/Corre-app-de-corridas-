@@ -15,10 +15,11 @@ function inteiroDeEnv(nome, padrao) {
 }
 
 module.exports = {
-  // Estado 1 (aguardando pagamento): expira em 15 minutos.
-  prazoPagamentoMs: () => inteiroDeEnv('CORRE_PRAZO_PAGAMENTO_MS', 15 * 60 * 1000),
-  // Estado 2 (procurando motoboy): cascata roda 5 minutos.
+  // Estado 1 (procurando motoboy): a cascata roda 5 minutos (seção 6).
   prazoCascataMs: () => inteiroDeEnv('CORRE_PRAZO_CASCATA_MS', 5 * 60 * 1000),
+  // Estado 4 (na porta, cobrando): a espera na porta é de 5 minutos, e é o
+  // MESMO relógio da validade do QR (seção 4) — um número, não dois.
+  prazoEsperaNaPortaMs: () => inteiroDeEnv('CORRE_PRAZO_ESPERA_PORTA_MS', 5 * 60 * 1000),
 
   // Re-login OTP (fechamento da Etapa 2).
   otpExpiraMs: () => inteiroDeEnv('CORRE_OTP_EXPIRA_MS', 10 * 60 * 1000),

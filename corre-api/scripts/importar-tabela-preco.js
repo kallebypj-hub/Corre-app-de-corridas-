@@ -19,18 +19,27 @@ async function importar() {
     || path.join(__dirname, '..', 'dados', 'tabela-preco-exemplo.json');
   const dados = JSON.parse(readFileSync(arquivo, 'utf8'));
 
+  // A tabela real de Sobral tem DUAS colunas por anel — preço e minutos
+  // (seção 8) —, e os minutos são exigidos aqui: versão sem eles é versão
+  // que não calcula prazo, e o motor descobriria isso só na primeira corrida.
   for (const campo of [
-    'rotulo', 'metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos', 'zonas',
+    'rotulo', 'metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos',
+    'tempo_base_coleta_minutos', 'adicional_km_minutos', 'zonas',
   ]) {
     if (dados[campo] === undefined) throw new Error(`campo ausente no arquivo: ${campo}`);
   }
-  for (const chave of ['metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos']) {
+  for (const chave of [
+    'metros_por_grau_lat', 'metros_por_grau_lng', 'adicional_km_centavos',
+    'tempo_base_coleta_minutos', 'adicional_km_minutos',
+  ]) {
     if (!Number.isInteger(dados[chave])) {
       throw new Error(`${chave} precisa ser inteiro (sem ponto flutuante) — Lei 1`);
     }
   }
   for (const zona of dados.zonas) {
-    for (const chave of ['preco_centavos', 'ordem', 'lat_min_e6', 'lat_max_e6', 'lng_min_e6', 'lng_max_e6']) {
+    for (const chave of [
+      'preco_centavos', 'minutos', 'ordem', 'lat_min_e6', 'lat_max_e6', 'lng_min_e6', 'lng_max_e6',
+    ]) {
       if (!Number.isInteger(zona[chave])) {
         throw new Error(`zona ${zona.nome}: ${chave} precisa ser inteiro`);
       }
@@ -43,21 +52,23 @@ async function importar() {
     await client.query('BEGIN');
     const { rows: [tabela] } = await client.query(
       `INSERT INTO tabelas_preco
-         (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos, cidade_id)
-       VALUES ($1, $2, $3, $4, $5,
-               COALESCE($6, (SELECT id FROM cidades WHERE ibge = '2312908'))) RETURNING id`,
+         (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos,
+          tempo_base_coleta_minutos, adicional_km_minutos, cidade_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7,
+               COALESCE($8, (SELECT id FROM cidades WHERE ibge = '2312908'))) RETURNING id`,
       [
         dados.rotulo,
         dados.exemplo !== false,
         dados.metros_por_grau_lat, dados.metros_por_grau_lng, dados.adicional_km_centavos,
+        dados.tempo_base_coleta_minutos, dados.adicional_km_minutos,
         dados.cidade_id || null,
       ],
     );
     for (const zona of dados.zonas) {
       await client.query(
-        `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6, cidade_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT cidade_id FROM tabelas_preco WHERE id = $1))`,
-        [tabela.id, zona.nome, zona.ordem, zona.preco_centavos,
+        `INSERT INTO zonas (tabela_id, nome, ordem, preco_centavos, minutos, lat_min_e6, lat_max_e6, lng_min_e6, lng_max_e6, cidade_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, (SELECT cidade_id FROM tabelas_preco WHERE id = $1))`,
+        [tabela.id, zona.nome, zona.ordem, zona.preco_centavos, zona.minutos,
           zona.lat_min_e6, zona.lat_max_e6, zona.lng_min_e6, zona.lng_max_e6],
       );
     }

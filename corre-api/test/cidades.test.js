@@ -35,8 +35,8 @@ const telefoneNovo = () => `88 9${String(process.pid % 1e4).padStart(4, '0')}-${
 async function criaSegundaCidade(dono) {
   const ibge = String(2300000 + (Math.floor(Number(process.hrtime.bigint() % 90000n)) + 10000));
   const { rows: [cidade] } = await dono.query(
-    `INSERT INTO cidades (nome, uf, ibge, tempo_base_coleta_min)
-     VALUES ($1, 'CE', $2, 12) RETURNING id`,
+    `INSERT INTO cidades (nome, uf, ibge)
+     VALUES ($1, 'CE', $2) RETURNING id`,
     [`Cidade ${ibge}`, ibge],
   );
   await dono.query(

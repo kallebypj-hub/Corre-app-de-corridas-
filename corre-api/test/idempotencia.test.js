@@ -46,9 +46,9 @@ test('idempotência (Lei 5)', async (t) => {
     const respostas = await Promise.all(
       Array.from({ length: REPETICOES }, () => transiciona(pool, {
         corridaId: corrida.id,
-        tipo: 'pagamento_confirmado',
-        autorTipo: 'sistema',
-        autorId: null,
+        tipo: 'motoboy_aceitou',
+        autorTipo: 'motoboy',
+        autorId: randomUUID(),
         chaveIdempotencia: chave,
       })),
     );
@@ -78,8 +78,11 @@ test('idempotência (Lei 5)', async (t) => {
     // chamador re-envia a mesma chave depois do commit. Não é o Promise.all
     // (que disputa antes do commit) — é retry com a corrida já movida.
     const cenarios = [
-      { ate: 1, tipo: 'pagamento_confirmado', autorTipo: 'sistema', estadoFinal: 2 },
-      { ate: 2, tipo: 'motoboy_aceitou', autorTipo: 'motoboy', estadoFinal: 3 },
+      { ate: 1, tipo: 'motoboy_aceitou', autorTipo: 'motoboy', estadoFinal: 2 },
+      { ate: 2, tipo: 'coleta_confirmada', autorTipo: 'motoboy', estadoFinal: 3 },
+      // O par que mais importa: a confirmação do gateway é o caminho do
+      // dinheiro, e é a retentativa dela que não pode virar dois Pagos.
+      { ate: 4, tipo: 'pagamento_confirmado', autorTipo: 'sistema', estadoFinal: 5 },
       { ate: 3, tipo: 'cancelada', autorTipo: 'painel', payload: { motivo: 'retentativa de rede' }, estadoFinal: 10 },
     ];
     for (const cenario of cenarios) {
@@ -109,21 +112,76 @@ test('idempotência (Lei 5)', async (t) => {
     }
   });
 
+  await t.test('a chave de idempotência NÃO é chave-mestra: repetida por outro lojista é reuso, não replay', async () => {
+    // Achado CRÍTICO da auditoria da Etapa 5. Sem a conferência de dono, a
+    // chave repetida devolvia a corrida DO OUTRO lojista — e devolvia ANTES
+    // da validação de autor, então motoboy, cliente, painel e até 'sistema'
+    // recebiam o pedido alheio. E o segundo pedido nunca era criado: sumia.
+    const { cadastraLojista, registraCartao } = require('../src/dominio/contas');
+    const { criaCorrida } = require('../src/dominio/corridas');
+    async function lojistaNovo(nome) {
+      const { conta } = await cadastraLojista(pool, { nome, telefone: `88 9${randomUUID().slice(0, 10)}` });
+      await registraCartao(pool, { lojistaId: conta.id, cartaoRef: 'cartao' });
+      return conta.id;
+    }
+    const A = await lojistaNovo('Loja A');
+    const B = await lojistaNovo('Loja B');
+    const chave = `pedido-${randomUUID()}`;
+
+    const primeira = await criaCorrida(pool, {
+      autorTipo: 'lojista', autorId: A, payload: { origem: 'A' }, chaveIdempotencia: chave,
+    });
+    assert.equal(primeira.repetida, false);
+
+    await assert.rejects(
+      () => criaCorrida(pool, {
+        autorTipo: 'lojista', autorId: B, payload: { origem: 'B' }, chaveIdempotencia: chave,
+      }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+      'a chave de outro lojista não pode devolver a corrida dele',
+    );
+
+    // Nem por outro tipo de autor — que sem chave já seria recusado.
+    for (const autorTipo of ['motoboy', 'cliente', 'painel', 'sistema']) {
+      await assert.rejects(
+        () => criaCorrida(pool, {
+          autorTipo, autorId: randomUUID(), payload: {}, chaveIdempotencia: chave,
+        }),
+        (erro) => erro instanceof ErroDeDominio
+          && ['chave_reutilizada', 'autor_nao_autorizado'].includes(erro.codigo),
+        `${autorTipo} com a chave alheia não pode receber a corrida`,
+      );
+    }
+
+    // A mensagem do reuso NÃO pode entregar o id do agregado alheio.
+    const vazou = await criaCorrida(pool, {
+      autorTipo: 'lojista', autorId: B, payload: { origem: 'B' }, chaveIdempotencia: chave,
+    }).then(() => null, (erro) => erro.message);
+    assert.ok(vazou && !vazou.includes(primeira.corrida.id), `a mensagem vazou o id alheio: ${vazou}`);
+
+    // E o DONO legítimo continua replayando: a Lei 5 não pode ter quebrado.
+    const repetida = await criaCorrida(pool, {
+      autorTipo: 'lojista', autorId: A, payload: { origem: 'A' }, chaveIdempotencia: chave,
+    });
+    assert.equal(repetida.repetida, true);
+    assert.equal(repetida.corrida.id, primeira.corrida.id);
+  });
+
   await t.test('a mesma chave em OUTRA operação é reuso indevido, não replay', async () => {
     const corrida = await levaAte(pool, 1);
     const chave = `idem-reuso-${randomUUID()}`;
     await transiciona(pool, {
       corridaId: corrida.id,
-      tipo: 'pagamento_confirmado',
-      autorTipo: 'sistema',
-      autorId: null,
+      tipo: 'motoboy_aceitou',
+      autorTipo: 'motoboy',
+      autorId: randomUUID(),
       chaveIdempotencia: chave,
     });
 
     await assert.rejects(
       () => transiciona(pool, {
         corridaId: corrida.id,
-        tipo: 'motoboy_aceitou',
+        tipo: 'coleta_confirmada',
         autorTipo: 'motoboy',
         autorId: randomUUID(),
         chaveIdempotencia: chave,
@@ -135,9 +193,9 @@ test('idempotência (Lei 5)', async (t) => {
     await assert.rejects(
       () => transiciona(pool, {
         corridaId: outra.id,
-        tipo: 'pagamento_confirmado',
-        autorTipo: 'sistema',
-        autorId: null,
+        tipo: 'motoboy_aceitou',
+        autorTipo: 'motoboy',
+        autorId: randomUUID(),
         chaveIdempotencia: chave,
       }),
       (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
