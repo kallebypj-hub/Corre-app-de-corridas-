@@ -581,7 +581,7 @@ sabota_codigo "versao_da_tabela_do_payload" src/dominio/corridas.js \
 # gravado como autor no log append-only, que a Lei 3 torna irreversível.
 sabota_codigo "autor_de_evento_nao_conferido" src/dominio/clientes.js \
   's|  const autorReal = await exigeAutorReal(pool, lojistaId);|  const autorReal = lojistaId \|\| null;|' \
-  test/clientes.test.js "autor de evento"
+  test/cidades.test.js "autor de evento"
 
 # O VÍNCULO DO LOJISTA COM A CORRIDA cai: qualquer lojista da cidade volta a
 # mover o pedido do vizinho.
