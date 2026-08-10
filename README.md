@@ -7,7 +7,7 @@ Plataforma de despacho de entregas para o comércio. Cidade piloto: Sobral/CE.
 | Arquivo | Para que serve | Quando ler |
 |---|---|---|
 | [`RETOMAR.md`](RETOMAR.md) | Em que etapa o projeto está, o que já está na `main`, o que trava, próximo passo | **Primeiro, sempre** |
-| [`CORRE.md`](CORRE.md) | As 9 leis, o método de teste, o regime de trabalho e a especificação vigente | Sempre |
+| [`CORRE.md`](CORRE.md) | As 10 leis, o método de teste, o regime de trabalho e a especificação vigente | Sempre |
 | [`HISTORICO.md`](HISTORICO.md) | Decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos | Só quando precisar saber *por quê* |
 | [`GATEWAY.md`](GATEWAY.md) | A escolha de gateway reaberta: critérios, ranking, a conta da Lei 7 e o que falta perguntar | Antes da Etapa 7 |
 | [`PORTAO-C.md`](PORTAO-C.md) | Pergunta **morta** em 2026-08-09 (o pagamento saiu de antes da entrega). Fica como levantamento de mercado | Quase nunca |

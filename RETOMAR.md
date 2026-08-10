@@ -2,7 +2,9 @@
 
 Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`CORRE.md`](CORRE.md), e trabalha a partir da `main`. A conversa anterior **não** faz parte da verdade do projeto. Registro histórico (por que as coisas são como são): [`HISTORICO.md`](HISTORICO.md).
 
-**Regime:** uma sessão por etapa — abre no prompt da etapa, fecha no merge. Raciocínio máximo só em auditoria adversarial e nas etapas de dinheiro (7 e 9).
+**Regime:** uma sessão por etapa, **uma branch por etapa, um PR por etapa** — abre no prompt da etapa, fecha no merge. Raciocínio máximo em auditoria adversarial e nas três categorias de caminho: **dinheiro** (7, 8b, 9, 11), **isolamento e identidade**, **autenticação e autorização** (`CORRE.md`, regime de trabalho).
+
+**Duas regras que se esquecem com facilidade:** **Lei 10** — camada de defesa nova cega controle negativo antigo, então ao acrescentar política/trigger/constraint/privilégio, rode a bateria inteira de sabotagens de novo. E **relatório de etapa só sai depois que a auditoria adversarial encerra** — número reportado antes é provisório e não vale como entrega.
 
 ---
 
@@ -13,7 +15,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 > **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
 > **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
 >
-> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 133.
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 137.
 
 ## Onde o projeto está
 
@@ -22,7 +24,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 | **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço). **4 (multi-cidade e cliente) está no PR #6** |
 | **O que a revisão invalidou** | **Etapa 1:** o motor vale, **a tabela de estados não** — é reescrita na Etapa 5. **Etapa 2:** vale, falta o cliente como ator. **Etapas 0 e 3:** valem |
 | **Próxima etapa** | **5 — Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado** |
-| **Situação da Etapa 4** | **entregue, aguardando merge.** RLS por cidade no banco, cliente como quarto ator, cidade na sessão. Auditoria adversarial feita |
+| **Situação da Etapa 4** | **aprovada pelo dono em 2026-08-10, aguardando merge do PR #6.** RLS por cidade no banco, cliente como quarto ator, cidade na sessão. Auditoria adversarial feita — ela achou um vazamento (o log de eventos ficou fora do isolamento) e ele foi corrigido na migration `0011` |
 | **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa*. A pesquisa está feita ([`GATEWAY.md`](GATEWAY.md)); faltam **duas respostas comerciais por escrito**. As Etapas 4, 5 e 6 rodam sem nada disso — a 5 usa a tabela de exemplo, como a Etapa 3 fez |
 | **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
 | **Última bateria verde** | **188 testes**, 0 falhas · controle negativo: **53 sabotagens**, todas vermelhas no teste certo |
@@ -82,6 +84,7 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 2. **A invariante que a etapa tem que provar: nenhum caminho chega a Entregue sem passar por Pago.**
 3. Prazo estimado gravado na criação com a versão da tabela — roda com a tabela de exemplo, como a Etapa 3 fez; os valores reais são pendência de lançamento, não da etapa.
 4. Tudo dentro da cidade: nenhuma consulta nova pode assumir cidade única (Etapa 4 já impõe por RLS, mas o critério vale para o código novo).
-5. Lei 9 em todo caminho novo de escrita; controles negativos próprios; auditoria adversarial recomendada (não é dinheiro nem identidade).
+5. Lei 9 em todo caminho novo de escrita; controles negativos próprios; **Lei 10 ao final** (a etapa mexe em transição, e transição é onde mais se empilha camada); auditoria adversarial antes do relatório.
+6. **Branch própria e PR próprio contra a `main`** — não continua a branch da Etapa 4.
 
 Depois dela: **Etapa 6** (despacho, que herda o critério do motoboy de outra cidade). A **Etapa 7** não começa antes das decisões de gateway.

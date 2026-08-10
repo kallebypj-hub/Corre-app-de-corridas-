@@ -7,7 +7,7 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
-> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 133.
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 137.
 
 ---
 
@@ -21,7 +21,9 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 
 **O critério por trás dessa regra é o destino compartilhado, não o tipo de arquivo.** Coisas que podem ser rejeitadas separadamente vão em PRs separados. Quando um código **só faz sentido se a outra metade for aprovada**, separá-lo cria um PR que não pode ser mesclado sozinho — e aí o acoplamento é honesto. Isso é **exceção que se pede e se registra**, com o motivo, nunca conveniência: houve uma em 2026-08-09 (`HISTORICO.md`, decisão 96) e ela não abre a regra.
 
-**Uma etapa por vez, PR separado por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
+**Uma etapa por vez, uma branch por etapa, um PR por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
+
+**A branch nasce com a etapa e morre no merge.** Etapa nova nunca continua a branch da anterior, mesmo que a anterior ainda não tenha sido mesclada — nesse caso a nova sai do topo da anterior e o PR fica em fila, mas **é PR próprio**. *(Regra de 2026-08-10, e o motivo é um caso concreto: o PR #6 acumulou revisão de spec, trava de configuração de taxa, Etapa 4 e correção de vazamento — 39 arquivos. Revisão humana num PR desse tamanho é teatro: o revisor aprova o conjunto porque não consegue reprovar uma parte.)*
 
 **Regime de esforço:** raciocínio máximo em auditoria adversarial e em **três categorias de caminho**:
 
@@ -39,7 +41,7 @@ Nas demais, esforço normal.
 
 ---
 
-## As 9 leis inegociáveis
+## As 10 leis inegociáveis
 
 Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
@@ -61,6 +63,14 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 **Lei 9 — Toda escrita nasce com teste de concorrência.** Todo caminho que grava tem teste de concorrência real, sem precisar ser pedido. Leitura-e-depois-escrita é sempre suspeita de lost update: contador, limite, cap de tentativas, reserva de vaga, saldo. Prove com processos concorrentes de verdade contra o servidor rodando, nunca com cliente de teste single-thread. Se a garantia depende de ordem de execução, ela não existe — a garantia mora no banco (`UNIQUE`, constraint, `UPDATE` condicional atômico, advisory lock).
 
+**Lei 10 — Camada de defesa nova exige re-verificação de todos os controles negativos existentes.** Quando uma segunda camada passa a proteger a mesma regra, a sabotagem antiga deixa de deixar o teste vermelho — e o verde parece correto. Ao adicionar qualquer camada (política, trigger, constraint, privilégio), rode a bateria inteira de sabotagens e prove que **cada uma** continua vermelha no teste certo. As que ficarem verdes precisam ser reescritas para derrubar **todas** as camadas que protegem aquela regra.
+
+*Origem, 2026-08-09 (Etapa 4):* a sabotagem `app_publica_preco` provava, desde a Etapa 3, que a aplicação não publica tabela de preço. O RLS da Etapa 4 virou **segunda camada** sobre a mesma regra: removido o `GRANT`, a política ainda barrava, o teste ficava verde e a sabotagem parou de acusar. **Lei 8 continuava obedecida no papel e o controle negativo estava cego.** A correção foi derrubar as duas camadas na mesma sabotagem (`HISTORICO.md`, decisão 128).
+
+---
+
+**O princípio por trás das dez.** Não se confia em alguém lembrar. Onde couber, a regra vira **impossibilidade estrutural**: configuração ruim não publica, tabela sem política nasce vermelha, evento não se apaga, coluna sem `GRANT` não se forja. Toda vez que uma proteção depender de disciplina — de revisar com atenção, de lembrar de incluir, de não esquecer —, **procure a versão que depende do banco**. Se ela não existir, diga isso em voz alta em vez de fingir que a disciplina basta.
+
 ## Como testar
 
 - **Teste executando, não lendo.** Leitura de código não prova nada.
@@ -70,6 +80,7 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 - **Volume, não amostra.** Milhares de corridas sintéticas, não dez.
 - **Prove a trava pelo EFEITO, não pelo nome.** Conferir que a constraint existe não prova nada: tente a operação proibida e exija o erro.
 - **Nunca escreva em banco de produção.**
+- **Relatório de etapa só sai depois que a auditoria adversarial encerra** e os achados são confirmados por reprodução. Número reportado antes disso é **provisório e não vale como entrega** — e o risco não é o número estar desatualizado, é a **promessa da etapa estar falsa**. *(Aconteceu em 2026-08-09: a Etapa 4 foi reportada com 186 testes e "nenhuma consulta devolve dado de outra cidade" enquanto a auditoria ainda rodava. Ela achou o vazamento de `eventos` logo depois: a frase central do relatório era mentira, e os números certos eram 188 e 53.)*
 - **NUNCA rode o controle negativo com código não commitado.** Ele sabota o arquivo e restaura com `git checkout` — e `git checkout` **não devolve arquivo que o git não conhece**. Arquivo novo fica com a sabotagem dentro; arquivo alterado e não commitado **volta para o HEAD e perde o trabalho da sessão**. Commite antes, sempre. *(Aconteceu em 2026-08-09: a trava de configuração de taxa foi apagada pelo próprio controle negativo que ia prová-la.)*
 
 ## Além do funcionamento
@@ -101,6 +112,8 @@ Ao fim de cada etapa, nesta ordem, curto:
 5. O que trava a próxima etapa
 
 Sem relatório longo. Sem adjetivo. Número e fato.
+
+**E depois da auditoria, nunca antes** — ver "Como testar". Etapa com auditoria obrigatória não tem relatório parcial: enquanto a auditoria roda, o que existe é obra em andamento.
 
 ---
 
