@@ -13,26 +13,26 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 > **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
 > **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
 >
-> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 122.
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 128.
 
 ## Onde o projeto está
 
 | | |
 |---|---|
-| **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço) |
+| **Etapas na `main`** | 0 (fundação), 1 (máquina de estados), 2 (cadastro e sessão + re-login OTP), 3 (zonas e preço). **4 (multi-cidade e cliente) está no PR #6** |
 | **O que a revisão invalidou** | **Etapa 1:** o motor vale, **a tabela de estados não** — é reescrita na Etapa 5. **Etapa 2:** vale, falta o cliente como ator. **Etapas 0 e 3:** valem |
-| **Próxima etapa** | **4 — Multi-cidade e o cliente como ator** |
-| **Situação da Etapa 4** | **liberada**, e **só contra interface falsa** — nenhuma etapa toca fornecedor real enquanto a mesa comercial não responder (pendência 22) |
+| **Próxima etapa** | **5 — Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado** |
+| **Situação da Etapa 4** | **entregue, aguardando merge.** RLS por cidade no banco, cliente como quarto ator, cidade na sessão. Auditoria adversarial feita |
 | **Primeira etapa travada** | **7 — Cobrança na porta.** Trava na escolha do gateway e em *quem paga a taxa*. A pesquisa está feita ([`GATEWAY.md`](GATEWAY.md)); faltam **duas respostas comerciais por escrito**. As Etapas 4, 5 e 6 rodam sem nada disso — a 5 usa a tabela de exemplo, como a Etapa 3 fez |
 | **Pendência paralela** | **Correção da Etapa 3** — preço é par origem-destino (matriz 6×6 de anéis). **PR próprio, travado:** falta a tabela real de Sobral |
-| **Última bateria verde** | **173 testes**, 0 falhas · controle negativo: **42 sabotagens**, todas vermelhas no teste certo |
+| **Última bateria verde** | **186 testes**, 0 falhas · controle negativo: **50 sabotagens**, todas vermelhas no teste certo |
 | **PRs mesclados** | #1 Etapa 0 · #2 Etapa 1 · #3 Etapa 2 · #5 correção de segurança do OTP · #4 Etapa 3 |
 
 ## O que já está na `main`
 
-**Migrations** (`corre-api/migrations/`): `0001` domínio centavos · `0002` eventos append-only · `0003` corridas + sequência + idempotência · `0004` log sem buraco · `0005` cadastro e sessão · `0006` travas no banco · `0007` re-login OTP · `0008` zonas e preço · `0009` trava de configuração de taxa.
+**Migrations** (`corre-api/migrations/`): `0001` domínio centavos · `0002` eventos append-only · `0003` corridas + sequência + idempotência · `0004` log sem buraco · `0005` cadastro e sessão · `0006` travas no banco · `0007` re-login OTP · `0008` zonas e preço · `0009` trava de configuração de taxa · `0010` multi-cidade, RLS e cliente.
 
-**Domínio** (`corre-api/src/dominio/`): `transicoes.js` (tabela declarativa — **será reescrita na Etapa 5**) · `corridas.js` (motor de estados, prazos, `corridasParadas`) · `contas.js` (motoboy, lojista, operador, painel) · `otp.js` (re-login) · `preco.js` (motor de preço) · `split.js` (split triplo e trava de taxa) · `nucleo.js` (transação, replay, disputa de posição) · `estados.js`, `cpf.js`, `erros.js`.
+**Domínio** (`corre-api/src/dominio/`): `transicoes.js` (tabela declarativa — **será reescrita na Etapa 5**) · `corridas.js` (motor de estados, prazos, `corridasParadas`) · `contas.js` (motoboy, lojista, operador, painel) · `otp.js` (re-login) · `preco.js` (motor de preço) · `split.js` (split triplo e trava de taxa) · `cidades.js` (pool por cidade, RLS) · `clientes.js` (o quarto ator) · `nucleo.js` (transação, replay, disputa de posição) · `estados.js`, `cpf.js`, `erros.js`.
 
 **HTTP** (`corre-api/src/http/`): `api.js` (cadastro, sessão, painel) · `sessoes.js` (token, revalidação contra conta viva) · `sms.js` (interface, sem provedor real). Ponto de entrada: `src/servidor.js` (recusa subir com credencial de dono/superusuário).
 
@@ -42,8 +42,8 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 ```bash
 cd corre-api && npm ci
-npm run bateria            # banco nasce do zero das migrations + 173 testes
-npm run controle-negativo  # 42 sabotagens; cada uma tem que ficar vermelha no teste certo
+npm run bateria            # banco nasce do zero das migrations + 186 testes
+npm run controle-negativo  # 50 sabotagens; cada uma tem que ficar vermelha no teste certo
 ```
 Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postgres`. A bateria **derruba e recria** o banco `corre_teste` — nunca aponte para um banco que importa.
 
@@ -76,11 +76,12 @@ Precisa de PostgreSQL 16 em `localhost:5432` com superusuário `postgres`/`postg
 
 ## Próximo passo exato
 
-**Etapa 4 — Multi-cidade e o cliente como ator**, em sessão nova, com o prompt da etapa.
+**Etapa 5 — Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado**, em sessão nova.
 
-1. `cidades` como entidade de primeira classe; `cidade_id` em lojista, motoboy, corrida, tabela de preço e zona. **O cliente não tem cidade** — é da plataforma.
-2. `clientes`: nasce pelo telefone que o lojista digita, vira dele pelo código de 6 dígitos por SMS. Sem subconta, não recebe dinheiro.
-3. **A trava mora no banco:** corrida cujo lojista, motoboy ou zona sejam de outra cidade é recusada por constraint — provada pelo efeito, não pelo nome.
-4. Lei 9 em todo caminho novo de escrita; controles negativos próprios; **auditoria adversarial OBRIGATÓRIA** — a etapa estende o login por código de 6 dígitos ao cliente e impõe isolamento por cidade, e toda etapa que mexe em autenticação ou autorização a exige (`CORRE.md`, Regime de trabalho).
+1. A tabela de transições da Etapa 1 é **reescrita**: 11 estados novos, **14 arestas**, o estado "Expirada" se extingue e a corrida nasce em "Procurando motoboy" (`CORRE.md`, seção 4).
+2. **A invariante que a etapa tem que provar: nenhum caminho chega a Entregue sem passar por Pago.**
+3. Prazo estimado gravado na criação com a versão da tabela — roda com a tabela de exemplo, como a Etapa 3 fez; os valores reais são pendência de lançamento, não da etapa.
+4. Tudo dentro da cidade: nenhuma consulta nova pode assumir cidade única (Etapa 4 já impõe por RLS, mas o critério vale para o código novo).
+5. Lei 9 em todo caminho novo de escrita; controles negativos próprios; auditoria adversarial recomendada (não é dinheiro nem identidade).
 
-Depois dela: **Etapa 5** (máquina de estados nova + prazo estimado) e **Etapa 6** (despacho). A **Etapa 7** (cobrança na porta) não começa antes das decisões 1 e 2 acima.
+Depois dela: **Etapa 6** (despacho, que herda o critério do motoboy de outra cidade). A **Etapa 7** não começa antes das decisões de gateway.

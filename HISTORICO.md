@@ -231,6 +231,17 @@ A sessão da Etapa 4 abriu lendo **apenas** `RETOMAR.md` e `CORRE.md`, sem conve
 | 121 | **Corte da Etapa 8 em 8a e 8b** (tabela de etapas) | Uma etapa só: entrega, retorno e dívida do lojista | **8a** entrega e retorno (fluxo físico e dinheiro da corrida); **8b** dívida do lojista (saldo devedor, relógio de 30 dias com aviso aos 15, recebedor adicional no split, mercadoria zero, cartão em último caso). **8b nasce com auditoria obrigatória e esforço máximo** | A 8b é caminho de dinheiro com **concorrência real**: dívida quitando enquanto outra corrida nasce, **dois splits disputando a mesma parcela do lojista**. É a Lei 9 em estado puro. **Etapa grande esconde falso verde** — separada, ela nasce sabendo que é o risco |
 | 122 | **Etapas marcadas por dependência comercial** (tabela de etapas) | — | 🔒 nas etapas que **tocam fornecedor real** e não podem sair da interface falsa: 7, 8b, 9, 11 e 14 | Sem a marca, uma sessão futura abre uma etapa travada sem perceber e descobre no meio da obra |
 
+### Etapa 4 — o que a obra decidiu
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 123 | **A cidade em cadastro e login vem do corpo** (seção 20) | "A cidade vem da sessão, nunca do corpo" | Continua valendo em **toda requisição autenticada**. Em **cadastro e login** ela vem do corpo, porque **ainda não existe sessão** — e declarar a cidade errada ali **não vaza nada**: a política não acha a conta e o pedido falha como "não existe" | Descoberto ao construir: ler a conta para descobrir a cidade exigiria a cidade. A exceção só cega quem erra, então não é brecha |
+| 124 | **Sobral tem id fixo** (migration `0010`) | — | `00000001-2312-4908-8000-000000000001`, com o IBGE nos dígitos do meio | Descobrir a cidade por consulta seria, ela mesma, **uma consulta sem cidade**. O id fixo quebra o ovo-e-galinha sem abrir exceção na política |
+| 125 | **O varredor de prazos varre cidade por cidade** (seção 20) | Um processo só, varrendo tudo | Percorre as cidades e roda **dentro do contexto de cada uma**. **Não ganha atalho de "ver tudo"** | Processo de fundo com bypass viraria a porta dos fundos do isolamento. Se a política vale, vale para ele também |
+| 126 | **A sessão do operador enxerga uma cidade só** (seção 20) | Não especificado | Limite declarado **até a Etapa 11**: operação em duas cidades exige duas sessões; escolher e trocar cidade no painel é da Etapa 11 | O operador não é *de* uma cidade, mas a sessão dele precisa declarar em qual está operando. Inventar o seletor antes da etapa que o especifica seria pior |
+| 127 | **O autor do evento de criação do cliente** (`clientes.js`) | Seria o lojista que digitou o telefone | **Lojista quando identificado; sistema quando não.** Nunca "lojista anônimo" | O `CHECK` de autor identificado do log recusa lojista sem id — e com razão: autor sem identidade não é autor |
+| 128 | **O RLS virou segunda camada e quebrou uma sabotagem antiga** (Lei 8) | A sabotagem `app_publica_preco` derrubava só o privilégio | Passou a derrubar **privilégio e política** | Com duas camadas, sabotar uma deixava a regra de pé e o teste **verde** — falso positivo. Foi o próprio script que pegou, que é exatamente para o que ele existe |
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:
