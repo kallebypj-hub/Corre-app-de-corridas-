@@ -291,6 +291,14 @@ Quatro achados, todos reproduzidos por mim antes de aceitar. Os dois primeiros s
 | 152 | **Uma corrida envenenada parava a varredura da cidade** | Qualquer erro fora dos dois esperados abortava o laço de `expiraVencidas` | O erro é **registrado** e a varredura segue; se a lista **inteira** falhar, aí sim sobe — porque não é uma corrida ruim, é o varredor quebrado | A chave determinística do varredor pode ser queimada por um chamador (defeito aberto, capítulo 3). Enquanto isso não se resolve, uma corrida não pode parar o vencimento de todas as outras |
 | 153 | **Guarda de estouro do prazo no número errado** | `Number.MAX_SAFE_INTEGER`, enquanto a coluna é `INTEGER` | Teto de sanidade de **um ano de minutos**, com `ErroDeDominio` | Daqui para cima não é corrida longa, é coordenada errada — e o certo é dizer isso, não estourar cru no `INSERT` |
 
+## Lei 11 — id não é autorização (2026-08-10)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 157 | **Lei 11** | Dez leis. Nenhuma dizia que receber um id não é receber permissão | **Toda função de domínio que recebe um identificador confere de quem ele é antes de operar.** Tipo de ator não é ator. Vale para chave de idempotência, resposta repetida e mensagem de erro. **Função exportada sem chamador segue a mesma regra** | Quatro furos da varredura, todos executados: a chave de criação devolvia a corrida de outro lojista **antes** da validação de autor; `transiciona` conferia o tipo e nunca o autor; a chave de transição dava replay a autor diferente; e `reivindica` tomava conta de cliente por id, **sem chamador nenhum** |
+| 158 | **O padrão, registrado** | — | A Etapa 2 passou não por cuidado, mas porque ali **a identidade estava no dado conferido** (CPF, telefone). Onde o id sozinho pareceu bastar, não bastou em lugar nenhum | **Id é endereço, não credencial.** Sem isso escrito, cada etapa nova redescobre o mesmo buraco |
+| 159 | **Enumeração no cadastro fechada** | `cpf_ja_cadastrado` e `telefone_ja_cadastrado` respondiam **409** — qualquer um descobria se um CPF é motoboy do Corre | Cadastro responde **sempre 202**, como o OTP. Colisão só se revela a quem **prova ser dono**, pelo código de 6 dígitos que já existe | Erro que revela existência é vazamento. Custa uma tela a mais no cadastro duplicado, que é raro, e fecha a enumeração. *Decisão do dono, 2026-08-10* |
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:
