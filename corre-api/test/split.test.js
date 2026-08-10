@@ -213,8 +213,8 @@ async function publica(dono, extra = {}) {
   const { rows: [linha] } = await dono.query(
     `INSERT INTO configuracoes_taxa
        (rotulo, gateway, comissao_bps, taxa_percentual_bps, taxa_fixa_centavos,
-        portador_taxa_percentual, frete_minimo_centavos, mercadoria_maxima_centavos, exemplo)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) RETURNING id`,
+        portador_taxa_percentual, frete_minimo_centavos, mercadoria_maxima_centavos, exemplo, cidade_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,'00000001-2312-4908-8000-000000000001') RETURNING id`,
     [`t-${randomUUID()}`, b.gateway, b.comissao_bps, b.taxa_percentual_bps, b.taxa_fixa,
       b.portador, b.frete_minimo, b.mercadoria_maxima],
   );
@@ -231,8 +231,8 @@ test('o banco RECUSA publicar configuração em que a taxa sai do Corre acima do
     dono,
     `INSERT INTO configuracoes_taxa
        (rotulo, gateway, comissao_bps, taxa_percentual_bps, taxa_fixa_centavos,
-        portador_taxa_percentual, frete_minimo_centavos, mercadoria_maxima_centavos)
-     VALUES ($1,'teste',500,119,0,'corre',500,50000)`,
+        portador_taxa_percentual, frete_minimo_centavos, mercadoria_maxima_centavos, cidade_id)
+     VALUES ($1,'teste',500,119,0,'corre',500,50000,'00000001-2312-4908-8000-000000000001')`,
     [`prejuizo-${randomUUID()}`],
   );
   assert.match(String(erro.constraint || erro.message), /configuracao_taxa_nunca_opera_no_prejuizo/);
@@ -249,8 +249,8 @@ test('o banco RECUSA taxa fixa que come a comissão do frete mínimo', async (t)
     dono,
     `INSERT INTO configuracoes_taxa
        (rotulo, gateway, comissao_bps, taxa_percentual_bps, taxa_fixa_centavos,
-        portador_taxa_percentual, frete_minimo_centavos, mercadoria_maxima_centavos)
-     VALUES ($1,'teste',500,119,99,'lojista',500,50000)`,
+        portador_taxa_percentual, frete_minimo_centavos, mercadoria_maxima_centavos, cidade_id)
+     VALUES ($1,'teste',500,119,99,'lojista',500,50000,'00000001-2312-4908-8000-000000000001')`,
     [`fixa-${randomUUID()}`],
   );
   assert.match(String(erro.constraint || erro.message), /configuracao_taxa_nunca_opera_no_prejuizo/);
@@ -398,8 +398,8 @@ test('a aplicação não altera, não apaga e não publica configuração (Lei 9
     'DELETE FROM configuracoes_taxa',
     `INSERT INTO configuracoes_taxa
        (rotulo, gateway, comissao_bps, taxa_percentual_bps, portador_taxa_percentual,
-        frete_minimo_centavos, mercadoria_maxima_centavos)
-     VALUES ('app','x',500,119,'lojista',500,50000)`,
+        frete_minimo_centavos, mercadoria_maxima_centavos, cidade_id)
+     VALUES ('app','x',500,119,'lojista',500,50000,'00000001-2312-4908-8000-000000000001')`,
   ]) {
     const erro = await esperaErro(app, sql);
     assert.match(String(erro.message), /permissão|permission/i, `deveria faltar permissão: ${sql}`);
@@ -436,7 +436,9 @@ test('falha de configuração responde 503, é registrada, e não vaza centavo a
     resposta = await fetch(`http://127.0.0.1:${servidor.address().port}/lojistas`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ nome: 'Loja', telefone: '88999990000' }),
+      body: JSON.stringify({
+        nome: 'Loja', telefone: '88999990000', cidade_id: '00000001-2312-4908-8000-000000000001',
+      }),
     });
     corpo = await resposta.json();
   } finally {

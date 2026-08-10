@@ -111,6 +111,8 @@ test('migrations', async (t) => {
       { column_name: 'zona_nome', data_type: 'text', is_nullable: 'YES' },
       { column_name: 'configuracao_taxa_id', data_type: 'uuid', is_nullable: 'YES' },
       { column_name: 'mercadoria_centavos', data_type: 'bigint', is_nullable: 'YES' },
+      { column_name: 'cidade_id', data_type: 'uuid', is_nullable: 'NO' },
+      { column_name: 'cliente_id', data_type: 'uuid', is_nullable: 'YES' },
     ]);
   });
 
@@ -137,8 +139,8 @@ test('migrations', async (t) => {
       // Dois CPFs de dígitos válidos, para isolar o CHECK chave_pix=cpf.
       const erro = await esperaErro(
         app,
-        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao)
-         VALUES (1, 'x', '1', '52998224725', '11144477735', 'c', 'r', 's', 'ap', 'ativa')`,
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao, cidade_id)
+         VALUES (1, 'x', '1', '52998224725', '11144477735', 'c', 'r', 's', 'ap', 'ativa', corre_cidade_atual())`,
       );
       assert.equal(erro.code, '23514');
     } finally {
@@ -152,8 +154,8 @@ test('migrations', async (t) => {
       // 11111111111 passa no regex ^[0-9]{11}$ mas é dígito repetido.
       const erro = await esperaErro(
         app,
-        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao)
-         VALUES (1, 'x', '1', '11111111111', '11111111111', 'c', 'r', 's', 'ap', 'ativa')`,
+        `INSERT INTO motoboys (seq, nome, telefone, cpf, chave_pix, cnh_ref, crlv_ref, selfie_ref, aparelho_id, situacao, cidade_id)
+         VALUES (1, 'x', '1', '11111111111', '11111111111', 'c', 'r', 's', 'ap', 'ativa', corre_cidade_atual())`,
       );
       assert.equal(erro.code, '23514');
     } finally {
@@ -180,7 +182,7 @@ test('migrations', async (t) => {
     const app = await conectaApp();
     try {
       const { rows: [semCartao] } = await app.query(
-        "INSERT INTO lojistas (seq, nome, telefone, situacao) VALUES (1, 'sem cartão', $1, 'ativa') RETURNING id",
+        "INSERT INTO lojistas (seq, nome, telefone, situacao, cidade_id) VALUES (1, 'sem cartão', $1, 'ativa', corre_cidade_atual()) RETURNING id",
         [`t-${randomUUID()}`],
       );
       const erroSemCartao = await esperaErro(
@@ -191,7 +193,7 @@ test('migrations', async (t) => {
       assert.equal(erroSemCartao.code, 'CR002');
 
       const { rows: [bloqueado] } = await app.query(
-        "INSERT INTO lojistas (seq, nome, telefone, situacao) VALUES (1, 'bloqueado', $1, 'bloqueada') RETURNING id",
+        "INSERT INTO lojistas (seq, nome, telefone, situacao, cidade_id) VALUES (1, 'bloqueado', $1, 'bloqueada', corre_cidade_atual()) RETURNING id",
         [`t-${randomUUID()}`],
       );
       const erroBloqueado = await esperaErro(
@@ -241,8 +243,8 @@ test('migrations', async (t) => {
     `);
     assert.deepEqual(
       inserir.rows.map((r) => r.column_name),
-      ['configuracao_taxa_id', 'estado', 'frete_centavos', 'lojista_id', 'mercadoria_centavos',
-        'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
+      ['cidade_id', 'cliente_id', 'configuracao_taxa_id', 'estado', 'frete_centavos',
+        'lojista_id', 'mercadoria_centavos', 'seq', 'tabela_preco_id', 'vence_em', 'zona_nome'],
     );
 
     const atualizar = await dono.query(`

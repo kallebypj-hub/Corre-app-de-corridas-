@@ -9,7 +9,8 @@
 
 const express = require('express');
 
-const { ErroDeDominio, ehFalhaDeConfiguracao } = require('../dominio/erros');
+const { ErroDeDominio, ehFalhaDeConfiguracao, CODIGOS } = require('../dominio/erros');
+const { poolDaCidade } = require('../dominio/cidades');
 const contas = require('../dominio/contas');
 const otp = require('../dominio/otp');
 const { emTransacao } = require('../dominio/nucleo');
@@ -66,6 +67,10 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
           return;
         }
         req.ator = ator;
+        // A CIDADE DA REQUISIÇÃO VEM DA SESSÃO, nunca do corpo (seção 20).
+        // Sem cidade na sessão o pedido segue com o pool cru — e o pool cru
+        // não enxerga tabela por cidade nenhuma. Cega, não vaza.
+        req.poolDaCidade = ator.cidadeId ? poolDaCidade(pool, ator.cidadeId) : pool;
         next();
       } catch (erro) {
         next(erro);
@@ -123,12 +128,28 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
     };
   }
 
+  // Antes de existir sessão — cadastro e login — a cidade vem do CORPO,
+  // porque não há de onde mais vir. Não é exceção à regra "a cidade vem da
+  // sessão": é o único momento em que sessão ainda não existe. E declarar a
+  // cidade errada aqui não vaza nada — a política simplesmente não acha a
+  // conta, e o pedido falha como "não existe".
+  function poolDoCorpo(corpo) {
+    if (!corpo || !corpo.cidade_id) {
+      throw new ErroDeDominio(
+        CODIGOS.CIDADE_NAO_DECLARADA,
+        'cidade_id é obrigatório antes de existir sessão (cadastro e login)',
+      );
+    }
+    return poolDaCidade(pool, corpo.cidade_id);
+  }
+
   roteador.get('/saude', (req, res) => res.json({ ok: true }));
 
   // ------------------------------------------------------------- motoboy
   roteador.post('/motoboys', trata(async (req, res) => {
     const corpo = req.body || {};
-    const { conta, repetida } = await contas.cadastraMotoboy(pool, {
+    const naCidade = poolDoCorpo(corpo);
+    const { conta, repetida } = await contas.cadastraMotoboy(naCidade, {
       nome: corpo.nome,
       telefone: corpo.telefone,
       cpf: corpo.cpf,
@@ -139,7 +160,7 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
       aparelhoId: corpo.aparelho_id,
       chaveIdempotencia: corpo.chave_idempotencia,
     });
-    const sessao = await emiteSessao(pool, {
+    const sessao = await emiteSessao(naCidade, {
       atorTipo: 'motoboy', atorId: conta.id, aparelhoId: conta.aparelho_id,
     });
     res.status(repetida ? 200 : 201).json({
@@ -152,13 +173,14 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/sessoes/motoboy', trata(async (req, res) => {
     const corpo = req.body || {};
-    const sessao = await emiteSessaoDeMotoboy(pool, {
+    const naCidade = poolDoCorpo(corpo);
+    const sessao = await emiteSessaoDeMotoboy(naCidade, {
       cpf: corpo.cpf, aparelhoId: corpo.aparelho_id,
     });
     // Login bem-sucedido gera evento (como qualquer ato relevante).
     await emTransacao(pool, (conexao) => contas.registraLogin(conexao, {
       atorTipo: 'motoboy', atorId: sessao.atorId, via: 'cpf_aparelho',
-    }));
+    }), { cidadeId: naCidade.cidadeId });
     res.status(201).json({ sessao: { token: sessao.token } });
   }));
 
@@ -166,7 +188,9 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
   // genérica: não revela se o telefone existe.
   roteador.post('/sessoes/otp/solicitar', trata(async (req, res) => {
     const corpo = req.body || {};
-    await otp.solicitaCodigo(pool, {
+    // O cliente não tem cidade (seção 20): o pedido dele não declara nenhuma.
+    const alvo = corpo.ator_tipo === 'cliente' ? pool : poolDoCorpo(corpo);
+    await otp.solicitaCodigo(alvo, {
       telefone: corpo.telefone,
       atorTipo: corpo.ator_tipo,
       ip: req.ip,
@@ -177,22 +201,24 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/sessoes/otp/confirmar', trata(async (req, res) => {
     const corpo = req.body || {};
-    const ator = await otp.confirmaCodigo(pool, {
+    const alvo = corpo.ator_tipo === 'cliente' ? pool : poolDoCorpo(corpo);
+    const ator = await otp.confirmaCodigo(alvo, {
       telefone: corpo.telefone,
       atorTipo: corpo.ator_tipo,
       codigo: corpo.codigo,
     });
-    const sessao = await emiteSessao(pool, { atorTipo: ator.atorTipo, atorId: ator.atorId });
+    const sessao = await emiteSessao(alvo, { atorTipo: ator.atorTipo, atorId: ator.atorId });
     res.status(201).json({ sessao: { token: sessao.token } });
   }));
 
   // ------------------------------------------------------------- lojista
   roteador.post('/lojistas', trata(async (req, res) => {
     const corpo = req.body || {};
-    const { conta, repetida } = await contas.cadastraLojista(pool, {
+    const naCidade = poolDoCorpo(corpo);
+    const { conta, repetida } = await contas.cadastraLojista(naCidade, {
       nome: corpo.nome, telefone: corpo.telefone, chaveIdempotencia: corpo.chave_idempotencia,
     });
-    const sessao = await emiteSessao(pool, { atorTipo: 'lojista', atorId: conta.id });
+    const sessao = await emiteSessao(naCidade, { atorTipo: 'lojista', atorId: conta.id });
     res.status(repetida ? 200 : 201).json({
       lojista: {
         id: conta.id,
@@ -205,7 +231,7 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/lojistas/cartao', exigeSessao('lojista'), trata(async (req, res) => {
     const corpo = req.body || {};
-    const { conta } = await contas.registraCartao(pool, {
+    const { conta } = await contas.registraCartao(req.poolDaCidade, {
       lojistaId: req.ator.id, cartaoRef: corpo.cartao_ref, chaveIdempotencia: corpo.chave_idempotencia,
     });
     res.status(201).json({
@@ -217,14 +243,14 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
   roteador.post('/operadores', exigeSessao('operador'), trata(async (req, res) => {
     const corpo = req.body || {};
     const autor = await operadorDaSessao(req);
-    const { conta } = await contas.criaOperador(pool, {
+    const { conta } = await contas.criaOperador(req.poolDaCidade, {
       nome: corpo.nome,
       telefone: corpo.telefone,
       papel: corpo.papel,
       autor,
       chaveIdempotencia: corpo.chave_idempotencia,
     });
-    const sessao = await emiteSessao(pool, { atorTipo: 'operador', atorId: conta.id });
+    const sessao = await emiteSessao(req.poolDaCidade, { atorTipo: 'operador', atorId: conta.id });
     res.status(201).json({
       operador: { id: conta.id, papel: conta.papel },
       sessao: { token: sessao.token },
@@ -233,7 +259,7 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/painel/motoboys/:id/bloqueio', exigeSessao('operador'), exigeUuid('id', 'conta_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
-    await contas.bloqueiaMotoboy(pool, {
+    await contas.bloqueiaMotoboy(req.poolDaCidade, {
       motoboyId: req.params.id,
       motivo: (req.body || {}).motivo,
       autor,
@@ -244,7 +270,7 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/painel/motoboys/:id/liberacao-de-saque', exigeSessao('operador'), exigeUuid('id', 'conta_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
-    await contas.liberaPrimeiroSaque(pool, {
+    await contas.liberaPrimeiroSaque(req.poolDaCidade, {
       motoboyId: req.params.id,
       autor,
       chaveIdempotencia: (req.body || {}).chave_idempotencia,
@@ -254,7 +280,7 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
 
   roteador.post('/painel/motoboys/:id/troca-de-aparelho', exigeSessao('operador'), exigeUuid('id', 'conta_inexistente'), trata(async (req, res) => {
     const autor = await operadorDaSessao(req);
-    await contas.trocaAparelho(pool, {
+    await contas.trocaAparelho(req.poolDaCidade, {
       motoboyId: req.params.id,
       novoAparelhoId: (req.body || {}).aparelho_id,
       autor,

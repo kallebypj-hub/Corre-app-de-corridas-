@@ -7,7 +7,7 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 - **Começando uma sessão?** Leia [`RETOMAR.md`](RETOMAR.md) primeiro — ele diz em uma tela onde o projeto está e qual é o próximo passo.
 - **Registro histórico** (decisões com data e motivo, alterações de spec antes→depois, achados de auditoria, defeitos aceitos): [`HISTORICO.md`](HISTORICO.md). Só se consulta quando pedido.
 
-> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 112.
+> **Revisão de 2026-08-09 — o pagamento mudou de lugar.** O cliente que compra pela primeira vez não tem app nenhum, e cobrar antes da entrega travava a primeira compra. O pagamento passou para **a porta do cliente**, por QR Pix dinâmico exibido no app do motoboy, e a **mercadoria entrou na cobrança**. Isso reescreveu as seções **1 a 18**, criou as seções **19 (chat interno)** e **20 (multi-cidade)**, matou o Portão C e invalidou a Etapa 4 que estava planejada. O antes→depois inteiro está no `HISTORICO.md`, capítulo 1, decisões 30 a 122.
 
 ---
 
@@ -23,11 +23,19 @@ Este arquivo é a **fonte única e oficial** do projeto: as leis, o método de t
 
 **Uma etapa por vez, PR separado por etapa.** Nunca comece a próxima com a anterior vermelha. **Obra e auditoria nunca em paralelo** — auditoria sabota arquivos e banco para provar o controle negativo; obra rodando junto contamina o resultado.
 
-**Regime de esforço:** raciocínio máximo **apenas** em auditoria adversarial e em caminho de dinheiro (**Etapas 7 e 9**). Nas demais, esforço normal.
+**Regime de esforço:** raciocínio máximo em auditoria adversarial e em **três categorias de caminho**:
+
+| Categoria | Etapas | Por quê |
+|---|---|---|
+| **Dinheiro** | 7, 8b, 9, 11 | Erro de centavo não se descobre olhando, e some com dinheiro de terceiro |
+| **Isolamento e identidade** | 4 | **Vazamento entre cidades é tão grave quanto erro de centavo** — e mais silencioso: ninguém reclama de ver dado que não devia. Vale para qualquer etapa que mexa em RLS, sessão ou identidade |
+| **Autenticação e autorização** | 4, 11 | Já era exigência da auditoria; agora também do esforço |
+
+Nas demais, esforço normal.
 
 **Nenhuma etapa toca fornecedor real enquanto a mesa comercial não responder** (seção 17): sem credencial, sem chamada, sem depender de particularidade de gateway. Tudo atrás de interface, com implementação falsa nos testes, como foi feito com o SMS.
 
-**Auditoria adversarial é obrigatória** nas etapas de **dinheiro e de segurança** (7, 9, 11 e qualquer etapa que mexa em autenticação ou autorização), e recomendada nas demais. Ela custa caro e continua obrigatória porque encontra o que a bateria comum não encontra — o registro do que ela pegou está no `HISTORICO.md`. O que se corta para economizar é conversa longa, nunca auditoria.
+**Auditoria adversarial é obrigatória** nas etapas de **dinheiro, de isolamento e de segurança** (4, 7, 8b, 9, 11 e qualquer etapa que mexa em RLS, autenticação ou autorização), e recomendada nas demais. Ela custa caro e continua obrigatória porque encontra o que a bateria comum não encontra — o registro do que ela pegou está no `HISTORICO.md`. O que se corta para economizar é conversa longa, nunca auditoria.
 
 ---
 
@@ -125,20 +133,23 @@ As etapas 0 a 3 estão na `main`. A revisão de 2026-08-09 **invalidou parte do 
 | 1 | Máquina de estados + log de eventos | As transições cobertas. Transição inválida recusada. Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. O servidor sobe de verdade com credencial de dono e encerra antes de servir a primeira requisição | **na `main`** (PR #2) — o **motor** vale; a **tabela de estados foi invalidada** e é reescrita na Etapa 5 |
 | 2 | Cadastro e sessão (lojista, motoboy, painel) | Chave Pix de CPF diferente é recusada. Segundo aparelho na mesma conta é recusado. Primeiro saque nasce travado. Atendimento recebe 403 em estorno e bloqueio | **na `main`** (PR #3 + correção #5) — vale; falta o **cliente** como ator (Etapa 4) |
 | 3 | Zonas e preço | Tabela carregada. Mesmo endereço dá sempre o mesmo preço. Fora de zona calcula por linha reta sem API externa | **na `main`** (PR #4) — vale; tem **correção pendente** (matriz 6×6, PR próprio, travada na tabela real) |
-| 4 | Multi-cidade e o cliente como ator | Corrida com lojista da cidade A e zona da cidade B é recusada **pelo banco**. Duas cidades com tabelas de preço diferentes coexistem sem se misturar. Cliente nasce por telefone, é da plataforma e não da cidade. Nenhuma consulta devolve dado de outra cidade | **liberada** — mas **só contra interface falsa**, como toda etapa até o MEI ter resposta (seção 17) |
+| 4 | Multi-cidade e o cliente como ator | Corrida com **lojista** da cidade A e **zona/tabela de preço** da cidade B é recusada **pelo banco**. Duas cidades com tabelas de preço e **configurações de taxa** diferentes coexistem sem se misturar. Cliente nasce por telefone, é da plataforma e não da cidade. **Nenhuma consulta devolve dado de outra cidade — por RLS, provado com pool de conexões e requisições concorrentes de cidades diferentes, em milhares intercaladas** | **em obra** — **isolamento e identidade**; auditoria obrigatória; **só contra interface falsa** |
 | 5 | Máquina de estados nova (entrega consignada ao pagamento) + prazo estimado | As **14 arestas** cobertas; par fora da tabela é recusado. **Nenhum caminho chega a Entregue sem passar por Pago.** Estado reconstruído dos eventos bate com o gravado, em 5.000 corridas sintéticas. Prazo estimado é gravado na criação com a versão da tabela; mesma corrida, mesmo prazo | não iniciada |
-| 6 | Despacho: cascata, timer de 30s, regras de recusa | 50 aparelhos disputando a mesma corrida resultam em exatamente 1 aceite. Cascata de 5 min sem aceite leva a Sem motoboy **sem nenhum movimento de dinheiro**. 4 recusas seguidas → offline por 15 min. Teto de 2 corridas ativas | não iniciada |
-| 7 | **Cobrança na porta: QR dinâmico, confirmação e split triplo** | A cobrança nasce com os **três recebedores declarados** e a soma bate com o total ao centavo. Webhook duplicado + consulta ativa simultânea produzem **um único** Pago. **Com o webhook desligado, a corrida ainda fecha** (a consulta ativa é o caminho primário). Entrega é impossível antes da confirmação. **Frete ímpar fecha ao centavo** e o centavo vai para o motoboy. **Mercadoria zero** e **mercadoria menor que a taxa** caem na regra da seção 9 e ninguém fica negativo. 10.000 corridas: mercadoria + frete = soma das três parcelas + taxa, ao centavo. Lei 9 em três pares: geração×geração, confirmação×confirmação, e **cancelamento da cobrança × confirmação** (a saída do estado 4) | não iniciada — **dinheiro; auditoria obrigatória; travada na seção 17, itens 1 e 2** |
-| 8 | Entrega, espera na porta e retorno | Sem pagamento confirmado não existe transição para Entregue. 5 min de espera + **1 aviso registrado como evento** habilita o retorno (o canal é das Etapas 10 e 14). **Retorno vira dívida do lojista no valor do frete, sem comissão — e não toca cartão nenhum.** A dívida quita no split da próxima corrida com mercadoria, com o motoboy credor como recebedor adicional; **corrida de mercadoria zero não quita e o relógio não para**; aos **30 dias** de dívida aberta o cartão é cobrado. **Corrida em retorno nunca carrega dinheiro pago.** Sair do estado 4 sem pagamento cancela a cobrança **antes** de gravar a transição | não iniciada — **dinheiro; auditoria obrigatória** |
-| 9 | Saldo, saque e reserva | Soma dos saldos das subcontas (lojista e motoboy) + sacado + comissão recebida pelo Corre + **taxa retida pelo gateway** = soma dos totais cobrados, ao centavo, em 10.000 corridas. Primeiro saque nasce travado. O Corre não move saldo de ninguém — o app espelha. **Recebedor negativo é detectado no instante da causa, nunca na tentativa de saque** — prova-se desligando a consulta ao gateway e exigindo que o log de eventos sozinho acuse o negativo. **A conta do Corre não saca abaixo do colchão**, e a tentativa é recusada | não iniciada — **dinheiro; auditoria obrigatória** |
+| 6 | Despacho: cascata, timer de 30s, regras de recusa | 50 aparelhos disputando a mesma corrida resultam em exatamente 1 aceite. Cascata de 5 min sem aceite leva a Sem motoboy **sem nenhum movimento de dinheiro**. 4 recusas seguidas → offline por 15 min. Teto de 2 corridas ativas. **⬅ Critério herdado da Etapa 4:** corrida cujo **motoboy** seja de outra cidade é recusada **pelo banco** — não coube na Etapa 4 porque `corridas` só ganha coluna de motoboy aqui | não iniciada |
+| 7 | **Cobrança na porta: QR dinâmico, confirmação e split triplo** | A cobrança nasce com os **três recebedores declarados** e a soma bate com o total ao centavo. Webhook duplicado + consulta ativa simultânea produzem **um único** Pago. **Com o webhook desligado, a corrida ainda fecha** (a consulta ativa é o caminho primário). Entrega é impossível antes da confirmação. **Frete ímpar fecha ao centavo** e o centavo vai para o motoboy. **Mercadoria zero** e **mercadoria menor que a taxa** caem na regra da seção 9 e ninguém fica negativo. 10.000 corridas: mercadoria + frete = soma das três parcelas + taxa, ao centavo. Lei 9 em três pares: geração×geração, confirmação×confirmação, e **cancelamento da cobrança × confirmação** (a saída do estado 4) | não iniciada — **dinheiro; auditoria obrigatória; 🔒 depende de resposta comercial** |
+| **8a** | Entrega, espera na porta e retorno | Sem pagamento confirmado não existe transição para Entregue. 5 min de espera + **1 aviso registrado como evento** habilita o retorno (o canal é das Etapas 10 e 14). **Retorno lança a dívida do lojista no valor do frete, sem comissão — e não toca cartão nenhum.** **Corrida em retorno nunca carrega dinheiro pago.** Sair do estado 4 sem pagamento cancela a cobrança **antes** de gravar a transição | não iniciada |
+| **8b** | **Dívida do lojista** | A dívida quita no split da próxima corrida com mercadoria, **debitada da parcela do lojista**, com o **motoboy credor como recebedor adicional**. **Mercadoria zero não quita e o relógio não para.** Aos **15 dias** o lojista é avisado; aos **30** o cartão é cobrado pelo saldo inteiro. **Lei 9 no par que define a etapa: duas corridas do mesmo lojista nascendo ao mesmo tempo não podem quitar a mesma dívida duas vezes**, nem deixar a parcela dele negativa | não iniciada — **dinheiro; auditoria obrigatória; 🔒 depende de resposta comercial** |
+| 9 | Saldo, saque e reserva | Soma dos saldos das subcontas (lojista e motoboy) + sacado + comissão recebida pelo Corre + **taxa retida pelo gateway** = soma dos totais cobrados, ao centavo, em 10.000 corridas. Primeiro saque nasce travado. O Corre não move saldo de ninguém — o app espelha. **Recebedor negativo é detectado no instante da causa, nunca na tentativa de saque** — prova-se desligando a consulta ao gateway e exigindo que o log de eventos sozinho acuse o negativo. **A conta do Corre não saca abaixo do colchão**, e a tentativa é recusada | não iniciada — **dinheiro; auditoria obrigatória; 🔒 depende de resposta comercial** |
 | 10 | Chat interno nas três pontas | **Nenhuma resposta da API contém telefone de ninguém.** Mensagem é evento: não edita, não apaga. Cada ponta só lê as conversas das corridas de que participa. Chat de corrida encerrada continua legível e imutável | não iniciada |
-| 11 | Painel, níveis de acesso e disputa | Atendimento recebe 403 em estorno e bloqueio. Toda ação gera evento com autor. Disputa abre e resolve por evento compensatório, **sem reabrir estado final**. **Estorno sai 100% da parcela do lojista e não toca o frete** — controle negativo: estorno sem split explícito fica vermelho | não iniciada — **dinheiro e autorização; auditoria obrigatória** |
+| 11 | Painel, níveis de acesso e disputa | Atendimento recebe 403 em estorno e bloqueio. Toda ação gera evento com autor. Disputa abre e resolve por evento compensatório, **sem reabrir estado final**. **Estorno sai 100% da parcela do lojista e não toca o frete** — controle negativo: estorno sem split explícito fica vermelho | não iniciada — **dinheiro e autorização; auditoria obrigatória; 🔒 depende de resposta comercial** |
 | 12 | Reputação nas três pontas | Nota do motoboy só desempata dentro da janela de 2 min. Falha por endereço errado conta contra a loja. **Não pagamento conta contra o cliente e contra mais ninguém.** Cliente acima do teto de faltas é recusado como destino até a operação liberar | não iniciada |
 | 13 | App do motoboy (Kotlin) | GPS reporta com tela apagada e app em background por 30 min contínuos. Push chega em menos de 5s. Perda de rede não duplica aceite. O QR aparece na tela e some sozinho quando a confirmação chega | não iniciada |
-| 14 | Ponte web mínima + app do cliente (Flutter) | O SMS chega e o link abre **sem instalar nada**; paga e rastreia, e nada além disso. O link morre com a corrida. O app do cliente mostra a **mesma** cobrança que o motoboy exibe, buscada no backend | não iniciada |
+| 14 | Ponte web mínima + app do cliente (Flutter) | O SMS chega e o link abre **sem instalar nada**; paga e rastreia, e nada além disso. O link morre com a corrida. O app do cliente mostra a **mesma** cobrança que o motoboy exibe, buscada no backend | não iniciada — **🔒 depende de provedor real de SMS** (seção 17, item 9) |
 | 15 | App do lojista (Flutter) | Cria corrida, acompanha, conversa. Sem cartão de garantia **e** sem subconta aprovada, a criação é recusada com a razão certa | não iniciada |
 | 16 | Antifraude | Localização simulada é detectada e bloqueia. Par lojista+motoboy repetido em cancelamento é sinalizado. Corrida sem lojista real é impossível por construção. **Cobrança que não nasceu no backend não fecha corrida nenhuma** | não iniciada |
 | 17 | Blindagem final | Caos: queda no meio de cada transição, duplo clique em tudo, relógio errado, rede oscilando, webhook fora de ordem e repetido. Caixa fecha ao centavo em todos os cenários | não iniciada |
+
+**🔒 = a etapa toca fornecedor real e não pode sair da interface falsa** enquanto a mesa comercial não responder (seção 17). Todas as outras se constroem inteiras hoje.
 
 **Fora da fila, em PR próprio:** correção da Etapa 3 — o preço é **par origem-destino** (matriz 6×6 de anéis), não propriedade do destino. Travada até a tabela real de Sobral entrar no repositório (seção 17, item 4).
 
@@ -672,14 +683,14 @@ Elas não são detalhe de planejamento: **toda conta desta especificação repou
 9. **Provedor real de SMS.** Deixou de ser detalhe de re-login: **sem SMS não existe primeira compra**, porque é por ele que o cliente novo recebe o link para pagar. Escalou de "falta para o lançamento" para "falta para o produto funcionar"
 10. **Custo do saque** da subconta para o banco do titular — agora para **motoboy e lojista**. É custo deles, não nosso, mas afeta a atratividade dos dois lados
 11. **Exigências e prazo de aprovação da subconta.** **Resolvido em parte:** todos os candidatos aceitam **pessoa física** — a regra "MEI não é exigido" sobrevive —, e o melhor colocado deixa o motoboy **receber antes de o KYC terminar**, preservando "cadastra e roda na hora" (`GATEWAY.md`, seção 8). **Continua aberto:** (a) como se cadastra um **lojista MEI**, que não tem quadro de sócios, e a documentação não diz; (b) o prazo real de aprovação, que só o contrato confirma. Do lado do lojista é pior que do motoboy: ele **não vende nada** até aprovar
-18. **Saldo global do marketplace prende o saque de todo mundo.** No candidato melhor colocado, o teto de saque de **qualquer** recebedor é o saldo global da plataforma: um recebedor negativo trava o saque dos outros. É vigilância operacional, não código — mas precisa de dono
-19. **KYC reprovado depois de o motoboy já ter recebido.** O dinheiro **não volta nem sai sozinho**: fica travado e a ação é nossa. Precisa de fluxo no painel (Etapa 11) e de decisão sobre para onde vai esse saldo
 12. **Frase de posicionamento para o lojista.** A antiga ficou falsa (seção 1). A substituta proposta — *"eu não tenho vitrine; ninguém descobre outra loja aqui"* — é decisão comercial do dono
 13. **Teto de faltas de pagamento** que bloqueia um cliente (seção 12) — e se o bloqueio é da plataforma toda ou só daquela loja
 14. **Confirmar que o retorno por cliente que não pagou é do cartão do lojista.** É o que a regra "quem causa paga" e a regra de cliente ausente já implicam, mas deixou de ser caso raro e virou o principal modo de falha do modelo
 15. **Revisão jurídica** das três cláusulas de controle, mais o risco novo da seção 15
 16. **A ponte web deve permitir abrir disputa?** Hoje ela sobrevive 24h só leitura, com o comprovante — o cliente sem app não abre disputa sozinho (seção 2). Ampliar a ponte contraria "paga e acompanha, nada mais", então é decisão do dono
 17. **Chargeback do cartão de garantia — DECISÃO ABERTA, duas saídas levantadas** (`GATEWAY.md`, 9.1). O cartão entrou pela porta dos fundos quando o retorno virou cobrança de cartão, e **cartão tem contestação**. O contrato do candidato é explícito: chargeback é *"de responsabilidade exclusiva do Cliente"* — **o Corre**, debitado da nossa conta, mesmo com documentos apresentados. Contestar custa mais que o valor de um retorno de R$ 10. As duas saídas — **débito na próxima corrida** (o cartão volta a ser só garantia) × **cartão como cobrança com o chargeback aceito** — estão levantadas com número. **Nenhuma foi escolhida**
+18. **Saldo global do marketplace prende o saque de todo mundo.** No candidato melhor colocado, o teto de saque de **qualquer** recebedor é o saldo global da plataforma: um recebedor negativo trava o saque dos outros. É vigilância operacional, não código — mas precisa de dono
+19. **KYC reprovado depois de o motoboy já ter recebido.** O dinheiro **não volta nem sai sozinho**: fica travado e a ação é nossa. Precisa de fluxo no painel (Etapa 11) e de decisão sobre para onde vai esse saldo
 20. **Reserva da plataforma para o saldo global** (`GATEWAY.md`, 9.2). Não é risco, é arquitetura: **não existe isolamento por recebedor** em nenhum campo da API, e um recebedor negativo trava o saque de todos. **A reserva é o único remédio**, e ela se financia com um mês de comissão (≈ R$ 17.100) deixando `transfer_enabled: false` na nossa própria conta. Falta o dono decidir **o tamanho e por quanto tempo** — e isso depende da taxa de recusa, que só o piloto mede
 21. **Ticket médio de mercadoria nunca foi medido** (seção 18). É ele que dimensiona a reserva, o teto de R$ 500 e a exposição por entrega. Entra na lista de medições do piloto ao lado das entregas/dia
 22. **Cadastro de lojista MEI — nenhum fornecedor documenta caminho** (`GATEWAY.md`, 9.3). MEI é CNPJ e **não pode ter sócio** por definição legal, enquanto o candidato melhor colocado exige sócio qualificado no QSA. Em Sobral, MEI é a maioria dos lojistas. **Esta pergunta vai à mesa comercial junto com as duas de preço, e a resposta dela pesa mais que preço na escolha**
@@ -742,8 +753,37 @@ A linha volta à tabela como número único quando o item 2 for decidido.
 - **A corrida acontece dentro de uma cidade só.** Origem e destino na mesma cidade — entrega intermunicipal está fora do MVP (seção 16).
 - **O banco impõe, não o código:** corrida cujo lojista, motoboy ou zona sejam de outra cidade é **recusada por constraint**. É critério de aceite da Etapa 4, provado pelo efeito.
 - **Cada cidade tem a sua tabela de preço versionada.** Publicar em uma não toca a outra.
-- **A operação enxerga por cidade.** Consulta sem cidade não vaza dado de cidade alheia.
 - **Sobral é a cidade 1.** Nenhuma segunda cidade se abre no MVP — o que se constrói é o **lugar** dela, não a operação dela.
+
+### O isolamento é Row Level Security, no banco
+
+**Consulta sem cidade não vaza dado de cidade alheia — e isso é política do banco contra o papel `corre_app`, não disciplina de quem escreve consulta.** Disciplina não se prova por efeito e depende de ninguém esquecer, que é o oposto de tudo que este projeto decidiu: a imutabilidade dos eventos e a trava de configuração de taxa já moram no banco, e o isolamento mora junto.
+
+**Fecha por padrão:** a política compara `cidade_id` com uma variável de sessão. **Variável não definida ⇒ nenhuma linha.** Esquecer de declarar a cidade não vaza dado: cega.
+
+> ### A armadilha que precisa de teste próprio
+>
+> **RLS depende de variável de sessão, e conexão de pool é reaproveitada entre requisições.** Se a variável for definida no nível da **conexão** em vez da **transação**, uma requisição herda a cidade da anterior — **vazamento entre cidades, silencioso, e só sob carga**, que é quando ninguém está olhando.
+>
+> **A regra:** a cidade é definida **por transação** (`SET LOCAL` / `set_config(..., true)`), e some no `COMMIT`. Nunca no `connect`, nunca por sessão.
+>
+> **Critério de aceite:** com pool de conexões e requisições concorrentes de cidades diferentes, **nenhuma consulta devolve dado da cidade errada, em milhares de requisições intercaladas**. E, depois de uma transação de uma cidade, a conexão devolvida ao pool **não carrega** aquela cidade.
+>
+> **Controle negativo:** mova a definição para o nível da conexão e prove que o teste fica **vermelho**.
+
+**De onde vem a cidade da requisição:** da **sessão**, não do corpo. A sessão guarda a cidade do ator no momento em que nasce; a requisição abre transação, declara aquela cidade e só então lê qualquer coisa. Identidade e cidade saem sempre do servidor (seção 10).
+
+**O cliente não tem cidade, e por isso `clientes` não tem RLS.** O que o isolamento protege dele é o que importa: **as corridas dele são da cidade**, então a operação de uma cidade nunca vê o que ele comprou na outra. O que atravessa é só a identidade — telefone e nome —, e isso é consequência de ele ser da plataforma. *(A política de leitura do cliente sobre as próprias corridas é da Etapa 14, quando ele ganha app. Hoje ele não lê corrida nenhuma.)*
+
+### Configuração de taxa é por cidade
+
+Pelo mesmo motivo de tudo o mais — e por um concreto: **a carta de lançamento com taxa zero nos primeiros 90 dias é inerentemente por cidade** (seção 17, item 6). Se todas as cidades tiverem a mesma configuração, replicar é barato; transformar global em por-cidade depois é migração em tabela com dinheiro apontando para ela.
+
+### Telefone: espaços separados por papel
+
+**O mesmo telefone pode ser de um lojista, de um motoboy e de um cliente ao mesmo tempo — e em Sobral isso é o caso comum, não a exceção.** Cada papel tem seu espaço de unicidade: um telefone é único **dentro** de `clientes`, e a existência dele em `lojistas` não impede nada.
+
+**É decisão deliberada, não omissão.** Papéis são identidades distintas que por acaso compartilham um número. Unificar depois — uma pessoa, vários papéis — é possível e continua sobre a mesa; o que não se faz é assumir hoje que quem tem o mesmo telefone é a mesma pessoa. O gateway já força a mesma leitura pelo outro lado, com **"um documento, um recebedor"** (seção 17, item 23).
 
 ## 21. A venda
 

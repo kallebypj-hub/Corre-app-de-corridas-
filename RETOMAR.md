@@ -13,7 +13,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 > **Isso invalidou:** a Etapa 4 que estava planejada (não existe mais), o Portão C e a escolha do PagBank, a tabela de estados da Etapa 1, e o PIN.
 > **Isso criou:** três apps, chat interno, reputação do cliente, prazo estimado e multi-cidade.
 >
-> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 112.
+> Antes de trabalhar, leia a seção 4 (máquina de estados) e a 9 (dinheiro) do `CORRE.md`. O antes→depois inteiro está no `HISTORICO.md`, decisões 30 a 122.
 
 ## Onde o projeto está
 

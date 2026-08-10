@@ -11,7 +11,7 @@ const { Pool } = require('pg');
 const { montaApi } = require('../src/http/api');
 const { emiteSessao, resolveSessao } = require('../src/http/sessoes');
 const contas = require('../src/dominio/contas');
-const { poolApp } = require('./ajuda-maquina');
+const { poolApp, SOBRAL } = require('./ajuda-maquina');
 const { cadastroValidoDeMotoboy, donoDeTeste, atendimentoDeTeste } = require('./ajuda-contas');
 
 function corpoDeCadastro(dados) {
@@ -40,7 +40,13 @@ test('API de cadastro e sessão', async (t) => {
     await pool.end();
   });
 
+  // Antes de existir sessão a cidade vem do corpo (a API exige). A bateria
+  // injeta Sobral em todo POST que não declare outra — o teste de isolamento
+  // por cidade é outro, e declara as duas de propósito.
   async function chama(metodo, caminho, { corpo, token } = {}) {
+    if (metodo === 'POST' && corpo && typeof corpo === 'object' && corpo.cidade_id === undefined) {
+      corpo = { ...corpo, cidade_id: SOBRAL };
+    }
     const resposta = await fetch(base + caminho, {
       method: metodo,
       headers: {

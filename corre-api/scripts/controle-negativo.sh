@@ -253,7 +253,13 @@ sabota_codigo "otp_codigo_em_claro" src/dominio/otp.js \
 # Versão de preço publicada é imutável / só-leitura para o app: se corre_app
 # ganhar INSERT em tabelas_preco, o teste de imutabilidade fica vermelho.
 sabota_sql "app_publica_preco" "
-  GRANT INSERT (rotulo, exemplo, metros_por_grau_lat, metros_por_grau_lng, adicional_km_centavos) ON tabelas_preco TO corre_app;
+  GRANT INSERT ON tabelas_preco, zonas TO corre_app;
+  -- Depois da Etapa 4 a proteção tem DUAS camadas: privilégio E política de
+  -- cidade. Sabotar só o privilégio deixaria a regra de pé pela política, e
+  -- o teste ficaria verde — falso positivo que este script pega. Para provar
+  -- a regra é preciso derrubar as duas.
+  ALTER TABLE tabelas_preco DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
 " test/migrations.test.js "não publica versão de preço"
 
 # Centavos trocados por ponto flutuante (reais): o frete deixa de ser inteiro
@@ -347,6 +353,62 @@ sabota_sql "app_publica_configuracao_de_taxa" "
 sabota_codigo "falha_de_configuracao_vira_erro_do_usuario" src/http/api.js \
   's|if (ehFalhaDeConfiguracao(erro)) {|if (false) {|' \
   test/split.test.js "responde 503"
+
+# ---------- Etapa 4: multi-cidade (RLS) e cliente ----------
+
+# A ARMADILHA DO POOL, que é o motivo de esta etapa existir: a cidade
+# declarada por CONEXÃO em vez de por TRANSAÇÃO. `false` no terceiro
+# argumento de set_config torna a variável de SESSÃO — ela sobrevive ao
+# COMMIT e vaza para a próxima requisição que pegar a mesma conexão.
+sabota_codigo "cidade_presa_a_conexao" src/dominio/nucleo.js \
+  "s|await conexao.query('SELECT set_config(\$1, \$2, true)', \['corre.cidade_id', cidadeId\]);|await conexao.query('SELECT set_config(\$1, \$2, false)', ['corre.cidade_id', cidadeId]);|" \
+  test/cidades.test.js "não a carrega"
+
+# RLS desligado nas tabelas por cidade: a política existe, mas não é
+# aplicada. É o falso verde clássico — tudo funciona, e tudo vaza.
+sabota_sql "rls_desligado" "
+  ALTER TABLE lojistas DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE motoboys DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE corridas DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE tabelas_preco DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE configuracoes_taxa DISABLE ROW LEVEL SECURITY;
+" test/cidades.test.js "CEGA"
+
+# A política deixa de FECHAR POR PADRÃO: sem cidade declarada passa a ver
+# tudo, em vez de nada. Esquecer a cidade voltaria a vazar.
+sabota_sql "politica_abre_por_padrao" "
+  DROP POLICY lojistas_da_cidade ON lojistas;
+  CREATE POLICY lojistas_da_cidade ON lojistas FOR ALL TO corre_app
+    USING (corre_cidade_atual() IS NULL OR cidade_id = corre_cidade_atual())
+    WITH CHECK (corre_cidade_atual() IS NULL OR cidade_id = corre_cidade_atual());
+" test/cidades.test.js "CEGA"
+
+# WITH CHECK removido: lê certo, mas GRAVA em qualquer cidade. É a metade
+# da política que costuma ser esquecida, e é a que dá dente.
+sabota_sql "politica_sem_with_check" "
+  DROP POLICY lojistas_da_cidade ON lojistas;
+  CREATE POLICY lojistas_da_cidade ON lojistas FOR ALL TO corre_app
+    USING (cidade_id = corre_cidade_atual()) WITH CHECK (true);
+" test/cidades.test.js "não lê nem escreve na cidade B"
+
+# A chave composta que casa a cidade entre corrida e lojista, removida: o
+# banco deixa de impedir a corrida de misturar cidades.
+sabota_sql "corrida_pode_misturar_cidades" "
+  ALTER TABLE corridas DROP CONSTRAINT corridas_lojista_da_mesma_cidade;
+" test/cidades.test.js "impossível por construção"
+
+# Telefone de cliente deixa de ser único: dois lojistas digitando o mesmo
+# número passam a criar duas contas — e o cliente vira duas pessoas.
+sabota_sql "telefone_de_cliente_repetido" "
+  ALTER TABLE clientes DROP CONSTRAINT clientes_telefone_unico;
+" test/cidades.test.js "UMA conta"
+
+# Reivindicação deixa de ser condicional: o UPDATE passa a valer sempre, e
+# duas confirmações simultâneas geram dois eventos (lost update clássico).
+sabota_codigo "reivindicacao_nao_condicional" src/dominio/clientes.js \
+  's|WHERE id = \$1 AND reivindicado_em IS NULL|WHERE id = $1|' \
+  test/cidades.test.js "UM evento só"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero

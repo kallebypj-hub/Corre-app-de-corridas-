@@ -47,6 +47,10 @@ const CODIGOS = {
   CONFIGURACAO_DE_TAXA_AUSENTE: 'configuracao_de_taxa_ausente',
   CONFIGURACAO_DE_TAXA_INVALIDA: 'configuracao_de_taxa_invalida',
   VALOR_INVALIDO: 'valor_invalido',
+  // Etapa 4 — multi-cidade e cliente
+  CIDADE_NAO_DECLARADA: 'cidade_nao_declarada',
+  CIDADE_INEXISTENTE: 'cidade_inexistente',
+  CLIENTE_INEXISTENTE: 'cliente_inexistente',
 };
 
 // Falha nossa, não do chamador. Serve para o painel e o log separarem "o

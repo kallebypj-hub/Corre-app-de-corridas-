@@ -190,12 +190,13 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
       const agora = await agoraDoBanco(conexao);
       const venceEm = calculaVenceEm(regra, agora);
       const { rows: [corrida] } = await conexao.query(
-        `INSERT INTO corridas (estado, seq, vence_em, lojista_id, configuracao_taxa_id, mercadoria_centavos)
-         VALUES ($1, 1, $2, $3, $4, $5)
-         RETURNING id, estado, seq, vence_em, lojista_id, configuracao_taxa_id, mercadoria_centavos, criado_em, atualizado_em`,
+        `INSERT INTO corridas (estado, seq, vence_em, lojista_id, configuracao_taxa_id, mercadoria_centavos, cidade_id, cliente_id)
+         VALUES ($1, 1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, estado, seq, vence_em, lojista_id, configuracao_taxa_id, mercadoria_centavos, cidade_id, cliente_id, criado_em, atualizado_em`,
         [
           regra.para, venceEm, lojista.id, configuracao.id,
           dados.mercadoria_centavos === undefined ? null : dados.mercadoria_centavos,
+          pool.cidadeId, dados.cliente_id === undefined ? null : dados.cliente_id,
         ],
       );
       await conexao.query(
@@ -212,7 +213,7 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
         ],
       );
       return { corrida, repetida: false };
-    });
+    }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplay(pool, { chave, tipo: 'criada', corridaId: null });
@@ -270,7 +271,7 @@ async function transiciona(pool, {
         [corridaId, regra.para, novoSeq, venceEm],
       );
       return { corrida, repetida: false };
-    });
+    }, { cidadeId: pool.cidadeId });
   } catch (erro) {
     // Sob corrida real, a MESMA retentativa pode esbarrar primeiro no UNIQUE
     // de seq ou no trigger anti-buraco (a operação original venceu a

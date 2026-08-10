@@ -8,6 +8,7 @@
 const { createHash, randomBytes } = require('node:crypto');
 
 const { ErroDeDominio, CODIGOS } = require('../dominio/erros');
+const { emTransacao } = require('../dominio/nucleo');
 const { buscaMotoboyPorCpf } = require('../dominio/contas');
 
 const VALIDADE_DIAS = 30;
@@ -16,14 +17,26 @@ function hashDoToken(token) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-async function emiteSessao(pool, { atorTipo, atorId, aparelhoId }) {
+// A CIDADE VEM DA SESSÃO, nunca do corpo da requisição (CORRE.md, seção 20).
+// Ela é gravada aqui, no instante em que a sessão nasce, a partir da conta do
+// ator — e é ela que a requisição declara na transação antes de ler qualquer
+// coisa. Isso também resolve o ovo-e-galinha do RLS: ler a conta para
+// descobrir a cidade exigiria a cidade.
+//
+// NULL para cliente (é da plataforma, não tem cidade) e para operador (a
+// escolha de cidade do painel é da Etapa 11). NULL significa não enxergar
+// tabela por cidade nenhuma — fecha por padrão, que é o certo até lá.
+async function emiteSessao(pool, {
+  atorTipo, atorId, aparelhoId, cidadeId,
+}) {
   const token = randomBytes(32).toString('hex');
+  const cidade = cidadeId === undefined ? (pool.cidadeId || null) : cidadeId;
   await pool.query(
-    `INSERT INTO sessoes (token_hash, ator_tipo, ator_id, aparelho_id, expira_em)
-     VALUES ($1, $2, $3, $4, now() + make_interval(days => $5))`,
-    [hashDoToken(token), atorTipo, atorId, aparelhoId || null, VALIDADE_DIAS],
+    `INSERT INTO sessoes (token_hash, ator_tipo, ator_id, aparelho_id, expira_em, cidade_id)
+     VALUES ($1, $2, $3, $4, now() + make_interval(days => $5), $6)`,
+    [hashDoToken(token), atorTipo, atorId, aparelhoId || null, VALIDADE_DIAS, cidade],
   );
-  return { token, atorTipo, atorId };
+  return { token, atorTipo, atorId, cidadeId: cidade };
 }
 
 // Re-entrada do motoboy: CPF + aparelho vinculado. Aparelho diferente é
@@ -54,22 +67,41 @@ async function emiteSessaoDeMotoboy(pool, { cpf, aparelhoId }) {
 // sessão sobreviva.
 async function resolveSessao(pool, token) {
   if (!token) return null;
+  // `sessoes` não tem RLS de propósito: é aqui que se DESCOBRE a cidade, e
+  // uma tabela que só se lê depois de saber a cidade não serviria para isso.
   const { rows: [sessao] } = await pool.query(
-    `SELECT ator_tipo, ator_id, aparelho_id FROM sessoes
+    `SELECT ator_tipo, ator_id, aparelho_id, cidade_id FROM sessoes
      WHERE token_hash = $1 AND expira_em > now()`,
     [hashDoToken(token)],
   );
   if (!sessao) return null;
 
-  const TABELA = { motoboy: 'motoboys', lojista: 'lojistas', operador: 'operadores' };
-  const { rows: [conta] } = await pool.query(
-    `SELECT * FROM ${TABELA[sessao.ator_tipo]} WHERE id = $1`,
-    [sessao.ator_id],
-  );
+  const TABELA = {
+    motoboy: 'motoboys', lojista: 'lojistas', operador: 'operadores', cliente: 'clientes',
+  };
+  // A revalidação contra a conta viva acontece JÁ DENTRO da cidade da
+  // sessão: motoboys e lojistas estão sob RLS, e sem declarar a cidade a
+  // consulta cegaria — a sessão pareceria inválida em vez de válida.
+  const leConta = async (executor) => {
+    const { rows } = await executor.query(
+      `SELECT * FROM ${TABELA[sessao.ator_tipo]} WHERE id = $1`,
+      [sessao.ator_id],
+    );
+    return rows[0];
+  };
+  const conta = sessao.cidade_id
+    ? await emTransacao(pool, leConta, { cidadeId: sessao.cidade_id })
+    : await leConta(pool);
+
   if (!conta || conta.situacao !== 'ativa') return null;
   if (sessao.ator_tipo === 'motoboy' && conta.aparelho_id !== sessao.aparelho_id) return null;
 
-  return { tipo: sessao.ator_tipo, id: sessao.ator_id, aparelhoId: sessao.aparelho_id };
+  return {
+    tipo: sessao.ator_tipo,
+    id: sessao.ator_id,
+    aparelhoId: sessao.aparelho_id,
+    cidadeId: sessao.cidade_id,
+  };
 }
 
 module.exports = { emiteSessao, emiteSessaoDeMotoboy, resolveSessao };

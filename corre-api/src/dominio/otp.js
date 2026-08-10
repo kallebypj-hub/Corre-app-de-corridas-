@@ -20,6 +20,7 @@ const { emTransacao } = require('./nucleo');
 const {
   buscaLojistaPorTelefone, buscaOperadorPorTelefone, registraLogin,
 } = require('./contas');
+const { buscaClientePorTelefone } = require('./clientes');
 
 function hashDoCodigo(telefone, codigo) {
   return createHash('sha256').update(`${telefone}:${codigo}`).digest('hex');
@@ -30,10 +31,13 @@ function geraCodigo() {
   return String(randomInt(0, 1_000_000)).padStart(6, '0');
 }
 
+// Etapa 4: o CLIENTE entra pelo mesmo mecanismo. Ele não tem cidade, então
+// a busca dele não passa por RLS — `clientes` é tabela da plataforma.
 async function resolveAtor(pool, atorTipo, telefone) {
   if (atorTipo === 'lojista') return buscaLojistaPorTelefone(pool, telefone);
   if (atorTipo === 'operador') return buscaOperadorPorTelefone(pool, telefone);
-  throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista ou operador');
+  if (atorTipo === 'cliente') return buscaClientePorTelefone(pool, telefone);
+  throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista, operador ou cliente');
 }
 
 // Solicita um código. Sempre registra a tentativa de envio (conta para o
@@ -46,8 +50,8 @@ async function solicitaCodigo(pool, {
   if (typeof telefone !== 'string' || telefone.trim() === '') {
     throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'telefone obrigatório');
   }
-  if (!['lojista', 'operador'].includes(atorTipo)) {
-    throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista ou operador');
+  if (!['lojista', 'operador', 'cliente'].includes(atorTipo)) {
+    throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista, operador ou cliente');
   }
   const janelaSegs = config.otpJanelaEnviosMs() / 1000;
 
@@ -80,7 +84,7 @@ async function solicitaCodigo(pool, {
     // A tentativa conta para o limite antes de qualquer envio.
     await conexao.query('INSERT INTO otp_envios (telefone, ip) VALUES ($1, $2)', [telefone, ip || null]);
     return { ok: true };
-  });
+  }, { cidadeId: pool.cidadeId });
   if (!veredito.ok) {
     throw new ErroDeDominio(CODIGOS.LIMITE_DE_ENVIO, 'limite de envios atingido');
   }
@@ -108,8 +112,8 @@ async function confirmaCodigo(pool, { telefone, atorTipo, codigo }) {
   if (typeof codigo !== 'string' || !/^[0-9]{6}$/.test(codigo)) {
     throw new ErroDeDominio(CODIGOS.CODIGO_INVALIDO, 'código inválido');
   }
-  if (!['lojista', 'operador'].includes(atorTipo)) {
-    throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista ou operador');
+  if (!['lojista', 'operador', 'cliente'].includes(atorTipo)) {
+    throw new ErroDeDominio(CODIGOS.CAMPO_OBRIGATORIO, 'ator_tipo precisa ser lojista, operador ou cliente');
   }
 
   // Só o código MAIS RECENTE do telefone vale; pedir outro invalida o
@@ -175,7 +179,7 @@ async function confirmaCodigo(pool, { telefone, atorTipo, codigo }) {
     }
     await registraLogin(conexao, { atorTipo, atorId: slot.ator_id, via: 'otp' });
     return { atorTipo, atorId: slot.ator_id };
-  });
+  }, { cidadeId: pool.cidadeId });
 }
 
 module.exports = { solicitaCodigo, confirmaCodigo, hashDoCodigo };
