@@ -455,7 +455,11 @@ sabota_sql "pago_se_desfaz" "
   CREATE OR REPLACE FUNCTION corridas_marca_pago() RETURNS TRIGGER
   LANGUAGE plpgsql AS \$\$
   BEGIN
-    IF NEW.estado = 5 THEN NEW.pago_em := now(); END IF;
+    IF TG_OP = 'UPDATE' AND NEW.estado = 5 AND OLD.pago_em IS NULL THEN
+      NEW.pago_em := now();
+    ELSIF NEW.estado <> 5 THEN
+      NEW.pago_em := NULL;
+    END IF;
     RETURN NEW;
   END;
   \$\$;
