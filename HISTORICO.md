@@ -291,6 +291,14 @@ Quatro achados, todos reproduzidos por mim antes de aceitar. Os dois primeiros s
 | 152 | **Uma corrida envenenada parava a varredura da cidade** | Qualquer erro fora dos dois esperados abortava o laço de `expiraVencidas` | O erro é **registrado** e a varredura segue; se a lista **inteira** falhar, aí sim sobe — porque não é uma corrida ruim, é o varredor quebrado | A chave determinística do varredor pode ser queimada por um chamador (defeito aberto, capítulo 3). Enquanto isso não se resolve, uma corrida não pode parar o vencimento de todas as outras |
 | 153 | **Guarda de estouro do prazo no número errado** | `Number.MAX_SAFE_INTEGER`, enquanto a coluna é `INTEGER` | Teto de sanidade de **um ano de minutos**, com `ErroDeDominio` | Daqui para cima não é corrida longa, é coordenada errada — e o certo é dizer isso, não estourar cru no `INSERT` |
 
+## O que a Etapa 5 ensinou e virou regra (2026-08-10, na aprovação)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 154 | **O que conta como camada** (junto à Lei 10) | "duas camadas" era contagem de mecanismos: uma no código, uma no banco | **Camada que deriva de dado controlado pelo chamador não é camada.** A fonte da segunda defesa tem que ser independente da primeira: fato no log, privilégio de banco, constraint sobre coluna que a aplicação não escreve. A pergunta a fazer é **quem escreve o dado de que ela deriva** | O caso da decisão 149: `pago_em` derivava de `NEW.estado`, e `estado` é do chamador. Contar mecanismos dá dois; contar **fontes** dá um. É a fonte que decide |
+| 155 | **Teste com nome de garantia exige controle negativo próprio** | A Lei 8 exigia controle negativo por regra crítica, sem falar de nome de teste | Todo teste batizado de **invariante, garantia, prova ou impossibilidade** nasce com a sabotagem que o derruba — atacando a **fonte** da garantia, não o caminho que o teste calhou de exercitar | Três testes se chamavam INVARIANTE e os três ficavam verdes enquanto a invariante era falsa. **Nome de prova desliga a desconfiança de quem lê:** ninguém revisita o que já se chama de prova |
+| 156 | **Exceção de PR registrada** | — | A correção da chave de idempotência (código da Etapa 1, já mesclado) viajou no PR da Etapa 5, **como exceção aprovada** | Mesmo critério da exceção de 2026-08-09 (decisão 96): **destino compartilhado, não tipo de arquivo**. A função estava sendo reescrita ali, e separar criaria um PR que não podia ser mesclado sozinho. Exceção que se pede e se registra — não abre a regra |
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:

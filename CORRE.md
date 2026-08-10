@@ -67,6 +67,12 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 **Lei 10 — Camada de defesa nova exige re-verificação de todos os controles negativos existentes.** Quando uma segunda camada passa a proteger a mesma regra, a sabotagem antiga deixa de deixar o teste vermelho — e o verde parece correto. Ao adicionar qualquer camada (política, trigger, constraint, privilégio), rode a bateria inteira de sabotagens e prove que **cada uma** continua vermelha no teste certo. As que ficarem verdes precisam ser reescritas para derrubar **todas** as camadas que protegem aquela regra.
 
+**Camada que deriva de dado controlado pelo chamador não é camada — é a mesma camada com outro nome.** Uma segunda defesa só vale se a **fonte** dela for independente da primeira: fato no log, privilégio de banco, constraint sobre coluna que a aplicação não escreve. Antes de chamar algo de segunda camada, responda a uma pergunta: **quem escreve o dado de que ela deriva?** Se a resposta for "o chamador", não é camada.
+
+*Origem, 2026-08-10 (Etapa 5):* a invariante "nenhum caminho chega a Entregue sem passar por Pago" tinha, no papel, a tabela de arestas em cima e o banco embaixo. Só que o banco derivava `pago_em` de `NEW.estado = 5` — e `estado` é a coluna que o chamador escreve. **Dois `UPDATE`s com a credencial da aplicação punham a corrida em Entregue com o log inteiro sendo `criada`**, e um único token errado na tabela de arestas derrubava as duas de uma vez. A correção foi derivar do **fato**: o evento `pagamento_confirmado` no log (`HISTORICO.md`, decisão 149).
+
+**Corolário — teste com nome de garantia exige controle negativo próprio.** *Três* testes se chamavam **INVARIANTE** e os três ficavam verdes enquanto a invariante era falsa. Nome de prova desliga a desconfiança de quem lê: **ninguém revisita o que já se chama de prova.** Todo teste batizado de invariante, garantia, prova ou impossibilidade nasce com a sabotagem que o derruba — e a sabotagem tem que atacar a **fonte** da garantia, não o caminho que o teste calhou de exercitar.
+
 *Origem, 2026-08-09 (Etapa 4):* a sabotagem `app_publica_preco` provava, desde a Etapa 3, que a aplicação não publica tabela de preço. O RLS da Etapa 4 virou **segunda camada** sobre a mesma regra: removido o `GRANT`, a política ainda barrava, o teste ficava verde e a sabotagem parou de acusar. **Lei 8 continuava obedecida no papel e o controle negativo estava cego.** A correção foi derrubar as duas camadas na mesma sabotagem (`HISTORICO.md`, decisão 128).
 
 ---
