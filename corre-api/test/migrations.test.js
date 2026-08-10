@@ -298,6 +298,49 @@ test('migrations', async (t) => {
     assert.deepEqual(atualizaveis, ['atualizado_em', 'estado', 'seq', 'vence_em']);
   });
 
+  await t.test('a trava da renumeração de estados morde: com corrida no banco, a 0012 se recusa a rodar', async () => {
+    // A Etapa 5 substituiu a máquina de estados SEM caminho de migração, e
+    // isso só é legítimo enquanto não houver cliente real (CORRE.md, regime
+    // de trabalho). A regra não fica na cabeça de ninguém: a migration tem um
+    // bloco que RECUSA rodar se `corridas` tiver uma linha sequer.
+    //
+    // Aqui o bloco é extraído do arquivo e executado com o banco povoado —
+    // é o único jeito de exercitá-lo, já que na bateria a tabela nasce vazia.
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const arquivo = path.join(__dirname, '..', 'migrations', '0012_maquina_de_estados_e_prazo.sql');
+    const sql = fs.readFileSync(arquivo, 'utf8');
+    const inicio = sql.indexOf('DO $$');
+    assert.ok(inicio >= 0, 'a trava da renumeração sumiu da migration 0012');
+    const fim = sql.indexOf('$$;', inicio);
+    assert.ok(fim > inicio, 'o bloco da trava está malformado');
+    const trava = sql.slice(inicio, fim + 3);
+    assert.ok(/RAISE EXCEPTION/.test(trava), 'a trava não levanta exceção nenhuma');
+
+    // Com corrida no banco, a trava morde. A corrida é semeada e desfeita
+    // aqui dentro: depender de outro arquivo de teste ter criado alguma
+    // deixaria este verde por acaso quando rodasse sozinho.
+    await dono.query('BEGIN');
+    try {
+      const { rows: [lojista] } = await dono.query(
+        `INSERT INTO lojistas (seq, nome, telefone, situacao, cartao_registrado_em, cidade_id)
+         VALUES (1, 'loja da trava', $1, 'ativa', now(),
+                 (SELECT id FROM cidades WHERE ibge = '2312908')) RETURNING id, cidade_id`,
+        [`trava-${randomUUID()}`],
+      );
+      await dono.query(
+        `INSERT INTO corridas (estado, seq, lojista_id, cidade_id) VALUES (1, 1, $1, $2)`,
+        [lojista.id, lojista.cidade_id],
+      );
+      await assert.rejects(
+        () => dono.query(trava),
+        /caminho de migracao declarado/,
+      );
+    } finally {
+      await dono.query('ROLLBACK');
+    }
+  });
+
   await t.test('domínio centavos existe e é inteiro de 64 bits (Lei 1)', async () => {
     const { rows } = await dono.query(`
       SELECT t.typname AS dominio, b.typname AS base
