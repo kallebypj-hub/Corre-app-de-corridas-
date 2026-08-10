@@ -136,8 +136,14 @@ sabota_codigo "aresta_ilegal_na_tabela" src/dominio/transicoes.js \
 
 # UNIQUE da sequência removido: o banco deixa de arbitrar a corrida pelo
 # aceite — mais de um vencedor passa a ser possível.
+# São DOIS os árbitros da posição no log: o UNIQUE e o trigger anti-buraco,
+# que também recusa quem não chega na posição seguinte. Derrubar só o UNIQUE
+# deixava o trigger segurando, e a sabotagem virava LOTERIA — vermelha em
+# isolamento, verde sob a carga do próprio controle negativo. Falso positivo
+# intermitente, que é o pior tipo. Lei 10: derruba AS DUAS camadas.
 sabota_sql "sem_unique_de_sequencia" "
   ALTER TABLE eventos DROP CONSTRAINT eventos_agregado_seq_unico;
+  DROP TRIGGER eventos_bloqueia_buraco ON eventos;
 " test/concorrencia.test.js "exatamente uma vencedora"
 
 # UNIQUE da chave de idempotência removido: retentativa duplica evento.
