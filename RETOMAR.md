@@ -4,7 +4,7 @@ Página de retomada do **Corre**. Uma sessão nova lê este arquivo, depois o [`
 
 **Regime:** uma sessão por etapa, **uma branch por etapa, um PR por etapa** — abre no prompt da etapa, fecha no merge. Raciocínio máximo em auditoria adversarial e nas três categorias de caminho: **dinheiro** (7, 8b, 9, 11), **isolamento e identidade**, **autenticação e autorização** (`CORRE.md`, regime de trabalho).
 
-**Duas regras que se esquecem com facilidade:** **Lei 10** — camada de defesa nova cega controle negativo antigo, então ao acrescentar política/trigger/constraint/privilégio, rode a bateria inteira de sabotagens de novo. E **relatório de etapa só sai depois que a auditoria adversarial encerra** — número reportado antes é provisório e não vale como entrega.
+**Duas regras que se esquecem com facilidade:** **Lei 11** — id não é autorização: toda função que recebe um identificador confere de quem ele é, inclusive em chave de idempotência e em mensagem de erro. E **Lei 10** — camada de defesa nova cega controle negativo antigo, então ao acrescentar política/trigger/constraint/privilégio, rode a bateria inteira de sabotagens de novo. E **relatório de etapa só sai depois que a auditoria adversarial encerra** — número reportado antes é provisório e não vale como entrega.
 
 ---
 

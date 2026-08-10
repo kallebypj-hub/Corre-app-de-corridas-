@@ -43,7 +43,7 @@ Nas demais, esforço normal.
 
 ---
 
-## As 10 leis inegociáveis
+## As 11 leis inegociáveis
 
 Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
@@ -69,9 +69,15 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 *Origem, 2026-08-09 (Etapa 4):* a sabotagem `app_publica_preco` provava, desde a Etapa 3, que a aplicação não publica tabela de preço. O RLS da Etapa 4 virou **segunda camada** sobre a mesma regra: removido o `GRANT`, a política ainda barrava, o teste ficava verde e a sabotagem parou de acusar. **Lei 8 continuava obedecida no papel e o controle negativo estava cego.** A correção foi derrubar as duas camadas na mesma sabotagem (`HISTORICO.md`, decisão 128).
 
+**Lei 11 — Id não é autorização.** Toda função de domínio que recebe um identificador **confere de quem ele é antes de operar**. Tipo de ator não é ator: validar que o chamador é *um* lojista não prova que é *aquele* lojista. A conferência vale também para **chave de idempotência**, para **resposta repetida** e para **mensagem de erro**. **Função exportada sem chamador segue a mesma regra** — ela será ligada um dia por quem não vai reauditá-la.
+
+*Origem, 2026-08-10 (varredura pedida depois da Etapa 5).* Quatro furos, todos reproduzidos executando: a **chave de idempotência da criação** devolvia a corrida de outro lojista, e devolvia **antes** da validação de autor; `transiciona` conferia o **tipo** do autor e nunca **qual** autor, então qualquer lojista movia a corrida alheia e qualquer motoboy declarava chegada na corrida de outro; a chave de idempotência de **transição** dava replay a um autor diferente, fazendo um aparelho crer que venceu o aceite de outro; e `reivindica` tomava conta de cliente por id, **sem chamador nenhum** — exportada, esperando alguém ligá-la.
+
+**O padrão que a varredura expôs:** a Etapa 2 passou não por cuidado, mas porque ali a **identidade estava no dado conferido** (o CPF, o telefone). Onde o id sozinho pareceu bastar, não bastou em lugar nenhum. Id é endereço, não credencial.
+
 ---
 
-**O princípio por trás das dez.** Não se confia em alguém lembrar. Onde couber, a regra vira **impossibilidade estrutural**: configuração ruim não publica, tabela sem política nasce vermelha, evento não se apaga, coluna sem `GRANT` não se forja. Toda vez que uma proteção depender de disciplina — de revisar com atenção, de lembrar de incluir, de não esquecer —, **procure a versão que depende do banco**. Se ela não existir, diga isso em voz alta em vez de fingir que a disciplina basta.
+**O princípio por trás das onze.** Não se confia em alguém lembrar. Onde couber, a regra vira **impossibilidade estrutural**: configuração ruim não publica, tabela sem política nasce vermelha, evento não se apaga, coluna sem `GRANT` não se forja. Toda vez que uma proteção depender de disciplina — de revisar com atenção, de lembrar de incluir, de não esquecer —, **procure a versão que depende do banco**. Se ela não existir, diga isso em voz alta em vez de fingir que a disciplina basta.
 
 ## Como testar
 
