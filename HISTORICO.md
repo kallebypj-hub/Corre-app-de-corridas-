@@ -299,6 +299,31 @@ Quatro achados, todos reproduzidos por mim antes de aceitar. Os dois primeiros s
 | 158 | **O padrão, registrado** | — | A Etapa 2 passou não por cuidado, mas porque ali **a identidade estava no dado conferido** (CPF, telefone). Onde o id sozinho pareceu bastar, não bastou em lugar nenhum | **Id é endereço, não credencial.** Sem isso escrito, cada etapa nova redescobre o mesmo buraco |
 | 159 | **Enumeração no cadastro fechada** | `cpf_ja_cadastrado` e `telefone_ja_cadastrado` respondiam **409** — qualquer um descobria se um CPF é motoboy do Corre | Cadastro responde **sempre 202**, como o OTP. Colisão só se revela a quem **prova ser dono**, pelo código de 6 dígitos que já existe | Erro que revela existência é vazamento. Custa uma tela a mais no cadastro duplicado, que é raro, e fecha a enumeração. *Decisão do dono, 2026-08-10* |
 
+## A rodada da Lei 11 — o que foi corrigido, e uma decisão revertida (2026-08-10)
+
+### As chaves de replay: o que cada uma passou a conferir
+
+A chave de idempotência dizia "mesma operação" e conferia só **tipo + agregado**. Faltava conferir os **dados** — e sem isso a segunda operação era engolida em silêncio, com o chamador achando que ela aconteceu. Todas reproduzidas executando antes de corrigir.
+
+| Função | O que a chave NÃO conferia | O que passou a conferir | O que acontecia |
+|---|---|---|---|
+| `criaCorrida` | o **dono** | `lojista_id` no payload | A chave repetida por outro lojista devolvia **a corrida dele**, antes da validação de autor |
+| `transiciona` | o **autor** | `autor_id` no payload | Dois aparelhos com a mesma chave recebiam ambos "venceu": um motoboy cria que aceitou a corrida de outro |
+| `autorizaEstornoSemEfeito` | a **corrida** | `corrida_id` no payload | Mesmo operador, mesma chave, outra corrida → replay; **o segundo estorno nunca foi registrado** |
+| `registraCartao` | o **cartão** | `cartao_ref` | Cartão novo com chave reaproveitada → replay; o cartão B nunca entrou |
+| `trocaAparelho` | o **aparelho** | as mudanças pedidas | Aparelho novo com chave reaproveitada → replay; o motoboy ficava preso ao aparelho antigo |
+| `criaOperador` | o **telefone** | `telefone` | Telefone e papel diferentes → devolvia **o primeiro operador**; o segundo nunca foi criado |
+
+*As três últimas não estavam na varredura original: apareceram quando o dono mandou "aplique a Lei 11 e verifique se existe uma terceira". Não havia uma terceira — havia três.*
+
+### Decisão revertida: cadastro sempre 202
+
+| # | Tema | Aprovado em | Revertido em | Motivo |
+|---|---|---|---|---|
+| 160 | **Cadastro respondendo sempre 202 para fechar a enumeração** | 2026-08-10, com a estimativa de que custaria "uma tela a mais no cadastro duplicado" | 2026-08-10, no mesmo dia, pelo dono | **O custo real é outro.** Se o cadastro novo devolve token e o repetido não, **a diferença entre as duas respostas É a enumeração** — meia fechadura não fecha nada. Fechar de verdade exige que o cadastro **pare de emitir sessão para todo mundo**, tornando o login passo obrigatório sempre. Isso é **atrito no cadastro do motoboy**, a peça que menos pode ter atrito na largada. A tentativa foi implementada e abriu 20 falhas na bateria — não por defeito, mas porque o desenho mudava de verdade. Revertida antes de virar entrega |
+
+*Registro do processo, porque é o mais útil aqui:* o dono aprovou um meio-termo com uma estimativa de custo, a implementação mostrou que a estimativa estava errada, e a decisão voltou à mesa **antes** de ser mesclada. É o que a exigência de "prove executando" serve para produzir.
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:
