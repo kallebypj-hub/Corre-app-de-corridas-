@@ -598,12 +598,12 @@ sabota_codigo "chave_de_transicao_sem_autor" src/dominio/corridas.js \
 # A CHAVE DO ESTORNO DEIXA DE CONFERIR A CORRIDA: o segundo estorno some.
 sabota_codigo "chave_de_estorno_sem_corrida" src/dominio/contas.js \
   's|      confereDados: (p) => p.corrida_id === corridaId,||' \
-  test/contas.test.js "estorno"
+  test/contas.test.js "chave do ESTORNO"
 
 # AS TRÊS IRMÃS: a chave volta a ignorar os dados pedidos.
 sabota_codigo "chave_de_cartao_sem_dados" src/dominio/contas.js \
   's|      confereDados: (p) => p.cartao_ref === cartaoRef,||' \
-  test/contas.test.js "cartão"
+  test/contas.test.js "chave do CARTÃO"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero

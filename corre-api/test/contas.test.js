@@ -243,7 +243,7 @@ test('cadastro e travas (Etapa 2)', async (t) => {
   });
 });
 
-test('LEI 11: a chave de idempotência confere os DADOS, não só o agregado', async (t) => {
+test('LEI 11: a chave do CARTÃO confere o cartão', async (t) => {
   const { poolApp } = require('./ajuda-maquina');
   const { randomUUID: uuid } = require('node:crypto');
   const contas = require('../src/dominio/contas');
@@ -272,8 +272,21 @@ test('LEI 11: a chave de idempotência confere os DADOS, não só o agregado', a
   });
   assert.equal(repetida.repetida, true);
 
-  // (b) estorno: mesmo operador, mesma chave, OUTRA corrida.
+});
+
+test('LEI 11: a chave do ESTORNO confere a corrida', async (t) => {
+  const { poolApp } = require('./ajuda-maquina');
+  const { randomUUID: uuid } = require('node:crypto');
+  const contas = require('../src/dominio/contas');
+  const { criaCorrida } = require('../src/dominio/corridas');
+  const { ErroDeDominio } = require('../src/dominio/erros');
   const { donoDeTeste } = require('./ajuda-contas');
+  const pool = poolApp(4);
+  t.after(() => pool.end());
+  const tel = () => `88 9${uuid().slice(0, 10)}`;
+
+  // Mesmo operador, mesma chave, OUTRA corrida: sem conferir a corrida, o
+  // segundo estorno virava replay e nunca era registrado.
   const dono = await donoDeTeste(pool);
   const { conta: lojaApta } = await contas.cadastraLojista(pool, { nome: 'LA', telefone: tel() });
   await contas.registraCartao(pool, { lojistaId: lojaApta.id, cartaoRef: 'c' });
