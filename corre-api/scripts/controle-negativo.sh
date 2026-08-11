@@ -434,6 +434,42 @@ sabota_sql "chave_de_idempotencia_global" "
     ON eventos (chave_idempotencia) WHERE chave_idempotencia IS NOT NULL;
 " test/cidades.test.js "por cidade e não vaza"
 
+# ---------- Replay não emite credencial ----------
+
+# A CAMADA DA ROTA cai: a sessão do cadastro volta a sair do objeto `conta`
+# devolvido pelo replay — o código exato de antes — em vez de sair da prova
+# (CPF + aparelho conferidos contra a linha da conta).
+#
+# O teste que acusa é o da CONTA BLOQUEADA, e é assim que se separam as duas
+# camadas: com a rota sabotada, o domínio ainda barra o aparelho diferente,
+# mas nada mais confere `situacao` — e o motoboy bloqueado recebe token.
+sabota_codigo "sessao_do_cadastro_sem_prova" src/http/api.js \
+  '/roteador.post(.\/motoboys./,/^  }));/ {
+     s|await emiteSessaoDeMotoboy(naCidade, {|await emiteSessao(naCidade, { atorTipo: "motoboy", atorId: conta.id,|
+     s|      cpf: corpo.cpf, aparelhoId: corpo.aparelho_id,|      aparelhoId: conta.aparelho_id,|
+   }' \
+  test/api.test.js "bloqueado por fora não emite token"
+
+# A CAMADA DO DOMÍNIO cai sozinha: "mesma operação" volta a ignorar o
+# aparelho, então `cadastraMotoboy` volta a devolver a conta da vítima a
+# quem apresentar (CPF + chave). O teste que acusa é o do DOMÍNIO — a rota
+# continuaria barrando pela porta HTTP, e é justamente por isso que as duas
+# camadas são duas e cada uma precisa da sua própria prova.
+sabota_codigo "replay_de_cadastro_ignora_aparelho" src/dominio/contas.js \
+  's|confereDados: (p) => p.cpf === cpfLimpo \&\& p.aparelho_id === aparelho,|confereDados: (p) => p.cpf === cpfLimpo,|g' \
+  test/contas.test.js "a chave do CADASTRO não é credencial"
+
+# O REPLAY DO LOJISTA VOLTA A EMITIR SESSÃO: (telefone + chave) vira login.
+sabota_codigo "replay_de_lojista_emite_sessao" src/http/api.js \
+  's|    if (repetida) {|    if (false) {|' \
+  test/api.test.js "do lojista não vira sessão"
+
+# A MENSAGEM DE REUSO VOLTA A ENTREGAR O AGREGADO ALHEIO: a recusa correta
+# sai com o id da conta da vítima dentro.
+sabota_codigo "mensagem_de_reuso_entrega_id" src/dominio/nucleo.js \
+  's|em ${evento.agregado_tipo})`,|em ${evento.agregado_tipo} ${evento.agregado_id})`,|' \
+  test/api.test.js "de outro aparelho não vira sessão"
+
 # Restaura um banco íntegro para não deixar sabotagem para trás.
 banco_do_zero
 

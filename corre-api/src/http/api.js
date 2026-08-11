@@ -160,8 +160,21 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
       aparelhoId: corpo.aparelho_id,
       chaveIdempotencia: corpo.chave_idempotencia,
     });
-    const sessao = await emiteSessao(naCidade, {
-      atorTipo: 'motoboy', atorId: conta.id, aparelhoId: conta.aparelho_id,
+    // REPLAY NÃO EMITE CREDENCIAL. A sessão sai da MESMA porta do login —
+    // CPF + aparelho conferidos contra a linha da conta, com `situacao`
+    // junto — em vez de sair do objeto `conta` que o replay devolveu.
+    //
+    // Antes: `emiteSessao(..., aparelhoId: conta.aparelho_id)`, o aparelho
+    // GRAVADO. Quem apresentasse (CPF + chave) recebia sessão válida da
+    // conta alheia COM o aparelho da vítima, e `resolveSessao` a aceitava —
+    // a trava de um-aparelho-por-conta caía sem nunca ser testada.
+    //
+    // Não é uma condição a mais no caminho feliz: no cadastro novo o
+    // aparelho pedido É o gravado, então a prova passa por construção. É a
+    // segunda camada, e ela lê a LINHA da conta — fonte independente da
+    // primeira, que lê o payload do evento.
+    const sessao = await emiteSessaoDeMotoboy(naCidade, {
+      cpf: corpo.cpf, aparelhoId: corpo.aparelho_id,
     });
     res.status(repetida ? 200 : 201).json({
       motoboy: {
@@ -218,8 +231,28 @@ function montaApi(pool, { enviarSms = smsNaoConfigurado() } = {}) {
     const { conta, repetida } = await contas.cadastraLojista(naCidade, {
       nome: corpo.nome, telefone: corpo.telefone, chaveIdempotencia: corpo.chave_idempotencia,
     });
+    // REPLAY NÃO EMITE CREDENCIAL — e o lojista não tem o que o motoboy tem.
+    //
+    // A prova de identidade do motoboy é a POSSE DO APARELHO, e ela está no
+    // próprio pedido de cadastro. A do lojista é o CÓDIGO DE 6 DÍGITOS, que
+    // não está. Então aqui não há como distinguir a retentativa do dono da
+    // apresentação de (telefone + chave) por um terceiro — e quando não se
+    // pode distinguir, não se emite credencial.
+    //
+    // A resposta repetida também não CONFIRMA a conta: devolver id, situação
+    // e `pode_pedir` de um telefone alheio é o vazamento que a Lei 11 nomeia
+    // ("a conferência de dono vale para a resposta repetida"). A retentativa
+    // continua sendo operação nula, não erro (Lei 5) — só não é login.
+    //
+    // Para o dono legítimo isso NÃO é passo novo: quem retenta sem chave já
+    // recebia 409 e já ia para o código de 6 dígitos. O que some é um atalho
+    // que era, ao mesmo tempo, a vulnerabilidade.
+    if (repetida) {
+      res.status(200).json({ lojista: { cadastro: 'ja_existe' }, sessao: null });
+      return;
+    }
     const sessao = await emiteSessao(naCidade, { atorTipo: 'lojista', atorId: conta.id });
-    res.status(repetida ? 200 : 201).json({
+    res.status(201).json({
       lojista: {
         id: conta.id,
         situacao: conta.situacao,

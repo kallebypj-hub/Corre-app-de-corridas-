@@ -70,6 +70,38 @@ test('cadastro e travas (Etapa 2)', async (t) => {
     assert.equal(segunda.conta.id, primeira.conta.id);
   });
 
+  await t.test('a chave do CADASTRO não é credencial: outro aparelho com a mesma chave é reuso, não replay', async () => {
+    // A camada do DOMÍNIO, e ela é independente da camada da rota: a fonte
+    // aqui é o PAYLOAD DO EVENTO, lá é a LINHA da conta. A rota sozinha
+    // pararia o ataque pela porta HTTP; esta função é chamável de qualquer
+    // outro lugar, e a Lei 11 vale para ela, não para quem a chama.
+    const dados = cadastroValidoDeMotoboy();
+    const chave = `cadastro-${randomUUID()}`;
+    const daVitima = await contas.cadastraMotoboy(pool, { ...dados, chaveIdempotencia: chave });
+
+    await assert.rejects(
+      () => contas.cadastraMotoboy(pool, {
+        ...dados, aparelhoId: 'aparelho-do-atacante', chaveIdempotencia: chave,
+      }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+      'aparelho diferente não é a mesma operação — não pode devolver a conta',
+    );
+
+    // E a recusa não entrega o id da conta alheia junto.
+    const mensagem = await contas.cadastraMotoboy(pool, {
+      ...dados, aparelhoId: 'aparelho-do-atacante', chaveIdempotencia: chave,
+    }).then(() => null, (erro) => erro.message);
+    assert.ok(
+      mensagem && !mensagem.includes(daVitima.conta.id),
+      `a recusa devolveu o id da vítima: ${mensagem}`,
+    );
+
+    // O DONO continua replayando: Lei 5 intacta.
+    const retentativa = await contas.cadastraMotoboy(pool, { ...dados, chaveIdempotencia: chave });
+    assert.equal(retentativa.repetida, true);
+    assert.equal(retentativa.conta.id, daVitima.conta.id);
+  });
+
   await t.test('CPF já cadastrado é recusado (chave nova, conta velha)', async () => {
     const dados = cadastroValidoDeMotoboy();
     await contas.cadastraMotoboy(pool, dados);

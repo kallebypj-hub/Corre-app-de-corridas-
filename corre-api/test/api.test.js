@@ -149,6 +149,98 @@ test('API de cadastro e sessão', async (t) => {
     assert.equal(comSessao.corpo.lojista.pode_pedir, true);
   });
 
+  await t.test('REPLAY NÃO EMITE CREDENCIAL: (CPF + chave) de outro aparelho não vira sessão do motoboy', async () => {
+    // A chave de idempotência é um id que o cliente gera — nunca foi
+    // desenhada como segredo. Enquanto o replay emitia sessão a partir da
+    // conta encontrada, ela era o ÚNICO fator entre um estranho e a conta:
+    // devolvia token válido COM o aparelho da vítima, contornando a trava de
+    // um-aparelho-por-conta sem nunca acionar `/sessoes/motoboy`.
+    const dados = cadastroValidoDeMotoboy();
+    const chave = `cad-${randomUUID()}`;
+    const daVitima = await chama('POST', '/motoboys', {
+      corpo: { ...corpoDeCadastro(dados), chave_idempotencia: chave },
+    });
+    assert.equal(daVitima.status, 201);
+    const idDaVitima = daVitima.corpo.motoboy.id;
+
+    // Controle: o login direto do atacante já era recusado — é a trava que
+    // o replay contornava.
+    const login = await chama('POST', '/sessoes/motoboy', {
+      corpo: { cpf: dados.cpf, aparelho_id: 'aparelho-do-atacante' },
+    });
+    assert.equal(login.status, 403);
+    assert.equal(login.corpo.erro, 'aparelho_nao_autorizado');
+
+    // O ataque: mesma chave, mesmo CPF, OUTRO aparelho.
+    const ataque = await chama('POST', '/motoboys', {
+      corpo: {
+        ...corpoDeCadastro({ ...dados, aparelhoId: 'aparelho-do-atacante' }),
+        chave_idempotencia: chave,
+      },
+    });
+    assert.ok(ataque.status >= 400, `o ataque recebeu ${ataque.status}`);
+    assert.ok(!ataque.corpo.sessao, 'o ataque não pode receber sessão nenhuma');
+    assert.ok(
+      !JSON.stringify(ataque.corpo).includes(idDaVitima),
+      'a resposta não pode confirmar a conta da vítima',
+    );
+
+    // E a Lei 5 continua de pé para o DONO: mesma chave, MESMO aparelho,
+    // retentativa byte a byte idêntica é operação nula com sessão emitida
+    // pela prova (CPF + aparelho), não pelo atalho.
+    const retentativa = await chama('POST', '/motoboys', {
+      corpo: { ...corpoDeCadastro(dados), chave_idempotencia: chave },
+    });
+    assert.equal(retentativa.status, 200);
+    assert.equal(retentativa.corpo.motoboy.id, idDaVitima);
+    const ator = await resolveSessao(pool, retentativa.corpo.sessao.token);
+    assert.equal(ator.id, idDaVitima);
+    assert.equal(ator.aparelhoId, dados.aparelhoId);
+  });
+
+  await t.test('REPLAY NÃO EMITE CREDENCIAL: (telefone + chave) do lojista não vira sessão nem confirma a conta', async () => {
+    const telefone = `88 2${randomUUID().slice(0, 10)}`;
+    const chave = `cad-${randomUUID()}`;
+    const daVitima = await chama('POST', '/lojistas', {
+      corpo: { nome: 'Loja da Vítima', telefone, chave_idempotencia: chave },
+    });
+    assert.equal(daVitima.status, 201);
+    const idDaVitima = daVitima.corpo.lojista.id;
+
+    const ataque = await chama('POST', '/lojistas', {
+      corpo: { nome: 'Atacante', telefone, chave_idempotencia: chave },
+    });
+    // Lei 5: a retentativa é operação NULA, não erro. Mas não é login.
+    assert.equal(ataque.status, 200);
+    assert.equal(ataque.corpo.sessao, null, 'replay não emite credencial');
+    assert.ok(
+      !JSON.stringify(ataque.corpo).includes(idDaVitima),
+      'a resposta repetida não pode confirmar a conta alheia',
+    );
+
+    // O cartão continua exigindo a sessão do próprio lojista: sem token, 401.
+    const cartao = await chama('POST', '/lojistas/cartao', { corpo: { cartao_ref: 'do-atacante' } });
+    assert.equal(cartao.status, 401);
+  });
+
+  await t.test('sessão nasce de PROVA: cadastro de motoboy bloqueado por fora não emite token nem no replay', async () => {
+    // A porta é a mesma do login, então ela carrega o que o login carrega —
+    // inclusive a recusa de conta bloqueada.
+    const dados = cadastroValidoDeMotoboy();
+    const chave = `cad-${randomUUID()}`;
+    const cadastro = await chama('POST', '/motoboys', {
+      corpo: { ...corpoDeCadastro(dados), chave_idempotencia: chave },
+    });
+    assert.equal(cadastro.status, 201);
+    await pool.query('UPDATE motoboys SET situacao = $2 WHERE id = $1', [cadastro.corpo.motoboy.id, 'bloqueada']);
+
+    const retentativa = await chama('POST', '/motoboys', {
+      corpo: { ...corpoDeCadastro(dados), chave_idempotencia: chave },
+    });
+    assert.equal(retentativa.status, 403);
+    assert.equal(retentativa.corpo.erro, 'conta_bloqueada');
+  });
+
   await t.test('atendimento recebe 403 em estorno e em bloqueio; dono passa', async () => {
     const dados = cadastroValidoDeMotoboy();
     const cadastro = await chama('POST', '/motoboys', { corpo: corpoDeCadastro(dados) });
