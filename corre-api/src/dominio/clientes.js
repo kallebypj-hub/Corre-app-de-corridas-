@@ -50,8 +50,22 @@ async function buscaClientePorTelefone(pool, telefone) {
 // IRREVERSÍVEL: autor falso em log append-only não se apaga. O `CHECK` de
 // autor identificado só exigia que o campo não fosse nulo; não exigia que
 // apontasse para alguém.
-async function exigeAutorReal(pool, lojistaId) {
-  if (!lojistaId) return null;
+async function exigeAutorReal(pool, lojistaId, interno) {
+  // 'SISTEMA' É TIPO, NÃO ATOR, e aqui ele nascia por OMISSÃO: bastava não
+  // mandar `lojistaId` para o evento sair com `autor_tipo: 'sistema'`. A
+  // ausência de um campo virava a autoridade mais alta do sistema.
+  //
+  // Agora todo caminho que age como sistema precisa de ORIGEM VERIFICÁVEL —
+  // `interno: true`, que só o próprio código passa —, nunca de omissão.
+  if (!lojistaId) {
+    if (!interno) {
+      throw new ErroDeDominio(
+        CODIGOS.LOJISTA_INEXISTENTE,
+        'evento de cliente exige lojista identificado: omitir não vira sistema',
+      );
+    }
+    return null;
+  }
   const { rows: [lojista] } = await pool.query(
     'SELECT id FROM lojistas WHERE id = $1', [lojistaId],
   );
@@ -64,12 +78,12 @@ async function exigeAutorReal(pool, lojistaId) {
   return lojista.id;
 }
 
-async function garanteCliente(pool, { telefone, lojistaId, chaveIdempotencia }) {
+async function garanteCliente(pool, { telefone, lojistaId, chaveIdempotencia, interno = false }) {
   const telefoneLimpo = exigeTexto(telefone, 'telefone');
   const chave = chaveIdempotencia || randomUUID();
   // Confere ANTES de qualquer escrita: descobrir o autor falso depois de
   // gravar seria descobrir tarde demais.
-  const autorReal = await exigeAutorReal(pool, lojistaId);
+  const autorReal = await exigeAutorReal(pool, lojistaId, interno);
 
   const existente = await buscaClientePorTelefone(pool, telefoneLimpo);
   if (existente) return { cliente: existente, criada: false };
