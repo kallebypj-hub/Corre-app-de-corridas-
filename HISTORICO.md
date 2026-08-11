@@ -333,6 +333,25 @@ A chave de idempotência dizia "mesma operação" e conferia só **tipo + agrega
 | 163 | **Autorização vem antes do atalho** | O replay de idempotência respondia **antes** de qualquer validação de autor | `exigeAutorReal` roda **antes** da tentativa de replay, em `transiciona` | O replay devolve resultado sem passar pela validação de estado. Enquanto vinha primeiro, quem acertasse a chave recebia a resposta sem provar nada — foi assim que a chave de criação virou chave-mestra e assim que o evento do sistema vazou |
 | 164 | **A corrida nasce com destinatário conferido** | `criaCorrida` gravava o `cliente_id` do pedido sem olhar; só a FK barrava, com erro de driver | `exigeDestinatarioReal` antes de qualquer escrita, com erro de domínio | É `cliente_id` que decide quem pode mover a corrida como cliente. Id que não aponta para ninguém não pode entrar por uma porta que decide autorização |
 
+### PR B — a regressão que a própria rodada da Lei 11 introduziu (2026-08-10)
+
+A conferência de dados que fechou as chaves de replay **quebrou a Lei 5 em duas funções**. Achado pela auditoria do PR #9, reproduzido por mim antes de corrigido:
+
+```
+1ª troca de aparelho                       -> {"repetida":false}
+2ª troca IDÊNTICA (Lei 5: operação nula)   -> RECUSADO chave_reutilizada
+1º registro de cartão com espaços          -> {"repetida":false}
+2º registro IDÊNTICO com espaços           -> RECUSADO chave_reutilizada
+```
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 165 | **A chave compara pedido, não estado** | `confereDados: (p) => confereMudancas(p, payload)` — e em `trocaAparelho` o payload traz `de`, **derivado da projeção** | `acaoDaOperacaoSobreMotoboy` aceita `pedido` separado do `payload`; `trocaAparelho` passa `pedido: { para: aparelho }` | Na retentativa a projeção **já mudou**: o pedido recalculado virava `{de:'B', para:'B'}` contra o gravado `{de:'A', para:'B'}`. O operador cuja resposta se perdeu recebia erro e tenderia a repetir **com chave nova**, gravando um segundo evento num log que a Lei 3 torna irreversível |
+| 166 | **A chave compara o valor NORMALIZADO** | `p.cartao_ref === cartaoRef` — o parâmetro **cru** | `p.cartao_ref === cartao` — o mesmo que foi gravado | O gravado passa por `exigeTexto` e vem aparado. Qualquer `cartao_ref` com espaço nas pontas transformava a retentativa idêntica em 409 |
+| 167 | **A metade do teste que faltava** | A bateria só testava chave com dados **diferentes** (recusa) | Testa também chave com dados **iguais** (operação nula), nas duas funções | **Idempotência sem teste de retentativa idêntica não está testada.** Era exatamente a metade que a regressão quebrou, e por isso ela passou verde |
+
+*E a Lei 10 apareceu sozinha na hora de rodar:* a correção mudou a linha que a sabotagem `chave_de_cartao_sem_dados` procurava, e **o próprio script acusou** — `sed` que não muda nada é erro, não silêncio. É o desenho funcionando: camada nova mexeu na regra antiga e o controle negativo não deixou passar cego.
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:

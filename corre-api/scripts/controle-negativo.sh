@@ -646,9 +646,26 @@ sabota_codigo "chave_de_estorno_sem_corrida" src/dominio/contas.js \
   's|      confereDados: (p) => p.corrida_id === corridaId,||' \
   test/contas.test.js "chave do ESTORNO"
 
+# ---------- Lei 5: retentativa idêntica é operação nula ----------
+
+# A COMPARAÇÃO DA CHAVE VOLTA A OLHAR ESTADO, não pedido: `confereMudancas`
+# passa a receber o payload inteiro, e `de` (derivado da projeção JÁ MUDADA)
+# nunca casa na retentativa. A retentativa byte a byte idêntica vira 409.
+sabota_codigo "chave_compara_estado_e_nao_pedido" src/dominio/contas.js \
+  's|      confereDados: (p) => confereMudancas(p, pedido \|\| payload),|      confereDados: (p) => confereMudancas(p, payload),|' \
+  test/contas.test.js "retentativa IDÊNTICA da troca de aparelho"
+
+# A COMPARAÇÃO DO CARTÃO VOLTA AO PARÂMETRO CRU: o gravado vem aparado por
+# `exigeTexto`, então qualquer espaço nas pontas quebra a retentativa.
+sabota_codigo "chave_do_cartao_compara_valor_cru" src/dominio/contas.js \
+  's|      confereDados: (p) => p.cartao_ref === cartao,|      confereDados: (p) => p.cartao_ref === cartaoRef,|g' \
+  test/contas.test.js "retentativa IDÊNTICA do cartão"
+
 # AS TRÊS IRMÃS: a chave volta a ignorar os dados pedidos.
+# (A linha mudou de `cartaoRef` para `cartao` na correção da Lei 5 — e foi o
+# PRÓPRIO script que acusou, porque `sed` que não muda nada é erro.)
 sabota_codigo "chave_de_cartao_sem_dados" src/dominio/contas.js \
-  's|      confereDados: (p) => p.cartao_ref === cartaoRef,||' \
+  's|      confereDados: (p) => p.cartao_ref === cartao,||' \
   test/contas.test.js "chave do CARTÃO"
 
 # Restaura um banco íntegro para não deixar sabotagem para trás.
