@@ -585,8 +585,10 @@ sabota_codigo "versao_da_tabela_do_payload" src/dominio/corridas.js \
 
 # O AUTOR DO EVENTO DEIXA DE SER CONFERIDO: um lojista inventado volta a ser
 # gravado como autor no log append-only, que a Lei 3 torna irreversível.
+# (A assinatura ganhou `interno` na correção do 'sistema por omissão' — e foi
+# o PRÓPRIO script que acusou, porque `sed` que não muda nada é erro.)
 sabota_codigo "autor_de_evento_nao_conferido" src/dominio/clientes.js \
-  's|  const autorReal = await exigeAutorReal(pool, lojistaId);|  const autorReal = lojistaId \|\| null;|' \
+  's|  const autorReal = await exigeAutorReal(pool, lojistaId, interno);|  const autorReal = lojistaId \|\| null;|' \
   test/cidades.test.js "autor de evento"
 
 # O VÍNCULO DO LOJISTA COM A CORRIDA cai: qualquer lojista da cidade volta a
@@ -606,8 +608,16 @@ sabota_codigo "cliente_alheio_move_corrida" src/dominio/corridas.js \
 # corrida nos quatro papéis, e o do 'painel' é o pior — a operação não tem
 # vínculo com a corrida, então a existência era a ÚNICA coisa entre um id
 # qualquer e o cancelamento de uma entrega com a mercadoria na rua.
+# A MUTAÇÃO É HONESTA: a consulta passa a ACHAR sempre uma linha ativa, que é
+# o que "a existência deixou de ser conferida" quer dizer. A versão anterior
+# trocava por `const { rows } = [{}]` — desestruturação de objeto sobre array,
+# então `rows` virava undefined e a linha seguinte estourava TypeError. Ficava
+# vermelha em 34 subtestes por DANO COLATERAL, e o próprio cabeçalho deste
+# script diz que vermelho por motivo alheio não conta. Sabotagem que acusa
+# pelo motivo errado é falso vermelho, e falso vermelho ensina a ignorar
+# vermelho. (Achado da auditoria do PR #9.)
 sabota_codigo "autor_de_transicao_nao_existe" src/dominio/corridas.js \
-  's|  const { rows } = await pool.query(`SELECT id FROM ${tabela} WHERE id = $1`, \[autorId\]);|  const { rows } = [{}];|' \
+  's|  const { rows: \[ator\] } = await pool.query(|  const { rows: [ator = { situacao: "ativa" }] } = await pool.query(|' \
   test/maquina.test.js "autor de evento tem que EXISTIR"
 
 # 'SISTEMA' VOLTA A SER DECLARÁVEL DE FORA: quem escrever "sistema" no corpo
@@ -621,19 +631,32 @@ sabota_codigo "sistema_declarado_de_fora" src/dominio/corridas.js \
 # de qualquer validação — que é exatamente como a chave derivável do varredor
 # entregava o evento do sistema a um chamador sem id.
 #
-# O endereço de linha (`/async function transiciona/,/const doMesmoAutor/`)
-# não é enfeite: a MESMA chamada existe dentro de `exigeVinculo`, e sabotar as
-# duas de uma vez derrubaria também o teste do 'sistema' — a sabotagem
-# deixaria de dizer qual regra caiu.
+# A sabotagem é a ORDEM, e por isso ela APAGA a chamada anterior ao replay em
+# vez de afrouxá-la. A versão anterior trocava o 4º argumento por `true`, o
+# que derrubava de novo a trava `interno` — a mesma regra que
+# `sistema_declarado_de_fora` já derruba, e de forma mais ampla: aquela deixa
+# vermelhos os subtestes do 'sistema' E o da ordem, esta deixava só o da
+# ordem. Era subconjunto estrito, e a ordem ficava sem controle próprio.
+#
+# O endereço de linha não é enfeite: a MESMA chamada existe dentro de
+# `exigeVinculo`, que continua de pé — é ela que garante que o vermelho seja
+# do ATALHO ter respondido antes, e não de a conferência ter sumido.
 sabota_codigo "replay_antes_do_autor" src/dominio/corridas.js \
-  '/^async function transiciona/,/const doMesmoAutor/ s|  await exigeAutorReal(pool, autorTipo, autorId, interno);|  await exigeAutorReal(pool, autorTipo, autorId, true);|' \
+  '/^async function transiciona/,/const doMesmoAutor/ s|  await exigeAutorReal(pool, autorTipo, autorId, interno);||' \
   test/maquina.test.js "autor é conferido ANTES do replay"
 
-# O DESTINATÁRIO DEIXA DE SER CONFERIDO: `cliente_id` inventado volta a entrar
-# no pedido, e quem decide quem pode mover a corrida como 'cliente' é ele.
-sabota_codigo "destinatario_nao_conferido" src/dominio/corridas.js \
+# O DESTINATÁRIO DEIXA DE SER CONFERIDO NO DOMÍNIO — e o que esta sabotagem
+# prova é só isto: que a recusa passa a ser erro de DRIVER (23503 da FK) em
+# vez de erro de domínio. Não é "o cliente inventado volta a entrar": a FK
+# `corridas_cliente_id_fkey` existe desde a 0010 e barra de qualquer jeito.
+#
+# Estava vendido como fechamento de furo da Lei 11, o que é o inverso de
+# "proteção que ninguém desenhou não é proteção": era creditar à camada nova
+# uma proteção que já era do banco. O nome do teste e o comentário agora dizem
+# o que a sabotagem realmente mede. (Achado da auditoria do PR #9.)
+sabota_codigo "destinatario_sem_erro_de_dominio" src/dominio/corridas.js \
   's|  await exigeDestinatarioReal(pool, dados.cliente_id);||' \
-  test/maquina.test.js "destinatário inventado não vira corrida"
+  test/maquina.test.js "destinatário inventado é recusado com erro de DOMÍNIO"
 
 # A CHAVE DE TRANSIÇÃO DEIXA DE SER DO AUTOR: dois aparelhos com a mesma
 # chave recebem ambos "venceu", e um motoboy crê que aceitou corrida alheia.
@@ -645,6 +668,30 @@ sabota_codigo "chave_de_transicao_sem_autor" src/dominio/corridas.js \
 sabota_codigo "chave_de_estorno_sem_corrida" src/dominio/contas.js \
   's|      confereDados: (p) => p.corrida_id === corridaId,||' \
   test/contas.test.js "chave do ESTORNO"
+
+# EXISTÊNCIA VOLTA A SER APTIDÃO: a conferência de `situacao` some, e conta
+# bloqueada volta a mover corrida — motoboy bloqueado por roubo aceitando
+# entrega, que é o caso que dói.
+sabota_codigo "bloqueado_move_corrida" src/dominio/corridas.js \
+  "s|  if (ator.situacao !== 'ativa') {|  if (false) {|" \
+  test/maquina.test.js "EXISTÊNCIA NÃO É APTIDÃO"
+
+# O TIPO DO AUTOR VOLTA A NÃO SER CONFERIDO NA CRIAÇÃO: quem tiver o id do
+# lojista e a chave recebe a corrida declarando-se o que quiser.
+sabota_codigo "criacao_sem_tipo_antes_do_replay" src/dominio/corridas.js \
+  's|  if (!autorizadosNaCriacao.includes(autorTipo)) {|  if (false) {|' \
+  test/maquina.test.js "replay da CRIAÇÃO confere o tipo do autor"
+
+# A RECUSA DA CRIAÇÃO VOLTA A ENTREGAR O ID do lojista.
+sabota_codigo "recusa_da_criacao_entrega_id" src/dominio/corridas.js \
+  "s|'lojista do pedido não existe'|\`lojista \${lojistaId} não existe\`|" \
+  test/maquina.test.js "recusa da criação não devolve o id"
+
+# 'SISTEMA' VOLTA A NASCER POR OMISSÃO em clientes.js: basta não mandar o
+# lojista para o evento sair com a autoridade mais alta do sistema.
+sabota_codigo "sistema_por_omissao_no_cliente" src/dominio/clientes.js \
+  's|    if (!interno) {|    if (false) {|' \
+  test/cidades.test.js "autor de evento"
 
 # ---------- Lei 5: retentativa idêntica é operação nula ----------
 

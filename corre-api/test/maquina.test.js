@@ -437,7 +437,16 @@ test('máquina de estados (Etapa 5)', async (t) => {
     assert.equal(replay.repetida, true);
   });
 
-  await t.test('LEI 11: destinatário inventado não vira corrida — e o pedido não é gravado', async () => {
+  await t.test('LEI 11: destinatário inventado é recusado com erro de DOMÍNIO, e nada é gravado', async () => {
+    // O QUE ESTE TESTE PROVA, e o que ele NÃO prova. Quem impede a corrida de
+    // nascer com um cliente inexistente é a FK `corridas_cliente_id_fkey`,
+    // desde a migration 0010 — e ela barra com ou sem esta conferência. O que
+    // a conferência acrescenta é a FORMA da recusa: erro de domínio no ato,
+    // em vez de 23503 do driver virando 500 na cara do lojista.
+    //
+    // O nome antigo dizia "não vira corrida" e vendia como furo de Lei 11
+    // fechado uma proteção que já era do banco. É o inverso de "proteção que
+    // ninguém desenhou não é proteção" — e a auditoria pegou.
     const inventado = randomUUID();
     const dono = await lojistaApto(pool);
     await assert.rejects(
@@ -453,6 +462,94 @@ test('máquina de estados (Etapa 5)', async (t) => {
       'SELECT count(*) AS n FROM corridas WHERE cliente_id = $1', [inventado],
     );
     assert.equal(rows[0].n, '0');
+  });
+
+  await t.test('EXISTÊNCIA NÃO É APTIDÃO: conta bloqueada não move a corrida, nos quatro papéis', async () => {
+    // O caso que dói: o motoboy bloqueado POR ROUBO continuava aceitando
+    // corrida e confirmando coleta — com a mercadoria de terceiro na mão
+    // dele. Bloqueio é a única ferramenta de expulsão da plataforma (seção
+    // 13) e não alcançava o motor que move mercadoria.
+    const dono = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    t.after(() => dono.end());
+
+    const casos = [
+      { autorTipo: 'motoboy', tabela: 'motoboys', tipo: 'motoboy_aceitou', ate: E.PROCURANDO_MOTOBOY },
+      { autorTipo: 'lojista', tabela: 'lojistas', tipo: 'coleta_confirmada', ate: E.A_CAMINHO_DA_LOJA },
+      { autorTipo: 'cliente', tabela: 'clientes', tipo: 'cancelada', ate: E.PROCURANDO_MOTOBOY },
+      { autorTipo: 'painel', papelDeTeste: 'painel-novo', tabela: 'operadores', tipo: 'cancelada', ate: E.A_CAMINHO_DA_LOJA },
+    ];
+    for (const caso of casos) {
+      // Um ator NOVO por caso: bloquear o compartilhado quebraria a bateria.
+      // O gênese é único no banco inteiro — bloqueá-lo envenenaria a bateria
+      // toda, então o painel usa um operador descartável.
+      const ator = await atorNovo(pool, caso.papelDeTeste || caso.autorTipo);
+      const corrida = await levaAte(pool, caso.ate, {
+        origem: 'aptidao',
+        ...(caso.autorTipo === 'cliente' ? { cliente_id: ator } : {}),
+      });
+      // Com a conta ATIVA a recusa, quando vem, é por vínculo — nunca por
+      // aptidão. É o controle que separa as duas causas.
+      const ativa = await aplica(pool, corrida.id, caso.tipo, {
+        autorTipo: caso.autorTipo, autorId: ator, payload: PAYLOAD_COMPLETO,
+      }).then(() => 'passou', (erro) => erro.codigo);
+      assert.notEqual(ativa, 'conta_bloqueada', `${caso.autorTipo} ativo não pode ser recusado por aptidão`);
+
+      const outra = await levaAte(pool, caso.ate, {
+        origem: 'aptidao',
+        ...(caso.autorTipo === 'cliente' ? { cliente_id: ator } : {}),
+      });
+      await dono.query(`UPDATE ${caso.tabela} SET situacao = 'bloqueada' WHERE id = $1`, [ator]);
+      await assert.rejects(
+        () => aplica(pool, outra.id, caso.tipo, {
+          autorTipo: caso.autorTipo, autorId: ator, payload: PAYLOAD_COMPLETO,
+        }),
+        (erro) => erro instanceof ErroDeDominio && erro.codigo === 'conta_bloqueada',
+        `${caso.autorTipo} BLOQUEADO não pode mover corrida`,
+      );
+      // E nada foi gravado com o autor bloqueado (Lei 3: seria irreversível).
+      const { rows } = await pool.query(
+        `SELECT count(*) AS n FROM eventos
+          WHERE autor_id = $1 AND agregado_tipo = 'corrida' AND agregado_id = $2`,
+        [ator, outra.id],
+      );
+      assert.equal(rows[0].n, '0');
+    }
+  });
+
+  await t.test('LEI 11: o replay da CRIAÇÃO confere o tipo do autor, não só o id', async () => {
+    // O atalho respondia antes da validação: com (id do lojista + chave),
+    // qualquer tipo declarado recebia a corrida — enquanto o MESMO pedido
+    // com chave nova é recusado. É a forma dos outros defeitos da rodada.
+    const donoDaCorrida = await lojistaApto(pool);
+    const chave = `pedido-${randomUUID()}`;
+    const { corrida } = await criaCorrida(pool, {
+      autorTipo: 'lojista', autorId: donoDaCorrida, payload: { origem: 'A' }, chaveIdempotencia: chave,
+    });
+
+    for (const autorTipo of ['motoboy', 'cliente', 'painel', 'sistema', 'tipo-inventado']) {
+      const resposta = await criaCorrida(pool, {
+        autorTipo, autorId: donoDaCorrida, payload: {}, chaveIdempotencia: chave,
+      }).then((r) => r, (erro) => erro);
+      assert.ok(
+        resposta instanceof ErroDeDominio && resposta.codigo === 'autor_nao_autorizado',
+        `'${autorTipo}' com a chave alheia recebeu ${JSON.stringify(resposta)}`,
+      );
+    }
+
+    // E o DONO continua replayando: a Lei 5 não pode ter quebrado.
+    const repetida = await criaCorrida(pool, {
+      autorTipo: 'lojista', autorId: donoDaCorrida, payload: { origem: 'A' }, chaveIdempotencia: chave,
+    });
+    assert.equal(repetida.repetida, true);
+    assert.equal(repetida.corrida.id, corrida.id);
+  });
+
+  await t.test('LEI 11: a recusa da criação não devolve o id do lojista', async () => {
+    const inventado = randomUUID();
+    const mensagem = await criaCorrida(pool, {
+      autorTipo: 'lojista', autorId: inventado, payload: {},
+    }).then(() => null, (erro) => erro.message);
+    assert.ok(mensagem && !mensagem.includes(inventado), `a recusa devolveu o id: ${mensagem}`);
   });
 
   await t.test('LEI 11: a chave de idempotência de transição é do AUTOR — outro aparelho não herda o aceite', async () => {

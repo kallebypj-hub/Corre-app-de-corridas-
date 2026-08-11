@@ -352,6 +352,28 @@ A conferência de dados que fechou as chaves de replay **quebrou a Lei 5 em duas
 
 *E a Lei 10 apareceu sozinha na hora de rodar:* a correção mudou a linha que a sabotagem `chave_de_cartao_sem_dados` procurava, e **o próprio script acusou** — `sed` que não muda nada é erro, não silêncio. É o desenho funcionando: camada nova mexeu na regra antiga e o controle negativo não deixou passar cego.
 
+### PR C — a meia-aplicação da Lei 11, e as sabotagens que não provavam nada (2026-08-10)
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 168 | **Existência não é aptidão** | `exigeAutorReal` perguntava só `SELECT id` | `SELECT id, situacao`, e conta não-`ativa` é recusada com `conta_bloqueada` | **Motoboy bloqueado por roubo, pelo caminho legítimo do painel, aceitava corrida e confirmava coleta** — com a mercadoria de terceiro na mão dele. O bloqueio é a única ferramenta de expulsão da plataforma e não alcançava o motor que move mercadoria |
+| 169 | **O replay da criação confere o TIPO** | `doMesmoDono` comparava só o id | o tipo autorizado é conferido **antes** do atalho | Com (id do lojista + chave), qualquer tipo declarado — inclusive um inventado — recebia a corrida; o **mesmo** pedido com chave nova era recusado |
+| 170 | **A recusa da criação não devolve o id** | `lojista ${lojistaId} não existe` | `lojista do pedido não existe` | A propriedade estava escrita, testada e sabotada em `transiciona`, e aberta **na porta pela qual toda corrida passa** |
+| 171 | **`'sistema'` não nasce por omissão** | `garanteCliente` sem `lojistaId` gravava `autor_tipo: 'sistema'` | exige `interno: true` explícito | **A ausência de um campo virava a autoridade mais alta do sistema** |
+| 172 | **Papel do painel: decisão, não esquecimento** | — | **não se confere**, e a condição de revisão fica escrita no código | `operadores.papel` tem só dois valores e a seção 13 dá o cancelamento aos dois. Lista com todos os valores possíveis nunca recusa ninguém: seria **trava que não se prova**, e trava que não se sabota não existe (Lei 8). Quando nascer um terceiro papel, a conferência entra junto com ele |
+
+### As três sabotagens que ficavam vermelhas pelo motivo errado
+
+A auditoria encontrou o defeito que o cabeçalho do próprio script proíbe — *"vermelho por motivo alheio não conta"*. **Sabotagem que acusa pelo motivo errado é falso vermelho, e falso vermelho ensina a ignorar vermelho.**
+
+| Sabotagem | O que estava errado | Depois |
+|---|---|---|
+| `autor_de_transicao_nao_existe` | `const { rows } = [{}]` é desestruturação de **objeto sobre array**: `rows` virava `undefined` e a linha seguinte estourava `TypeError`. A regra **não era desligada** — o módulo passava a explodir em toda transição, e ficavam **34 subtestes vermelhos**, com o teste-alvo morrendo no setup antes de chegar à asserção | `[ator = { situacao: 'ativa' }]` — o ator inexistente passa a ser encontrado, que é o que "a existência deixou de ser conferida" significa. **1 subteste vermelho**, pelo motivo certo |
+| `replay_antes_do_autor` | Trocava o 4º argumento por `true`, o que derrubava outra vez a trava `interno` — a **mesma** regra que `sistema_declarado_de_fora` já derruba, e de forma mais ampla. Era subconjunto estrito, e a ORDEM ficava sem controle próprio | **apaga** a chamada anterior ao replay. `exigeVinculo` continua de pé, então o vermelho é do **atalho ter respondido antes** |
+| `destinatario_nao_conferido` | Ficava vermelha pela **forma** do erro. Quem barra o destinatário inventado é a **FK** desde a 0010, não a regra sabotada — vender isso como furo da Lei 11 fechado é o inverso de *"proteção que ninguém desenhou não é proteção"*: é **creditar à camada nova uma proteção que já era do banco** | renomeada para `destinatario_sem_erro_de_dominio`, e o teste passou a dizer o que mede: **erro de domínio em vez de 500 do driver** |
+
+*E a Lei 10 apareceu de novo sozinha:* a correção do `'sistema' por omissão` mudou a assinatura que a sabotagem `autor_de_evento_nao_conferido` procurava, e **o próprio script acusou**.
+
 ### Correções da varredura adversarial da própria revisão
 
 Cinco lentes independentes sobre os documentos reescritos, cada achado passando por um verificador cético. **23 defeitos sobreviveram** — todos corrigidos no mesmo PR. O que eles pegaram:

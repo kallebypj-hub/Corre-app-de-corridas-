@@ -180,11 +180,28 @@ async function exigeAutorReal(pool, autorTipo, autorId, interno) {
   if (!autorId) {
     throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, `${autorTipo} precisa ser identificado`);
   }
-  const { rows } = await pool.query(`SELECT id FROM ${tabela} WHERE id = $1`, [autorId]);
-  if (rows.length === 0) {
+  // EXISTÊNCIA NÃO É APTIDÃO. A primeira versão desta função perguntava só
+  // `SELECT id`, e "existe" virou "pode" — um motoboy BLOQUEADO por roubo
+  // continuava aceitando corrida e confirmando coleta com a mercadoria de
+  // terceiro na mão dele. Bloqueio é a única ferramenta de expulsão da
+  // plataforma (seção 13) e não alcançava o motor que move mercadoria.
+  //
+  // A `situacao` está nas quatro tabelas desde a 0005/0010, e o schema dá
+  // `GRANT UPDATE (situacao)` ao app justamente para bloquear. O resto do
+  // projeto já tratava assim: a sessão não nasce para conta bloqueada e é
+  // revalidada contra a conta viva a cada requisição. Só o motor não.
+  const { rows: [ator] } = await pool.query(
+    `SELECT id, situacao FROM ${tabela} WHERE id = $1`,
+    [autorId],
+  );
+  if (!ator) {
     // Não diz QUAL id: quem só acertou o formato não sai sabendo se existe.
     throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, `${autorTipo} do evento não existe`);
   }
+  if (ator.situacao !== 'ativa') {
+    throw new ErroDeDominio(CODIGOS.CONTA_BLOQUEADA, `${autorTipo} bloqueado não move corrida`);
+  }
+  return ator;
 }
 
 // O VÍNCULO com a corrida, por tipo de ator.
@@ -197,11 +214,22 @@ async function exigeVinculo(pool, corrida, autorTipo, autorId, interno) {
     throw new ErroDeDominio(CODIGOS.AUTOR_NAO_AUTORIZADO, 'cliente não é o destinatário desta corrida');
   }
   // 'painel' não tem vínculo com a corrida — a operação age sobre qualquer
-  // uma da cidade dela, por desenho. O que ela precisa é ser operador DE
-  // VERDADE, e é o que `exigeAutorReal` acabou de exigir: antes disto, um
-  // UUID inventado cancelava corrida com a mercadoria já na rua.
+  // uma da cidade dela, por desenho. O que ela precisa é ser operador real e
+  // ATIVO, e é o que `exigeAutorReal` acabou de exigir.
+  //
+  // PAPEL, aqui, NÃO se confere — e isto é decisão, não esquecimento. A
+  // auditoria apontou o contraste com `autorizaEstornoSemEfeito`, que exige
+  // papel 'dono'. Só que `operadores.papel` tem exatamente dois valores
+  // ('dono', 'atendimento') e a seção 13 dá o cancelamento aos dois:
+  // "atendimento resolve o dia a dia; só o dono estorna e bloqueia". Uma
+  // lista com os dois valores possíveis nunca recusa ninguém — seria trava
+  // que não se prova, e trava que não se sabota não existe (Lei 8).
+  //
+  // CONDIÇÃO DE REVISÃO: no dia em que nascer um terceiro papel (Etapa 11 ou
+  // 13), a conferência de papel entra JUNTO com ele, com sabotagem própria.
+  //
   // O 'motoboy' fica sem vínculo até a Etapa 6 (dívida declarada), mas a
-  // EXISTÊNCIA já é exigida acima.
+  // EXISTÊNCIA e a APTIDÃO já são exigidas acima.
 }
 
 // O DESTINATÁRIO da corrida, quando o pedido traz um. É `cliente_id` que
@@ -233,7 +261,10 @@ async function exigeLojistaApto(pool, lojistaId) {
     [lojistaId],
   );
   if (!lojista) {
-    throw new ErroDeDominio(CODIGOS.LOJISTA_INEXISTENTE, `lojista ${lojistaId} não existe`);
+    // Não devolve o id: a propriedade "a recusa não diz QUAL id" estava
+    // escrita, testada e sabotada em `transiciona`, e aberta na porta ao
+    // lado — a porta pela qual TODA corrida passa.
+    throw new ErroDeDominio(CODIGOS.LOJISTA_INEXISTENTE, 'lojista do pedido não existe');
   }
   if (lojista.situacao !== 'ativa') {
     throw new ErroDeDominio(CODIGOS.CONTA_BLOQUEADA, 'lojista bloqueado não cria corrida');
@@ -325,6 +356,22 @@ async function criaCorrida(pool, { autorTipo, autorId, payload, chaveIdempotenci
   // segundo pedido, que nunca era criado. (Achado da auditoria da Etapa 5;
   // `contas.js` e `clientes.js` já faziam a conferência — só a criação de
   // corrida estava aberta.)
+  // E "MESMA operação" TAMBÉM INCLUI O TIPO DE AUTOR. O `doMesmoDono`
+  // comparava só o id, então quem tivesse (id do lojista + chave) recebia a
+  // corrida declarando-se motoboy, cliente, painel, 'sistema' ou um tipo
+  // inventado — enquanto o MESMO pedido com chave nova é recusado por
+  // `validaTransicao` ("<tipo> não pode aplicar criada a partir de ∅").
+  // O atalho respondia antes, que é a forma dos outros três defeitos desta
+  // rodada. A validação de tipo passa a vir ANTES do atalho, como já é em
+  // `transiciona`.
+  const autorizadosNaCriacao = regraDe('criada').autorizados.null;
+  if (!autorizadosNaCriacao.includes(autorTipo)) {
+    throw new ErroDeDominio(
+      CODIGOS.AUTOR_NAO_AUTORIZADO,
+      `${autorTipo} não pode aplicar criada a partir de ∅`,
+    );
+  }
+
   const doMesmoDono = (payloadDoEvento) => payloadDoEvento.lojista_id === autorId;
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplay(pool, {

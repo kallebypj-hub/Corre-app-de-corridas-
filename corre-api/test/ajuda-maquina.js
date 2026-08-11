@@ -5,7 +5,7 @@ const { Pool } = require('pg');
 
 const { criaCorrida, transiciona } = require('../src/dominio/corridas');
 const {
-  cadastraLojista, registraCartao, cadastraMotoboy, criaOperadorGenese,
+  cadastraLojista, registraCartao, cadastraMotoboy, criaOperadorGenese, criaOperador,
 } = require('../src/dominio/contas');
 const { garanteCliente } = require('../src/dominio/clientes');
 const { emTransacao } = require('../src/dominio/nucleo');
@@ -100,9 +100,24 @@ async function operadorReal(pool) {
   }
 }
 
+async function buscaGenese(pool) {
+  await operadorReal(pool);
+  const { rows } = await pool.query('SELECT * FROM operadores WHERE genese');
+  return rows[0];
+}
+
 async function criaAtor(pool, tipo) {
   if (tipo === 'sistema') return null;
-  if (tipo === 'lojista') return lojistaApto(pool);
+  // Lojista NOVO e apto — `atorPara` é que devolve o compartilhado. Quem
+  // pede `atorNovo('lojista')` quer outro lojista de verdade: devolver o
+  // compartilhado faria um teste que o bloqueia derrubar a bateria inteira.
+  if (tipo === 'lojista') {
+    const { conta } = await cadastraLojista(pool, {
+      nome: 'Loja avulsa', telefone: telefoneNovo('88 8'),
+    });
+    await registraCartao(pool, { lojistaId: conta.id, cartaoRef: 'cartao-avulso' });
+    return conta.id;
+  }
   if (tipo === 'motoboy') {
     const cpf = cpfValido();
     const { conta } = await cadastraMotoboy(pool, {
@@ -124,6 +139,17 @@ async function criaAtor(pool, tipo) {
     return cliente.id;
   }
   if (tipo === 'painel') return operadorReal(pool);
+  // Operador DESCARTÁVEL, para cenários que bloqueiam a conta: o gênese é
+  // único no banco inteiro e bloqueá-lo envenenaria a bateria toda.
+  if (tipo === 'painel-novo') {
+    const { conta } = await criaOperador(pool, {
+      nome: `Operador ${randomUUID().slice(0, 8)}`,
+      telefone: telefoneNovo('88 3'),
+      papel: 'atendimento',
+      autor: await buscaGenese(pool),
+    });
+    return conta.id;
+  }
   throw new Error(`tipo de ator desconhecido: ${tipo}`);
 }
 
@@ -131,6 +157,9 @@ async function criaAtor(pool, tipo) {
 // (para provar que o alheio é recusado) chama `atorNovo`.
 function atorPara(pool, autorTipo) {
   if (autorTipo === 'sistema') return null;
+  // O lojista compartilhado é o DONO das corridas da bateria (`levaAte` as
+  // cria com ele), então é ele que o vínculo espera.
+  if (autorTipo === 'lojista') return lojistaApto(pool);
   if (!atores.has(autorTipo)) atores.set(autorTipo, criaAtor(pool, autorTipo));
   return atores.get(autorTipo);
 }

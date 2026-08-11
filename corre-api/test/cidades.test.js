@@ -286,14 +286,14 @@ test('o cliente nasce pelo telefone que o lojista digita, e não tem cidade', as
   t.after(() => pool.end());
 
   const telefone = telefoneNovo();
-  const { cliente, criada } = await garanteCliente(pool.cru, { telefone });
+  const { cliente, criada } = await garanteCliente(pool.cru, { telefone, interno: true });
   assert.equal(criada, true);
   assert.equal(cliente.telefone, telefone);
   assert.equal(cliente.reivindicado_em, null, 'nasce NÃO reivindicada');
   assert.equal(cliente.cidade_id, undefined, 'cliente não tem cidade — é da plataforma');
 
   // Segundo lojista digitando o mesmo número: a MESMA conta, não erro.
-  const outra = await garanteCliente(pool.cru, { telefone });
+  const outra = await garanteCliente(pool.cru, { telefone, interno: true });
   assert.equal(outra.criada, false);
   assert.equal(outra.cliente.id, cliente.id);
 });
@@ -304,7 +304,7 @@ test('o mesmo telefone pode ser de um lojista e de um cliente ao mesmo tempo', a
 
   const telefone = telefoneNovo();
   const { conta } = await cadastraLojista(pool, { nome: 'Dona da loja', telefone });
-  const { cliente } = await garanteCliente(pool.cru, { telefone });
+  const { cliente } = await garanteCliente(pool.cru, { telefone, interno: true });
 
   assert.ok(conta.id && cliente.id);
   assert.notEqual(conta.id, cliente.id, 'são identidades distintas, não a mesma conta');
@@ -315,7 +315,7 @@ test('reivindicar é idempotente e grava um evento só', async (t) => {
   const pool = poolApp();
   t.after(() => pool.end());
 
-  const { cliente } = await garanteCliente(pool.cru, { telefone: telefoneNovo() });
+  const { cliente } = await garanteCliente(pool.cru, { telefone: telefoneNovo(), interno: true });
   const primeira = await reivindica(pool.cru, { clienteId: cliente.id, nome: 'Maria' });
   assert.equal(primeira.repetida, false);
   assert.equal(primeira.cliente.nome, 'Maria');
@@ -339,7 +339,7 @@ test('Lei 9 — 60 tentativas simultâneas com o mesmo telefone dão UMA conta',
   const telefone = telefoneNovo();
   const resultados = await emParalelo(
     Array.from({ length: 60 }, (_, i) => i), 60,
-    () => garanteCliente(pool.cru, { telefone }).then((r) => r.cliente.id, (e) => `erro:${e.message}`),
+    () => garanteCliente(pool.cru, { telefone, interno: true }).then((r) => r.cliente.id, (e) => `erro:${e.message}`),
   );
 
   const ids = new Set(resultados);
@@ -355,7 +355,7 @@ test('Lei 9 — 40 reivindicações simultâneas geram UM evento só', async (t)
   const pool = poolApp();
   t.after(() => pool.end());
 
-  const { cliente } = await garanteCliente(pool.cru, { telefone: telefoneNovo() });
+  const { cliente } = await garanteCliente(pool.cru, { telefone: telefoneNovo(), interno: true });
   await emParalelo(
     Array.from({ length: 40 }, (_, i) => i), 40,
     () => reivindica(pool.cru, { clienteId: cliente.id, nome: 'Ana' }).then(() => null, (e) => e),
@@ -375,7 +375,7 @@ test('a corrida guarda cidade e cliente', async (t) => {
 
   const { conta } = await cadastraLojista(pool, { nome: 'Loja com cliente', telefone: telefoneNovo() });
   await registraCartao(pool, { lojistaId: conta.id, cartaoRef: 'cartao' });
-  const { cliente } = await garanteCliente(pool.cru, { telefone: telefoneNovo() });
+  const { cliente } = await garanteCliente(pool.cru, { telefone: telefoneNovo(), interno: true });
 
   const { corrida } = await criaCorrida(pool, {
     autorTipo: 'lojista',
@@ -416,4 +416,22 @@ test('LEI 11: autor de evento tem que existir — log não aceita autor forjado'
   );
   assert.equal(evento.autor_tipo, 'lojista');
   assert.equal(evento.autor_id, conta.id);
+
+  // 'SISTEMA' NÃO NASCE POR OMISSÃO. Bastava não mandar o lojista para o
+  // evento sair com `autor_tipo: 'sistema'` — a ausência de um campo virava
+  // a autoridade mais alta do sistema, que ninguém consegue provar ser.
+  await assert.rejects(
+    () => garanteCliente(pool, { telefone: `88 9${uuid().slice(0, 10)}` }),
+    (erro) => erro instanceof ErroDeDominio && erro.codigo === 'lojista_inexistente',
+    'omitir o lojista não pode virar sistema',
+  );
+
+  // O caminho interno continua existindo — e agora é EXPLÍCITO, não omissão.
+  const interno = await garanteCliente(pool, { telefone: `88 9${uuid().slice(0, 10)}`, interno: true });
+  const { rows: [doSistema] } = await pool.query(
+    `SELECT autor_tipo, autor_id FROM eventos WHERE agregado_tipo = 'cliente' AND agregado_id = $1`,
+    [interno.cliente.id],
+  );
+  assert.equal(doSistema.autor_tipo, 'sistema');
+  assert.equal(doSistema.autor_id, null);
 });
