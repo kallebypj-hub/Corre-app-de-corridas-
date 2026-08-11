@@ -205,7 +205,7 @@ function confereMudancas(gravado, pedido) {
 }
 
 async function acaoDaOperacaoSobreMotoboy(pool, {
-  motoboyId, autor, papeis, tipo, payload, mudancas, revogaSessoes, chaveIdempotencia,
+  motoboyId, autor, papeis, tipo, payload, pedido, mudancas, revogaSessoes, chaveIdempotencia,
 }) {
   const chave = chaveIdempotencia || randomUUID();
   exigePapelDoOperador(autor, papeis);
@@ -216,7 +216,16 @@ async function acaoDaOperacaoSobreMotoboy(pool, {
       // Lei 11: a chave vale para a MESMA operação, e "mesma" inclui os
       // dados. Sem isto, a mesma chave com outro aparelho devolvia replay e
       // a troca nova nunca acontecia — em silêncio.
-      confereDados: (p) => confereMudancas(p, payload),
+      //
+      // MAS SÓ SE COMPARA O QUE O CHAMADOR PEDIU. Comparar o payload
+      // inteiro quebrou a Lei 5: em `trocaAparelho` o campo `de` é DERIVADO
+      // da projeção, e na retentativa a projeção JÁ MUDOU — o pedido
+      // recalculado virava {de:'B', para:'B'} contra o gravado
+      // {de:'A', para:'B'}, e a retentativa BYTE A BYTE IDÊNTICA levava 409.
+      //
+      // A regra que sobra: idempotência compara PEDIDO com PEDIDO, sempre
+      // já normalizado — nunca pedido com estado.
+      confereDados: (p) => confereMudancas(p, pedido || payload),
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -314,6 +323,8 @@ async function trocaAparelho(pool, { motoboyId, novoAparelhoId, autor, chaveIdem
     papeis: ['dono', 'atendimento'],
     tipo: 'aparelho_trocado',
     payload: { de: atual ? atual.aparelho_id : null, para: aparelho },
+    // `de` é estado, `para` é pedido. Só `para` entra na comparação da chave.
+    pedido: { para: aparelho },
     mudancas: { aparelho_id: aparelho },
     // Troca invalida o token do aparelho antigo na hora — o motoboy re-loga
     // no aparelho novo (um aparelho por conta).
@@ -379,10 +390,14 @@ async function registraCartao(pool, { lojistaId, cartaoRef, chaveIdempotencia })
   const chave = chaveIdempotencia || randomUUID();
   const cartao = exigeTexto(cartaoRef, 'cartao_ref');
 
+  // Compara o valor NORMALIZADO — o mesmo que foi gravado. Comparar o
+  // parâmetro cru contra o gravado (que passou por `exigeTexto`, e portanto
+  // vem aparado) fazia qualquer `cartao_ref` com espaço nas pontas
+  // transformar a retentativa IDÊNTICA em 409.
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'cartao_registrado', agregadoTipo: 'lojista', agregadoId: lojistaId,
-      confereDados: (p) => p.cartao_ref === cartaoRef,
+      confereDados: (p) => p.cartao_ref === cartao,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -415,7 +430,7 @@ async function registraCartao(pool, { lojistaId, cartaoRef, chaveIdempotencia })
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'cartao_registrado', agregadoTipo: 'lojista', agregadoId: lojistaId,
-        confereDados: (p) => p.cartao_ref === cartaoRef,
+        confereDados: (p) => p.cartao_ref === cartao,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(

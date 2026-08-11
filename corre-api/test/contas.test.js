@@ -200,6 +200,68 @@ test('cadastro e travas (Etapa 2)', async (t) => {
     assert.equal(eventos[0].autor_tipo, 'painel');
   });
 
+  await t.test('LEI 5: retentativa IDÊNTICA da troca de aparelho é operação nula, não erro', async () => {
+    // O caso canônico da Lei 5: a operação chegou e a RESPOSTA se perdeu.
+    // O operador re-envia a MESMA chamada, byte a byte. Isso tem que ser
+    // operação nula — se virar erro, ele repete com chave NOVA e grava um
+    // segundo evento num log que a Lei 3 torna irreversível.
+    //
+    // Não existia teste assim para nenhuma das duas funções com chave. Foi
+    // o que deixou a regressão passar verde: a bateria testava chave com
+    // dados DIFERENTES (que tem que ser recusada) e nunca chave com dados
+    // IGUAIS (que tem que ser replay).
+    const { conta: motoboy } = await contas.cadastraMotoboy(pool, cadastroValidoDeMotoboy());
+    const atendimento = await atendimentoDeTeste(pool);
+    const chave = `troca-${randomUUID()}`;
+    const pedido = {
+      motoboyId: motoboy.id, novoAparelhoId: 'aparelho-B', autor: atendimento, chaveIdempotencia: chave,
+    };
+
+    const primeira = await contas.trocaAparelho(pool, { ...pedido });
+    assert.equal(primeira.repetida, false);
+    assert.equal(primeira.conta.aparelho_id, 'aparelho-B');
+
+    const segunda = await contas.trocaAparelho(pool, { ...pedido });
+    assert.equal(segunda.repetida, true, 'a retentativa idêntica tem que replayar, não errar');
+    assert.equal(segunda.conta.aparelho_id, 'aparelho-B');
+
+    // E o log não andou: um evento só.
+    const eventos = await eventoDe(pool, 'motoboy', motoboy.id, 'aparelho_trocado');
+    assert.equal(eventos.length, 1, 'a retentativa não pode gravar um segundo evento');
+
+    // A chave continua sendo da OPERAÇÃO: outro aparelho com a mesma chave
+    // é reuso, não replay. As duas coisas convivem, e é o par que importa.
+    await assert.rejects(
+      () => contas.trocaAparelho(pool, { ...pedido, novoAparelhoId: 'aparelho-C' }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+    );
+  });
+
+  await t.test('LEI 5: retentativa IDÊNTICA do cartão é operação nula — inclusive com espaço nas pontas', async () => {
+    const { conta: lojista } = await contas.cadastraLojista(pool, {
+      nome: 'Loja da retentativa', telefone: `88 4${randomUUID().slice(0, 10)}`,
+    });
+    const chave = `cartao-${randomUUID()}`;
+    // O espaço nas pontas é o ponto: o valor GRAVADO passa por `exigeTexto`
+    // e vem aparado, então comparar com o parâmetro cru nunca casa.
+    const pedido = { lojistaId: lojista.id, cartaoRef: '  cartao-com-espaco  ', chaveIdempotencia: chave };
+
+    const primeira = await contas.registraCartao(pool, { ...pedido });
+    assert.equal(primeira.repetida, false);
+
+    const segunda = await contas.registraCartao(pool, { ...pedido });
+    assert.equal(segunda.repetida, true, 'a retentativa idêntica tem que replayar, não errar');
+
+    const eventos = await eventoDe(pool, 'lojista', lojista.id, 'cartao_registrado');
+    assert.equal(eventos.length, 1);
+    assert.equal(eventos[0].payload.cartao_ref, 'cartao-com-espaco');
+
+    await assert.rejects(
+      () => contas.registraCartao(pool, { ...pedido, cartaoRef: 'outro-cartao' }),
+      (erro) => erro instanceof ErroDeDominio && erro.codigo === 'chave_reutilizada',
+    );
+  });
+
   await t.test('só o dono cria operador; gênese só existe uma', async () => {
     const atendimento = await atendimentoDeTeste(pool);
     await assert.rejects(
