@@ -147,10 +147,19 @@ async function cadastraMotoboy(pool, {
     );
   }
 
+  // "MESMA OPERAÇÃO" INCLUI O APARELHO. Sem isto, quem apresentasse
+  // (CPF + chave) recebia `repetida: true` com a conta da vítima — e a rota
+  // emitia sessão a partir dela, com o aparelho GRAVADO. A trava de posse de
+  // aparelho (`/sessoes/motoboy` recusa aparelho diferente) era contornada
+  // por uma string que ninguém desenhou como segredo.
+  //
+  // Esta é a primeira das DUAS camadas, e a fonte dela é o PAYLOAD DO EVENTO.
+  // A segunda mora na rota e lê a LINHA da conta — fontes independentes, que
+  // é o que faz duas camadas contarem como duas (Lei 10).
   if (chaveIdempotencia) {
     const replayPrevio = await tentaReplayEvento(pool, {
       chave, tipo: 'motoboy_cadastrado', agregadoTipo: 'motoboy', agregadoId: null,
-      confereDados: (p) => p.cpf === cpfLimpo,
+      confereDados: (p) => p.cpf === cpfLimpo && p.aparelho_id === aparelho,
     });
     if (replayPrevio) return respostaDeReplay(pool, replayPrevio);
   }
@@ -180,7 +189,7 @@ async function cadastraMotoboy(pool, {
       // da chave: replay primeiro, recusa depois.
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'motoboy_cadastrado', agregadoTipo: 'motoboy', agregadoId: null,
-        confereDados: (p) => p.cpf === cpfLimpo,
+        confereDados: (p) => p.cpf === cpfLimpo && p.aparelho_id === aparelho,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new ErroDeDominio(CODIGOS.CPF_JA_CADASTRADO, 'CPF já cadastrado');
@@ -188,7 +197,7 @@ async function cadastraMotoboy(pool, {
     if (ehDisputaDePosicao(erro)) {
       const replay = await tentaReplayEvento(pool, {
         chave, tipo: 'motoboy_cadastrado', agregadoTipo: 'motoboy', agregadoId: null,
-        confereDados: (p) => p.cpf === cpfLimpo,
+        confereDados: (p) => p.cpf === cpfLimpo && p.aparelho_id === aparelho,
       });
       if (replay) return respostaDeReplay(pool, replay);
       throw new Error(`chave de idempotência ${chave} conflitou mas não foi encontrada`);

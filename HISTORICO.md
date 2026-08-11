@@ -287,6 +287,36 @@ A auditoria adversarial roda agentes independentes que **atacam** o código exec
 | Varredura da Lei 9 (retroativa) | 4 | — | — | Varreu todos os caminhos de escrita da `main`: **os dois do OTP eram os únicos vulneráveis**; todo o resto protegido pelo banco (UNIQUE de seq, UNIQUE de chave, trigger anti-buraco, índice da gênese, PK do token) |
 | Revisão de 2026-08-09 (a própria spec) | 10 | 63 | 23 | Primeira vez que a auditoria adversarial rodou sobre **documento**, não sobre código, com cinco lentes: máquina de estados, dinheiro (refazendo as contas na calculadora), referências cruzadas, restos da versão antiga e buracos de produto. Achou: **Lei 6 violada por construção** pelo próprio estorno que a revisão criou; **estorno de "100% da parcela do lojista" que devolve ao cliente menos do que ele pagou**; **5% de frete ímpar sem regra de arredondamento**; **QR sem prazo e pagamento que confirma depois de a corrida morrer**; **"só Pix no MVP" falso** desde que o retorno virou cobrança de cartão; **valor do retorno inexistente** sendo critério de aceite; e uma dúzia de referências quebradas pela renumeração de 13 para 18 etapas. Decisões 76 a 87 |
 
+## 2026-08-10 — A vulnerabilidade que a auditoria do PR #9 achou fora do PR #9
+
+Cinco lentes adversariais sobre outro assunto (a Lei 11 no motor de transições) e o pior achado estava **na `main`**, no código da Etapa 2. Reproduzido por mim antes de corrigido, com a credencial da aplicação, em banco nascido das migrations.
+
+**A chave de idempotência do cadastro funcionava como credencial de login.**
+
+`cadastraLojista`/`cadastraMotoboy` consultavam o replay com `agregadoId: null` e um `confereDados` que comparava **só dado que o próprio chamador forneceu** — `p.telefone === telefone`, `p.cpf === cpf`. Quem apresentasse `(telefone + chave)` ou `(CPF + chave)` recebia `repetida: true` **com a conta da vítima**, e as rotas `POST /lojistas` e `POST /motoboys` emitiam sessão a partir de `conta` sem distinguir criação de replay:
+
+```
+conta da vítima: 3df3c83e-c1c4-48db-a00e-6799aa61e83c repetida = false
+atacante com (telefone + chave) da vítima   -> {"repetida":true,"mesma_conta":true}
+atacante SEM a chave (controle)             -> RECUSADO telefone_ja_cadastrado
+atacante com (CPF + chave) e OUTRO aparelho -> {"repetida":true,"mesma_conta":true,
+                                                "aparelho_devolvido":"ap-da-vitima"}
+```
+
+No motoboy era pior: a rota emitia `emiteSessao(..., aparelhoId: conta.aparelho_id)` — **o aparelho gravado, o da vítima** —, então `resolveSessao` validava a sessão do atacante como motoboy da vítima. A trava de posse de aparelho (`/sessoes/motoboy` responde `aparelho_nao_autorizado` a aparelho diferente) era **contornada sem nunca ser acionada**.
+
+**E um segundo vazamento, que só apareceu porque o teste do primeiro o expôs:** a mensagem de `chave_reutilizada` trazia `${evento.agregado_id}`. Ou seja, a recusa **correta** do ataque saía com o **id da conta da vítima dentro**. Barrar e entregar o id ao mesmo tempo.
+
+| # | Tema | Antes | Depois | Motivo |
+|---|---|---|---|---|
+| 161 | **Replay não emite credencial** | A resposta repetida do cadastro emitia sessão nova a partir da conta encontrada | **A sessão nasce de prova de identidade, nunca do atalho.** No motoboy, a rota chama a MESMA porta do login (`emiteSessaoDeMotoboy`, CPF + aparelho conferidos contra a linha da conta, com `situacao` junto). No lojista, cuja prova é o código de 6 dígitos e não está no pedido, o replay **não emite sessão e não confirma a conta** | Uma chave que o cliente gera não é segredo. Enquanto ela emitia credencial, era o único fator entre um estranho e a conta — e ainda entregava o aparelho da vítima junto |
+| 162 | **"Mesma operação" inclui o aparelho** | `confereDados: (p) => p.cpf === cpfLimpo` | `... && p.aparelho_id === aparelho` | Camada do **domínio**, independente da camada da rota: a fonte aqui é o **payload do evento**, lá é a **linha da conta**. `cadastraMotoboy` é chamável de fora do HTTP, e a Lei 11 vale para a função, não para quem a chama |
+| 163 | **A recusa de reuso não diz qual agregado** | `(${evento.tipo} em ${evento.agregado_tipo} ${evento.agregado_id})` | sem o id | "Erro que revela existência é vazamento" — e id alheio é pior que existência. A recusa certa não pode ser o canal de entrega |
+
+**Atrito para o usuário legítimo: nenhum no motoboy, e nenhum novo no lojista.** No motoboy a prova (CPF + aparelho) já está dentro do próprio pedido de cadastro, então a retentativa do dono continua devolvendo sessão — no cadastro novo o aparelho pedido **é** o gravado, e a prova passa por construção. No lojista, o que some é o atalho "retentar com a mesma chave devolve token": quem retentava **sem** chave já recebia 409 e já ia para o código de 6 dígitos. Nenhum app existe ainda (Etapas 13 e 14), então nenhum fluxo em uso muda.
+
+**Efeito colateral bom:** como a sessão do cadastro de motoboy passou a sair da porta do login, ela herdou a recusa de **conta bloqueada** — que a porta do cadastro não tinha.
+
 ## Falha de processo registrada
 
 Na Etapa 3 a auditoria do OTP foi deixada rodando **em paralelo** com a obra, violando "obra e auditoria nunca em paralelo". Agentes de auditoria sabotam arquivos e banco para provar o controle negativo, e isso contaminou uma rodada de testes (uma sabotagem vazou na árvore de trabalho e apareceu como falha inexplicada). Corrigido isolando a etapa, mesclando a correção em árvore limpa e refazendo tudo single-threaded. A regra está no `CORRE.md`.

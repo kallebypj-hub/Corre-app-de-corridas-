@@ -80,9 +80,14 @@ async function tentaReplayEvento(pool, {
     && (!agregadoId || evento.agregado_id === agregadoId)
     && (!confereDados || confereDados(evento.payload));
   if (!mesmaOperacao) {
+    // A MENSAGEM NÃO DIZ QUAL AGREGADO. Ela dizia — e isso transformava a
+    // recusa numa entrega: quem apresentasse (CPF + chave) de outro motoboy
+    // era corretamente barrado e saía com o ID DA CONTA DA VÍTIMA na
+    // resposta de erro. "Erro que revela existência é vazamento", e id
+    // alheio é pior que existência.
     throw new ErroDeDominio(
       CODIGOS.CHAVE_REUTILIZADA,
-      `chave de idempotência já usada em outra operação (${evento.tipo} em ${evento.agregado_tipo} ${evento.agregado_id})`,
+      `chave de idempotência já usada em outra operação (${evento.tipo} em ${evento.agregado_tipo})`,
     );
   }
   return evento;

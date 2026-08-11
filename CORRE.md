@@ -61,6 +61,14 @@ Violação de qualquer uma invalida a etapa, mesmo que tudo funcione.
 
 **Lei 9 — Toda escrita nasce com teste de concorrência.** Todo caminho que grava tem teste de concorrência real, sem precisar ser pedido. Leitura-e-depois-escrita é sempre suspeita de lost update: contador, limite, cap de tentativas, reserva de vaga, saldo. Prove com processos concorrentes de verdade contra o servidor rodando, nunca com cliente de teste single-thread. Se a garantia depende de ordem de execução, ela não existe — a garantia mora no banco (`UNIQUE`, constraint, `UPDATE` condicional atômico, advisory lock).
 
+---
+
+**Replay nunca emite credencial.** A resposta repetida devolve **o resultado da operação**, jamais uma sessão nova. Sessão só nasce de **prova de identidade**: CPF mais aparelho, ou código de 6 dígitos. E a **conferência de dono vale para a resposta repetida** — quem não prova ser o dono não recebe o resultado dele, nem confirmação de que ele existe.
+
+**Conferência de dono vem ANTES do atalho de replay, sempre.** O caminho de idempotência existe para ser rápido, e rápido significa **pular etapa** — quem acerta a chave recebe a resposta sem passar por validação nenhuma. Se a conferência vier depois, ela não roda.
+
+*Origem, 2026-08-10:* a chave de idempotência do cadastro funcionava como **credencial de login**. Apresentar `(telefone + chave)` ou `(CPF + chave)` devolvia `repetida: true` **com a conta da vítima**, e a rota emitia sessão a partir dela — no motoboy com o `aparelho_id` **gravado**, contornando a trava de um-aparelho-por-conta sem nunca acionar o login. A chave é um id que o cliente gera; **nunca foi desenhada para ser segredo**, e virou o único fator entre um estranho e a conta. Na mesma rodada, três outros defeitos tinham exatamente esta forma — o atalho respondendo antes da conferência.
+
 ## Como testar
 
 - **Teste executando, não lendo.** Leitura de código não prova nada.
