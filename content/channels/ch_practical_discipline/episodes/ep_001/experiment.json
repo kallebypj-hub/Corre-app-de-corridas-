@@ -1,0 +1,34 @@
+{
+  "episode_id": "ep_001",
+  "experiment_id": "exp_ep_001",
+  "hypothesis": "Linha de base tecnica do canal: um miniensaio narrado de 6 a 9 minutos, aberto com afirmacao seca em segunda pessoa e sem trilha, consegue sustentar retencao inicial acima do abandono tipico de video longo sem rosto. Este episodio nao testa nada contra nada: ele estabelece a referencia contra a qual os proximos serao comparados.",
+  "primary_variable": "hook_style",
+  "variable_label": "estilo de abertura",
+  "held_constant": [
+    "narration_voice",
+    "music",
+    "target_minutes",
+    "pause_beat",
+    "pause_scene"
+  ],
+  "applies_learning": [],
+  "search_intent": "pessoa procurando entender por que nao consegue comecar, nao procurando motivacao",
+  "audience": "adultos 25-45 que ja tentaram rotina e falharam",
+  "knowledge_consulted": {
+    "must_apply": [],
+    "worth_testing": [],
+    "do_not_repeat_blindly": [],
+    "counts": {
+      "apoiadas": 0,
+      "promissoras": 0,
+      "descartadas": 0
+    },
+    "note": "Descartada quer dizer \"nao funcionou nas condicoes testadas\". Fora delas, continua sem teste — e pode ser retomada com justificativa."
+  },
+  "prior_experiments": 0,
+  "registered_before_production": true,
+  "note": "Este registro e imutavel. Corrigir depois gera evento novo, nunca sobrescreve.",
+  "registered_event": {
+    "note": "experimento ja registrado; registro imutavel preservado"
+  }
+}

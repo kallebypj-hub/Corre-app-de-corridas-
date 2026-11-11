@@ -1,0 +1,10 @@
+{
+  "asr_duration_s": 469.505,
+  "words_recognized": 996,
+  "reference_words": 1023,
+  "word_error_rate": 0.0645,
+  "intelligibility_verdict": "APROVADO",
+  "low_confidence_words": 19,
+  "elapsed_ms": 36961,
+  "method": "faster-whisper local (CPU, int8). WER calculado entre o texto do roteiro e a transcricao do audio sintetizado."
+}

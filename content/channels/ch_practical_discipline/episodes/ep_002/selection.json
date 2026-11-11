@@ -1,0 +1,24 @@
+{
+  "episode_id": "ep_002",
+  "chosen_id": "idea_04",
+  "title": "How Long a Habit Takes Is the Wrong Question",
+  "thesis": "Todo número de formação de hábito que circula — 21, 66, 59 — é uma mediana calculada sobre quem terminou. O espalhamento é o achado, não o meio; e perguntar 'quanto tempo' instala um prazo que transforma variação normal em veredicto sobre a pessoa. A variável que de fato se move não é o calendário: é repetição em contexto estável.",
+  "idea_thesis": "O numero mais repetido do nicho descreve uma mediana de um subgrupo, e metade dos participantes nunca chegou la.",
+  "rationale": "Escolhida porque é a única pauta do catálogo cuja correção depende de ler o que o estudo MEDIU, e não de repetir o número. Isso dá ao episódio uma tese própria (estatística de sobreviventes) que não existe em nenhum outro vídeo do canal.",
+  "blocked_for_research": [
+    {
+      "id": "idea_10",
+      "reason": "confirmar na fonte primaria a atribuicao a Durant antes de produzir"
+    },
+    {
+      "id": "idea_11",
+      "reason": "precisa de fonte primaria solida antes de entrar no calendario"
+    },
+    {
+      "id": "idea_12",
+      "reason": "fontes ainda genericas; nao produzir antes de dossie"
+    }
+  ],
+  "decided_by": "editorial_director",
+  "decided_at": "2026-11-11T17:51:46.474Z"
+}

@@ -1,0 +1,38 @@
+{
+  "episode_id": "ep_002",
+  "experiment_id": "exp_ep_002",
+  "hypothesis": "Abrir com tres numeros em disputa (21, 66, 59) prende mais nos primeiros 30 segundos do que abrir com afirmacao seca, porque instala uma pergunta aritmetica que o espectador quer ver resolvida.",
+  "primary_variable": "hook_style",
+  "variable_label": "estilo de abertura",
+  "held_constant": [
+    "narration_voice",
+    "music",
+    "target_minutes",
+    "pause_beat",
+    "pause_scene",
+    "title_shape"
+  ],
+  "applies_learning": [
+    "exp_ep_001 (linha de base tecnica): a producao fechou em 7min49 com 28/28 gates e WER de 6,45%, o que confirmou que o formato de miniensaio narrado e produzivel com qualidade. ISTO E APRENDIZADO DE PRODUCAO, NAO DE AUDIENCIA: o ep_001 ainda nao foi publicado, entao nao existe nenhuma medida de publico para aplicar.",
+    "Do mesmo exp_ep_001 veio uma correcao de producao aplicada aqui: a miniatura A mediu contraste de 4,17:1, abaixo do piso de 4,5:1. Neste episodio as duas variantes foram desenhadas com massa clara maior."
+  ],
+  "search_intent": "pessoa que ouviu 21 ou 66 dias e quer saber se e verdade",
+  "audience": "adultos que ja ouviram a regra dos 21 ou 66 dias",
+  "knowledge_consulted": {
+    "must_apply": [],
+    "worth_testing": [],
+    "do_not_repeat_blindly": [],
+    "counts": {
+      "apoiadas": 0,
+      "promissoras": 0,
+      "descartadas": 0
+    },
+    "note": "Descartada quer dizer \"nao funcionou nas condicoes testadas\". Fora delas, continua sem teste — e pode ser retomada com justificativa."
+  },
+  "prior_experiments": 1,
+  "registered_before_production": true,
+  "note": "Este registro e imutavel. Corrigir depois gera evento novo, nunca sobrescreve.",
+  "registered_event": {
+    "note": "experimento ja registrado; registro imutavel preservado"
+  }
+}

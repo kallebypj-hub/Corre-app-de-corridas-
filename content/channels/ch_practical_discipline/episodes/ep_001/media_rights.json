@@ -1,0 +1,105 @@
+{
+  "verdict": "APROVADO",
+  "assets": [
+    {
+      "scene": "s01",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s02",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s03",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s04",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s05",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s06",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s07",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s08",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s09",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    },
+    {
+      "scene": "s10",
+      "asset_type": "motion_graphics_generated_by_code",
+      "source": "obra original do canal",
+      "license": "proprietario do canal (gerado por codigo nesta producao)",
+      "attribution": "nao requerida",
+      "third_party_media": false,
+      "limitations": "nenhuma — obra propria gerada por codigo nesta sessao"
+    }
+  ],
+  "assets_with_unknown_license": 0,
+  "third_party_assets": 0,
+  "policy": [
+    "Nenhuma foto, video, musica, cena de filme, podcast ou fala de terceiro foi usada.",
+    "Nenhuma imagem generativa foi usada: todo visual e desenhado por codigo neste repositorio.",
+    "Tipografia Inter sob SIL Open Font License 1.1, instalada no sistema; nao redistribuida no video.",
+    "Trilha musical: ausente por decisao. O video funciona sem musica."
+  ],
+  "checked_by": "media_rights_curator",
+  "checked_at": "2026-11-11T17:47:42.618Z"
+}

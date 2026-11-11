@@ -1,0 +1,459 @@
+{
+  "channel": "ch_practical_discipline",
+  "created": "2026-11-11",
+  "total": 30,
+  "rule": "Nenhum lote e produzido antecipadamente. Cada lote de 4 incorpora o que o lote anterior mediu. Hipotese pode ser trocada antes da producao, e a troca vira evento no registro.",
+  "batching": "lotes de 4 episodios; o lote N+1 so abre depois que o lote N tem ao menos o marco de 7 dias coletado ou declarado indisponivel.",
+  "episodes": [
+    {
+      "slot": 1,
+      "batch": 1,
+      "working_title": "Why Waiting for Motivation Keeps You Stuck",
+      "primary_variable": "hook_style",
+      "variable_value": "cold_statement",
+      "hypothesis": "Linha de base tecnica do canal.",
+      "status": "produzido",
+      "produced_as": "ep_001",
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 2,
+      "batch": 1,
+      "working_title": "How Long a Habit Takes Is the Wrong Question",
+      "primary_variable": "hook_style",
+      "variable_value": "number_trio",
+      "hypothesis": "Abertura com tres numeros em disputa prende mais que afirmacao seca.",
+      "status": "produzido",
+      "produced_as": "ep_002",
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 3,
+      "batch": 1,
+      "working_title": "The Day After You Break the Streak",
+      "primary_variable": "evidence_position",
+      "variable_value": "late",
+      "hypothesis": "Segurar a evidencia para depois do payoff mantem quem veio pelo lado pratico.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 4,
+      "batch": 1,
+      "working_title": "Why Tracking Everything Can Kill the Habit",
+      "primary_variable": "hook_style",
+      "variable_value": "contradiction",
+      "hypothesis": "Abrir com contradicao do proprio nicho segura melhor do que abrir com promessa.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 5,
+      "batch": 2,
+      "working_title": "Boredom Is the Skill Nobody Trains",
+      "primary_variable": "thumbnail_style",
+      "variable_value": "contrast_word",
+      "hypothesis": "Miniatura de uma palavra em alto contraste ganha CTR de miniatura tipografica densa.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 6,
+      "batch": 2,
+      "working_title": "The Smallest Unit of Discipline Is 90 Seconds",
+      "primary_variable": "target_minutes",
+      "variable_value": "[4,6]",
+      "hypothesis": "Episodio de 4-6 min retem proporcionalmente mais que 6-9 no mesmo nicho.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 7,
+      "batch": 2,
+      "working_title": "What Willpower Research Got Wrong, and What Survived",
+      "primary_variable": "payoff_position",
+      "variable_value": "middle",
+      "hypothesis": "Entregar o payoff no meio reduz abandono da segunda metade.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 8,
+      "batch": 2,
+      "working_title": "Your Environment Is Already Deciding For You",
+      "primary_variable": "motif_set",
+      "variable_value": "spatial",
+      "hypothesis": "Conjunto de motivos espaciais sustenta atencao melhor que tipografia pura.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 9,
+      "batch": 3,
+      "working_title": "Motivation Is a Receipt. Here Is the Ticket.",
+      "primary_variable": "hook_style",
+      "variable_value": "callback",
+      "hypothesis": "Abrir com retomada de um episodio anterior aumenta espectador recorrente.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 10,
+      "batch": 3,
+      "working_title": "The Two-Minute Rule Does Not Survive Contact With Tuesday",
+      "primary_variable": "title_shape",
+      "variable_value": "correction",
+      "hypothesis": "Titulo de correcao atrai busca; titulo de promessa atrai navegacao.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 11,
+      "batch": 3,
+      "working_title": "Why You Clean Your Desk Before Hard Work",
+      "primary_variable": "scene_count",
+      "variable_value": "14",
+      "hypothesis": "Mais cenas curtas reduzem queda no meio comparado a menos cenas longas.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 12,
+      "batch": 3,
+      "working_title": "Habit Stacking Is Weaker Than It Sounds",
+      "primary_variable": "evidence_position",
+      "variable_value": "early",
+      "hypothesis": "Evidencia logo no inicio filtra publico mas aumenta retencao final.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 13,
+      "batch": 4,
+      "working_title": "The Cost of a Decision You Keep Postponing",
+      "primary_variable": "narration_speed",
+      "variable_value": "1.05",
+      "hypothesis": "Narracao 5% mais rapida melhora retencao inicial sem perder clareza.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 14,
+      "batch": 4,
+      "working_title": "Nobody Is Consistent. They Are Just Arranged.",
+      "primary_variable": "hook_style",
+      "variable_value": "cold_statement",
+      "hypothesis": "Replicar a abertura seca do ep_001 em outro assunto testa se o efeito e da abertura ou do tema.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 15,
+      "batch": 4,
+      "working_title": "What Happens in the Brain Is Not the Point",
+      "primary_variable": "thumbnail_style",
+      "variable_value": "chart",
+      "hypothesis": "Miniatura com grafico simples ganha de miniatura so com palavra em nicho de pesquisa.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 16,
+      "batch": 4,
+      "working_title": "The Gym Is Not the Hard Part",
+      "primary_variable": "pause_scene",
+      "variable_value": "0.8",
+      "hypothesis": "Pausa menor entre cenas aumenta ritmo e retencao intermediaria.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 17,
+      "batch": 5,
+      "working_title": "Why Advice That Worked for Them Fails for You",
+      "primary_variable": "evidence_position",
+      "variable_value": "middle",
+      "hypothesis": "Evidencia no meio equilibra credibilidade e retencao.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 18,
+      "batch": 5,
+      "working_title": "Discipline Without Goals",
+      "primary_variable": "title_shape",
+      "variable_value": "question",
+      "hypothesis": "Titulo em pergunta ganha CTR de titulo em afirmacao no mesmo tema.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 19,
+      "batch": 5,
+      "working_title": "The Myth of the Morning Routine",
+      "primary_variable": "hook_style",
+      "variable_value": "number_trio",
+      "hypothesis": "Segunda aplicacao da abertura numerica, para testar se o efeito do ep_002 se repete.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 20,
+      "batch": 5,
+      "working_title": "Measuring the Wrong Thing Feels Like Progress",
+      "primary_variable": "motif_set",
+      "variable_value": "data_viz",
+      "hypothesis": "Motivos de visualizacao de dados sustentam melhor um argumento quantitativo.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 21,
+      "batch": 6,
+      "working_title": "What You Call Laziness Is Usually Ambiguity",
+      "primary_variable": "target_minutes",
+      "variable_value": "[9,14]",
+      "hypothesis": "Episodio longo retem pior no inicio mas gera mais tempo de exibicao total.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 22,
+      "batch": 6,
+      "working_title": "The Streak Is a Bad Instrument",
+      "primary_variable": "payoff_position",
+      "variable_value": "late",
+      "hypothesis": "Payoff tardio aumenta retencao final quando o argumento e cumulativo.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 23,
+      "batch": 6,
+      "working_title": "Why Starting Is Harder Than Continuing",
+      "primary_variable": "hook_style",
+      "variable_value": "question",
+      "hypothesis": "Abertura em pergunta direta ganha de afirmacao seca neste nicho.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 24,
+      "batch": 6,
+      "working_title": "You Cannot Outplan a Bad Trigger",
+      "primary_variable": "scene_count",
+      "variable_value": "8",
+      "hypothesis": "Menos cenas e mais profundas reduzem sensacao de fragmentacao.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 25,
+      "batch": 7,
+      "working_title": "The Honest Version of Atomic Habits",
+      "primary_variable": "title_shape",
+      "variable_value": "contrarian",
+      "hypothesis": "Citar obra conhecida no titulo aumenta impressao mas pode baixar CTR qualificado.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 26,
+      "batch": 7,
+      "working_title": "Rest Is Not a Reward",
+      "primary_variable": "narration_speed",
+      "variable_value": "0.95",
+      "hypothesis": "Narracao mais lenta melhora retencao em assunto de tom reflexivo.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 27,
+      "batch": 7,
+      "working_title": "Three Studies That Changed How I Plan a Week",
+      "primary_variable": "thumbnail_style",
+      "variable_value": "numeric",
+      "hypothesis": "Miniatura numerica ganha quando o titulo tambem e numerico.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 28,
+      "batch": 7,
+      "working_title": "Why Your Second Month Is Harder Than Your First",
+      "primary_variable": "evidence_position",
+      "variable_value": "late",
+      "hypothesis": "Adiar a evidencia funciona melhor em tema emocional que em tema factual.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 29,
+      "batch": 8,
+      "working_title": "The Part of Habit Research Nobody Quotes",
+      "primary_variable": "hook_style",
+      "variable_value": "origin_reveal",
+      "hypothesis": "Replicacao do episodio 1 da serie, para testar repetibilidade da abertura de origem.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    },
+    {
+      "slot": 30,
+      "batch": 8,
+      "working_title": "What I Got Wrong in the First Ten Episodes",
+      "primary_variable": "hook_style",
+      "variable_value": "callback",
+      "hypothesis": "Episodio de revisao publica do proprio canal testa confianca e espectador recorrente.",
+      "status": "nao produzido",
+      "produced_as": null,
+      "requires_before_production": [
+        "dossie de fontes verificadas",
+        "matriz de afirmacoes",
+        "applies_learning citando lote anterior"
+      ]
+    }
+  ]
+}

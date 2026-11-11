@@ -1,41 +1,27 @@
-# CI da Etapa 0: a bateria roda em banco criado do zero pelas migrations,
-# e o controle negativo (Lei 8) prova que a bateria fica vermelha quando a
-# regra de imutabilidade é sabotada.
+# CI da empresa de YouTube: roda as suites que nao dependem de midia pesada
+# nem de credencial. As suites de episodio exigem os artefatos renderizados e
+# por isso rodam na maquina de producao, nao aqui.
 name: CI
 
-# Só push (mais disparo manual): o status prende no SHA e aparece no PR do
-# mesmo repositório; push + pull_request sem filtro rodaria tudo em dobro.
 on:
   push:
   workflow_dispatch:
 
 jobs:
-  bateria:
+  suites:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    defaults:
-      run:
-        working-directory: corre-api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: corre-api/package-lock.json
-      - run: npm ci
-      - name: Bateria (banco nasce das migrations, do zero)
-        run: scripts/bateria.sh
-      - name: Controle negativo (Lei 8 — sabotagem tem que deixar a bateria vermelha)
-        run: scripts/controle-negativo.sh
+          node-version: '22'
+      - name: Instalar ffmpeg (sondagem de midia nos testes)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Bloqueios negativos
+        run: node src/test-gates.js
+      - name: Cliente YouTube contra espelho local
+        run: node src/test-youtube.js
+      - name: Seguranca do painel
+        run: node src/test-security.js
+      - name: Motor de evolucao
+        run: node src/test-evolution.js

@@ -1,0 +1,29 @@
+{
+  "revision": 1,
+  "updated": "2026-11-11",
+  "global": {
+    "external_spend_limit_usd": 0,
+    "hard_cap": true,
+    "rationale": "Enquanto o piloto nao prova repetibilidade, nenhuma chamada paga e autorizada. Mudar este numero e decisao do proprietario, registrada aqui e no log."
+  },
+  "categories": {
+    "api_llm":        { "limit_usd": 0, "note": "geracao de roteiro por modelo externo" },
+    "api_tts":        { "limit_usd": 0, "note": "narracao paga; hoje a narracao roda local e custa zero" },
+    "api_image":      { "limit_usd": 0, "note": "geracao de imagem; hoje o visual e desenhado por codigo" },
+    "api_video":      { "limit_usd": 0, "note": "geracao de video por provedor pago" },
+    "infrastructure": { "limit_usd": 0, "note": "VPS, armazenamento, banda. Hoje roda na maquina existente." },
+    "tools":          { "limit_usd": 0, "note": "assinaturas de ferramenta" },
+    "production":     { "limit_usd": 0, "note": "licenciamento de midia, locucao humana, musica" }
+  },
+  "channels": {
+    "ch_practical_discipline": {
+      "limit_usd": 0,
+      "per_experiment_limit_usd": 0,
+      "note": "canal piloto. Teto por experimento existe para que um unico teste nao consuma o orcamento do canal."
+    }
+  },
+  "real_costs_not_invoiced": {
+    "note": "Software gratis nao e producao gratis. Estes custos existem e nao aparecem em fatura de API.",
+    "tracked": ["energia eletrica", "tempo de CPU", "disco", "banda", "horas de trabalho humano"]
+  }
+}

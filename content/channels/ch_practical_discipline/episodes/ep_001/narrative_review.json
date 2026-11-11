@@ -1,0 +1,106 @@
+{
+  "verdict": "APROVADO",
+  "checks": [
+    {
+      "id": "hook_short",
+      "pass": true,
+      "detail": "gancho com 6 palavras (limite 8, resolvido em ~3s de leitura)"
+    },
+    {
+      "id": "sem_termo_proibido",
+      "pass": true,
+      "detail": "nenhum termo da lista proibida do canal"
+    },
+    {
+      "id": "variacao_de_frase",
+      "pass": true,
+      "detail": "media 14.4 palavras, desvio 7.1 (minimo 4 para evitar cadencia monotona)"
+    },
+    {
+      "id": "densidade_de_vocabulario_proprio",
+      "pass": true,
+      "detail": "85% das falas carregam termo distintivo do proprio episodio, nome proprio ou numero (minimo 55%)"
+    },
+    {
+      "id": "sem_trecho_intercambiavel",
+      "pass": true,
+      "detail": "maior sequencia de falas consecutivas sem nada especifico: 3 (limite 5). Um trecho longo sem vocabulario proprio e o que torna um roteiro trocavel por outro."
+    },
+    {
+      "id": "sem_abertura_repetida",
+      "pass": true,
+      "detail": "1 aberturas de frase repetidas (limite 3)"
+    },
+    {
+      "id": "duracao_alvo",
+      "pass": true,
+      "detail": "1022 palavras (faixa 850-1500 para 6-9 min)"
+    },
+    {
+      "id": "tem_limite_admitido",
+      "pass": true,
+      "detail": "4 afirmacao(oes) marcada(s) como limitacao ou com ressalva exigida presente no roteiro"
+    },
+    {
+      "id": "convite_pertinente",
+      "pass": true,
+      "detail": "a cena final faz um pedido concreto usando vocabulario proprio do episodio, em vez de um convite generico"
+    }
+  ],
+  "stats": {
+    "lines": 71,
+    "words": 1022,
+    "mean_words_per_line": 14.39,
+    "sd_words": 7.08,
+    "episode_vocabulary": [
+      "one",
+      "it's",
+      "motivation",
+      "two",
+      "feeling",
+      "thousand",
+      "six",
+      "isn't",
+      "task",
+      "write",
+      "order",
+      "never",
+      "action",
+      "waiting",
+      "state",
+      "yourself",
+      "you're",
+      "sentence",
+      "rule",
+      "something",
+      "somewhere",
+      "discomfort",
+      "version",
+      "hundred",
+      "question"
+    ],
+    "specific_density": 0.845,
+    "worst_generic_run": 3,
+    "generic_lines": [
+      "And it gets more expensive every time you apply it.",
+      "You got out of bed for a flight.",
+      "You showed up for someone else.",
+      "You answered a message you'd been dreading.",
+      "You have run that experiment hundreds of times. It keeps coming out the same way.",
+      "And the bill compounds.",
+      "Ordinary tasks get promoted into heavy ones.",
+      "Now the useful part.",
+      "And cost is a design problem, not a character problem.",
+      "Here's where I stop selling.",
+      "So the instruction is small, and a little disappointing."
+    ]
+  },
+  "method_note": "A primeira versao deste teste comparava com uma lista fixa de palavras-chave e reprovava falas altamente especificas (ex.: a citacao de Sirois e Pychyl) so porque o termo nao estava na lista. Foi trocada por vocabulario derivado do proprio roteiro mais nomes proprios e numeros, medindo densidade e a pior sequencia sem nada especifico.",
+  "human_review_pending": [
+    "Ouvir a narração inteira uma vez com fone: o tom calmo se mantém na cena 8?",
+    "Confirmar que a cena 6 (saúde mental) não soa como conselho clínico.",
+    "Decidir se o título definitivo é o provisório ou um dos alternativos do metadata."
+  ],
+  "reviewed_by": "narrative_editor",
+  "reviewed_at": "2026-11-11T17:47:42.613Z"
+}
