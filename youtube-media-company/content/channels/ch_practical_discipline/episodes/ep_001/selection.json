@@ -1,0 +1,22 @@
+{
+  "chosen_id": "idea_01",
+  "title": "Why Waiting for Motivation Keeps You Stuck",
+  "thesis": "Esperar motivacao e o proprio mecanismo que transforma uma tarefa comum numa tarefa que exige estado excepcional.",
+  "rationale": "Escolhido pela tese, nao por palavra-chave: e a unica das 12 que sustenta um argumento circular verificavel (esperar e o que cria a necessidade de esperar) e que ja tem cinco fontes primarias confirmadas. Risco de semelhanca no titulo e compensado por duas correcoes factuais que quase ninguem no nicho faz.",
+  "rejected_now": [
+    {
+      "id": "idea_10",
+      "reason": "confirmar na fonte primaria a atribuicao a Durant antes de produzir"
+    },
+    {
+      "id": "idea_11",
+      "reason": "precisa de fonte primaria solida antes de entrar no calendario"
+    },
+    {
+      "id": "idea_12",
+      "reason": "fontes ainda genericas; nao produzir antes de dossie"
+    }
+  ],
+  "decided_by": "editorial_director",
+  "decided_at": "2026-11-11T15:09:17.855Z"
+}

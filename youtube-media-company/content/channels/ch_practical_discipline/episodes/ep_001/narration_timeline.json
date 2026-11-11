@@ -1,0 +1,837 @@
+{
+  "engine": "kokoro",
+  "engine_version": "0.9.4",
+  "weights_license": "Apache-2.0 (pesos hexgrad/Kokoro-82M)",
+  "voice": "am_michael",
+  "sample_rate": 24000,
+  "pauses": {
+    "beat": 0.38,
+    "scene": 1.1,
+    "lead": 0.6,
+    "outro": 1.8
+  },
+  "total_duration_s": 469.505,
+  "synthesis_cpu_ms": 111496,
+  "realtime_factor": 4.21,
+  "audio_stats": {
+    "mean_volume_db": -23.8,
+    "max_volume_db": -3
+  },
+  "scene_durations": {
+    "s01": 25.875,
+    "s02": 26.145,
+    "s03": 35.935,
+    "s04": 37.375,
+    "s05": 40.83,
+    "s06": 76.985,
+    "s07": 63.69,
+    "s08": 84.495,
+    "s09": 37.47,
+    "s10": 40.705
+  },
+  "beat_durations": {
+    "s01": [
+      3.405,
+      3.405,
+      4.705,
+      4.805,
+      2.73,
+      6.825
+    ],
+    "s02": [
+      5.73,
+      4.83,
+      6.83,
+      3.83,
+      4.925
+    ],
+    "s03": [
+      4.83,
+      5.205,
+      2.855,
+      2.78,
+      3.53,
+      6.955,
+      6.005,
+      3.775
+    ],
+    "s04": [
+      3.43,
+      5.63,
+      9.03,
+      5.655,
+      5.28,
+      8.35
+    ],
+    "s05": [
+      2.58,
+      8.98,
+      4.005,
+      4.23,
+      8.005,
+      4.505,
+      8.525
+    ],
+    "s06": [
+      2.48,
+      9.13,
+      9.105,
+      8.055,
+      16.155,
+      12.505,
+      10.955,
+      8.6
+    ],
+    "s07": [
+      2.73,
+      6.755,
+      5.08,
+      6.68,
+      6.205,
+      8.605,
+      13.705,
+      5.83,
+      8.1
+    ],
+    "s08": [
+      2.68,
+      8.83,
+      5.93,
+      8.155,
+      11.83,
+      6.58,
+      8.93,
+      16.38,
+      7.68,
+      7.5
+    ],
+    "s09": [
+      4.755,
+      7.43,
+      7.28,
+      11.055,
+      6.95
+    ],
+    "s10": [
+      4.48,
+      5.605,
+      7.68,
+      4.93,
+      5.105,
+      3.555,
+      9.35
+    ]
+  },
+  "lines": [
+    {
+      "lineId": "s01_b0",
+      "scene": "s01",
+      "beat": 0,
+      "text": "You already know what to do.",
+      "start": 0.6,
+      "end": 3.025,
+      "duration": 2.425,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b1",
+      "scene": "s01",
+      "beat": 1,
+      "text": "That's the part nobody wants to look at.",
+      "start": 3.405,
+      "end": 6.43,
+      "duration": 3.025,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b2",
+      "scene": "s01",
+      "beat": 2,
+      "text": "The plan isn't missing. The information isn't missing.",
+      "start": 6.81,
+      "end": 11.135,
+      "duration": 4.325,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b3",
+      "scene": "s01",
+      "beat": 3,
+      "text": "You could write the steps down right now, in order, from memory.",
+      "start": 11.515,
+      "end": 15.94,
+      "duration": 4.425,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b4",
+      "scene": "s01",
+      "beat": 4,
+      "text": "And still, nothing moves.",
+      "start": 16.32,
+      "end": 18.67,
+      "duration": 2.35,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b5",
+      "scene": "s01",
+      "beat": 5,
+      "text": "So you tell yourself the truth as you understand it. You're just not feeling it yet.",
+      "start": 19.05,
+      "end": 24.775,
+      "duration": 5.725,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b0",
+      "scene": "s02",
+      "beat": 0,
+      "text": "That sentence sounds like an observation. It isn't. It's a strategy.",
+      "start": 25.875,
+      "end": 31.225,
+      "duration": 5.35,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b1",
+      "scene": "s02",
+      "beat": 1,
+      "text": "Underneath it sits a rule you never agreed to out loud.",
+      "start": 31.605,
+      "end": 36.055,
+      "duration": 4.45,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b2",
+      "scene": "s02",
+      "beat": 2,
+      "text": "Action requires a feeling first. Get the feeling, then act. No feeling, no action.",
+      "start": 36.435,
+      "end": 42.885,
+      "duration": 6.45,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b3",
+      "scene": "s02",
+      "beat": 3,
+      "text": "It's a clean rule. It's also backwards.",
+      "start": 43.265,
+      "end": 46.715,
+      "duration": 3.45,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b4",
+      "scene": "s02",
+      "beat": 4,
+      "text": "And it gets more expensive every time you apply it.",
+      "start": 47.095,
+      "end": 50.92,
+      "duration": 3.825,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b0",
+      "scene": "s03",
+      "beat": 0,
+      "text": "Here's the strange part. You already have evidence against it.",
+      "start": 52.02,
+      "end": 56.47,
+      "duration": 4.45,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b1",
+      "scene": "s03",
+      "beat": 1,
+      "text": "Think about the last time you did something hard without wanting to.",
+      "start": 56.85,
+      "end": 61.675,
+      "duration": 4.825,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b2",
+      "scene": "s03",
+      "beat": 2,
+      "text": "You got out of bed for a flight.",
+      "start": 62.055,
+      "end": 64.53,
+      "duration": 2.475,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b3",
+      "scene": "s03",
+      "beat": 3,
+      "text": "You showed up for someone else.",
+      "start": 64.91,
+      "end": 67.31,
+      "duration": 2.4,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b4",
+      "scene": "s03",
+      "beat": 4,
+      "text": "You answered a message you'd been dreading.",
+      "start": 67.69,
+      "end": 70.84,
+      "duration": 3.15,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b5",
+      "scene": "s03",
+      "beat": 5,
+      "text": "No motivation arrived first. You moved, and the resistance thinned out somewhere in the middle.",
+      "start": 71.22,
+      "end": 77.795,
+      "duration": 6.575,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b6",
+      "scene": "s03",
+      "beat": 6,
+      "text": "You have run that experiment hundreds of times. It keeps coming out the same way.",
+      "start": 78.175,
+      "end": 83.8,
+      "duration": 5.625,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b7",
+      "scene": "s03",
+      "beat": 7,
+      "text": "So why does the rule survive?",
+      "start": 84.18,
+      "end": 86.855,
+      "duration": 2.675,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b0",
+      "scene": "s04",
+      "beat": 0,
+      "text": "Because waiting pays. Immediately.",
+      "start": 87.955,
+      "end": 91.005,
+      "duration": 3.05,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b1",
+      "scene": "s04",
+      "beat": 1,
+      "text": "Procrastination research points at something less flattering than laziness.",
+      "start": 91.385,
+      "end": 96.635,
+      "duration": 5.25,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b2",
+      "scene": "s04",
+      "beat": 2,
+      "text": "Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair.",
+      "start": 97.015,
+      "end": 105.665,
+      "duration": 8.65,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b3",
+      "scene": "s04",
+      "beat": 3,
+      "text": "The task carries discomfort. Putting it off removes the discomfort now.",
+      "start": 106.045,
+      "end": 111.32,
+      "duration": 5.275,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b4",
+      "scene": "s04",
+      "beat": 4,
+      "text": "The cost gets handed to a version of you who isn't in the room yet.",
+      "start": 111.7,
+      "end": 116.6,
+      "duration": 4.9,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b5",
+      "scene": "s04",
+      "beat": 5,
+      "text": "So you're not failing at discipline. You're succeeding at something else. Feeling better in the next ten minutes.",
+      "start": 116.98,
+      "end": 124.23,
+      "duration": 7.25,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b0",
+      "scene": "s05",
+      "beat": 0,
+      "text": "And the bill compounds.",
+      "start": 125.33,
+      "end": 127.53,
+      "duration": 2.2,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b1",
+      "scene": "s05",
+      "beat": 1,
+      "text": "Every time you skip a task while telling yourself you need more motivation, you teach yourself one more thing about that task.",
+      "start": 127.91,
+      "end": 136.51,
+      "duration": 8.6,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b2",
+      "scene": "s05",
+      "beat": 2,
+      "text": "That it requires an unusual state to attempt.",
+      "start": 136.89,
+      "end": 140.515,
+      "duration": 3.625,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b3",
+      "scene": "s05",
+      "beat": 3,
+      "text": "Ordinary tasks get promoted into heavy ones.",
+      "start": 140.895,
+      "end": 144.745,
+      "duration": 3.85,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b4",
+      "scene": "s05",
+      "beat": 4,
+      "text": "A folder of unpaid bills becomes a confrontation. A thirty minute walk becomes an identity test.",
+      "start": 145.125,
+      "end": 152.75,
+      "duration": 7.625,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b5",
+      "scene": "s05",
+      "beat": 5,
+      "text": "Nothing about the work changed. The price tag did.",
+      "start": 153.13,
+      "end": 157.255,
+      "duration": 4.125,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b6",
+      "scene": "s05",
+      "beat": 6,
+      "text": "That's the trap, and it's circular. Waiting for motivation is the thing that makes the task need motivation.",
+      "start": 157.635,
+      "end": 165.06,
+      "duration": 7.425,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b0",
+      "scene": "s06",
+      "beat": 0,
+      "text": "Now the useful part.",
+      "start": 166.16,
+      "end": 168.26,
+      "duration": 2.1,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b1",
+      "scene": "s06",
+      "beat": 1,
+      "text": "If motivation follows action, you'd expect that to show up somewhere serious. Somewhere with higher stakes than a tidy desk.",
+      "start": 168.64,
+      "end": 177.39,
+      "duration": 8.75,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b2",
+      "scene": "s06",
+      "beat": 2,
+      "text": "It does. There's a treatment for depression built on exactly that order of operations. It's called behavioral activation.",
+      "start": 177.77,
+      "end": 186.495,
+      "duration": 8.725,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b3",
+      "scene": "s06",
+      "beat": 3,
+      "text": "Patients schedule activity before the mood that would support it exists. Not when they feel ready. On a schedule.",
+      "start": 186.875,
+      "end": 194.55,
+      "duration": 7.675,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b4",
+      "scene": "s06",
+      "beat": 4,
+      "text": "In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidepressant medication among the more severely depressed patients.",
+      "start": 194.93,
+      "end": 210.705,
+      "duration": 15.775,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b5",
+      "scene": "s06",
+      "beat": 5,
+      "text": "I want to be careful here. A later reanalysis did not reproduce its advantage over cognitive therapy, so treat this as one strong result, not a settled ranking.",
+      "start": 211.085,
+      "end": 223.21,
+      "duration": 12.125,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b6",
+      "scene": "s06",
+      "beat": 6,
+      "text": "But the order of operations held up well enough to become standard practice. You can act your way into the state. You cannot reliably wait your way into it.",
+      "start": 223.59,
+      "end": 234.165,
+      "duration": 10.575,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b7",
+      "scene": "s06",
+      "beat": 7,
+      "text": "If that order works in the treatment of clinical depression, your Tuesday afternoon is not a special case.",
+      "start": 234.545,
+      "end": 242.045,
+      "duration": 7.5,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b0",
+      "scene": "s07",
+      "beat": 0,
+      "text": "Which changes the question.",
+      "start": 243.145,
+      "end": 245.495,
+      "duration": 2.35,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b1",
+      "scene": "s07",
+      "beat": 1,
+      "text": "The question was never how to feel more like it. The question is how much it costs you to start.",
+      "start": 245.875,
+      "end": 252.25,
+      "duration": 6.375,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b2",
+      "scene": "s07",
+      "beat": 2,
+      "text": "And cost is a design problem, not a character problem.",
+      "start": 252.63,
+      "end": 257.33,
+      "duration": 4.7,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b3",
+      "scene": "s07",
+      "beat": 3,
+      "text": "Peter Gollwitzer's work on implementation intentions is the cleanest version of this.",
+      "start": 257.71,
+      "end": 264.01,
+      "duration": 6.3,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b4",
+      "scene": "s07",
+      "beat": 4,
+      "text": "Instead of writing a goal, you write a trigger. If this situation, then this action.",
+      "start": 264.39,
+      "end": 270.215,
+      "duration": 5.825,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b5",
+      "scene": "s07",
+      "beat": 5,
+      "text": "Not exercise more. Instead, when I finish dinner on Monday, I put on my shoes and walk to the end of the street.",
+      "start": 270.595,
+      "end": 278.82,
+      "duration": 8.225,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b6",
+      "scene": "s07",
+      "beat": 6,
+      "text": "A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. A d of point six five.",
+      "start": 279.2,
+      "end": 292.525,
+      "duration": 13.325,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b7",
+      "scene": "s07",
+      "beat": 7,
+      "text": "Notice what the if then plan removes. Not the discomfort. The decision.",
+      "start": 292.905,
+      "end": 298.355,
+      "duration": 5.45,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b8",
+      "scene": "s07",
+      "beat": 8,
+      "text": "Deciding is the expensive part. And it's exactly the part you were asking motivation to pay for.",
+      "start": 298.735,
+      "end": 305.735,
+      "duration": 7,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b0",
+      "scene": "s08",
+      "beat": 0,
+      "text": "Here's where I stop selling.",
+      "start": 306.835,
+      "end": 309.135,
+      "duration": 2.3,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b1",
+      "scene": "s08",
+      "beat": 1,
+      "text": "In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days.",
+      "start": 309.515,
+      "end": 317.965,
+      "duration": 8.45,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b2",
+      "scene": "s08",
+      "beat": 2,
+      "text": "The number that escaped into the internet is sixty six days to form a habit.",
+      "start": 318.345,
+      "end": 323.895,
+      "duration": 5.55,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b3",
+      "scene": "s08",
+      "beat": 3,
+      "text": "The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve.",
+      "start": 324.275,
+      "end": 332.05,
+      "duration": 7.775,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b4",
+      "scene": "s08",
+      "beat": 4,
+      "text": "Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside the study window.",
+      "start": 332.43,
+      "end": 343.88,
+      "duration": 11.45,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b5",
+      "scene": "s08",
+      "beat": 5,
+      "text": "So arrangement beats motivation. It is still not fast, and it is not guaranteed.",
+      "start": 344.26,
+      "end": 350.46,
+      "duration": 6.2,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b6",
+      "scene": "s08",
+      "beat": 6,
+      "text": "One more correction worth having. For years the popular story was willpower as a fuel tank that drains through the day.",
+      "start": 350.84,
+      "end": 359.39,
+      "duration": 8.55,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b7",
+      "scene": "s08",
+      "beat": 7,
+      "text": "In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero. A d of point zero four, with a confidence interval crossing zero.",
+      "start": 359.77,
+      "end": 375.77,
+      "duration": 16,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b8",
+      "scene": "s08",
+      "beat": 8,
+      "text": "That doesn't prove the effect is absent. It does mean you shouldn't build your week on the fuel tank metaphor.",
+      "start": 376.15,
+      "end": 383.45,
+      "duration": 7.3,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b9",
+      "scene": "s08",
+      "beat": 9,
+      "text": "Which is quietly good news. If willpower isn't a tank, you aren't waiting for it to refill.",
+      "start": 383.83,
+      "end": 390.23,
+      "duration": 6.4,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b0",
+      "scene": "s09",
+      "beat": 0,
+      "text": "None of this is new. It's just been said less carefully since.",
+      "start": 391.33,
+      "end": 395.705,
+      "duration": 4.375,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b1",
+      "scene": "s09",
+      "beat": 1,
+      "text": "Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling.",
+      "start": 396.085,
+      "end": 403.135,
+      "duration": 7.05,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b2",
+      "scene": "s09",
+      "beat": 2,
+      "text": "In the Ross translation, we become just by doing just acts, and brave by doing brave acts.",
+      "start": 403.515,
+      "end": 410.415,
+      "duration": 6.9,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b3",
+      "scene": "s09",
+      "beat": 3,
+      "text": "William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can.",
+      "start": 410.795,
+      "end": 421.47,
+      "duration": 10.675,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b4",
+      "scene": "s09",
+      "beat": 4,
+      "text": "Both are saying the same unglamorous thing. The state you want is downstream.",
+      "start": 421.85,
+      "end": 427.7,
+      "duration": 5.85,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b0",
+      "scene": "s10",
+      "beat": 0,
+      "text": "So the instruction is small, and a little disappointing.",
+      "start": 428.8,
+      "end": 432.9,
+      "duration": 4.1,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b1",
+      "scene": "s10",
+      "beat": 1,
+      "text": "Pick the one task you've been circling. Don't make it meaningful. Make it cheap.",
+      "start": 433.28,
+      "end": 438.505,
+      "duration": 5.225,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b2",
+      "scene": "s10",
+      "beat": 2,
+      "text": "Write one sentence in the form, when X happens, I do Y. Make Y small enough that it doesn't need a state.",
+      "start": 438.885,
+      "end": 446.185,
+      "duration": 7.3,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b3",
+      "scene": "s10",
+      "beat": 3,
+      "text": "Then do it once while still unconvinced. That part matters.",
+      "start": 446.565,
+      "end": 451.115,
+      "duration": 4.55,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b4",
+      "scene": "s10",
+      "beat": 4,
+      "text": "Because the motivation you were waiting for was never the ticket.",
+      "start": 451.495,
+      "end": 456.22,
+      "duration": 4.725,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b5",
+      "scene": "s10",
+      "beat": 5,
+      "text": "It's the receipt. It shows up after.",
+      "start": 456.6,
+      "end": 459.775,
+      "duration": 3.175,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b6",
+      "scene": "s10",
+      "beat": 6,
+      "text": "If you write that one sentence, put it in the comments as the if then. Not the goal, the trigger. I read those.",
+      "start": 460.155,
+      "end": 467.705,
+      "duration": 7.55,
+      "measured": true
+    }
+  ]
+}

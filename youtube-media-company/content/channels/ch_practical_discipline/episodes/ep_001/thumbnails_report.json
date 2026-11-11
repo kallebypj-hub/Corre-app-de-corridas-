@@ -1,0 +1,28 @@
+{
+  "variants": [
+    {
+      "variant": "A",
+      "width": 1280,
+      "height": 720,
+      "aspect": 1.778,
+      "size_bytes": 334535,
+      "small_preview": "320x180",
+      "title": "Waiting is the trap",
+      "misleading_claim": false,
+      "claim_basis": "Ambas descrevem exatamente a tese do vídeo; nenhuma promete resultado, prazo ou número."
+    },
+    {
+      "variant": "B",
+      "width": 1280,
+      "height": 720,
+      "aspect": 1.778,
+      "size_bytes": 286482,
+      "small_preview": "320x180",
+      "title": "The task got heavier. The work did not.",
+      "misleading_claim": false,
+      "claim_basis": "Ambas descrevem exatamente a tese do vídeo; nenhuma promete resultado, prazo ou número."
+    }
+  ],
+  "legibility_method": "Cada miniatura foi reduzida a 320px de largura e reexportada; o arquivo reduzido é anexado como prova visual de legibilidade.",
+  "human_review_pending": "Escolher A ou B antes da publicação."
+}

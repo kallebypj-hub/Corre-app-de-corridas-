@@ -1,0 +1,11 @@
+node_modules/
+.env
+var/
+content/channels/*/episodes/*/work/
+content/channels/*/episodes/*/slides/
+*.log
+tokens/
+
+# cenas intermediarias: regeneraveis a partir do storyboard + narracao
+content/channels/*/episodes/*/scenes/
+content/channels/*/episodes/*/work/

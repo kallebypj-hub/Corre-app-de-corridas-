@@ -1,0 +1,23 @@
+{
+  "channel": "ch_practical_discipline",
+  "generated_at": "2026-11-11",
+  "cadence": "1 vídeo longo por semana (6–9 min) + até 3 Shorts derivados",
+  "rule": "Nenhum slot publica sozinho: cada um exige aprovação do vídeo específico. Queda de qualidade ou risco de repetição congela o volume em vez de aumentá-lo.",
+  "review_rhythm": { "weekly": "revisão editorial e de qualidade toda segunda", "monthly": "análise de métricas reais — só quando houver API autenticada e publicação" },
+  "slots": [
+    { "week": 1,  "date": "2026-11-17", "episode": "ep_001", "title": "Why Waiting for Motivation Keeps You Stuck", "status": "produzido, aguardando aprovação", "deliverables": "1 longo + 3 Shorts", "gate": "aprovação do proprietário + OAuth" },
+    { "week": 2,  "date": "2026-11-24", "episode": "ep_002", "title": "The 66-Day Habit Myth, Corrected", "status": "pauta com fonte confirmada", "deliverables": "1 longo + 3 Shorts", "gate": "dossiê de fontes fechado" },
+    { "week": 3,  "date": "2026-12-01", "episode": "ep_003", "title": "The Cost of Starting Is the Only Number That Matters", "status": "pauta", "deliverables": "1 longo + 3 Shorts", "gate": "dossiê de fontes fechado" },
+    { "week": 4,  "date": "2026-12-08", "episode": "ep_004", "title": "The Day After Is the Real Test", "status": "pauta", "deliverables": "1 longo + 3 Shorts", "gate": "dossiê de fontes fechado" },
+    { "week": 5,  "date": "2026-12-15", "episode": "ep_005", "title": "Willpower Is Not a Fuel Tank", "status": "pauta", "deliverables": "1 longo + 3 Shorts", "gate": "revisão mensal nº 1 antes de seguir" },
+    { "week": 6,  "date": "2026-12-22", "episode": "ep_006", "title": "Discipline Is Architecture, Not Character", "status": "pauta", "deliverables": "1 longo + 3 Shorts", "gate": "dossiê de fontes fechado" },
+    { "week": 7,  "date": "2026-12-29", "episode": "ep_007", "title": "You Are Not Lazy, You Are Avoiding a Feeling", "status": "pauta — risco alto de semelhança, exige ângulo próprio", "deliverables": "1 longo + 3 Shorts", "gate": "diretor editorial precisa aprovar a diferenciação" },
+    { "week": 8,  "date": "2027-01-05", "episode": "ep_008", "title": "Why Your Goals Are Too Interesting", "status": "pauta", "deliverables": "1 longo + 3 Shorts", "gate": "dossiê de fontes fechado" },
+    { "week": 9,  "date": "2027-01-12", "episode": "ep_009", "title": "Act First: What Depression Treatment Taught Productivity", "status": "pauta sensível", "deliverables": "1 longo + 3 Shorts", "gate": "revisão humana obrigatória do enquadramento de saúde mental" },
+    { "week": 10, "date": "2027-01-19", "episode": "ep_010", "title": "Aristotle Did Not Say What the Quote Says", "status": "pauta — confirmar atribuição a Durant na fonte primária", "deliverables": "1 longo + 3 Shorts", "gate": "pesquisa pendente bloqueia produção" },
+    { "week": 11, "date": "2027-01-26", "episode": "ep_011", "title": "Boredom Is the Skill", "status": "pauta — fontes ainda genéricas", "deliverables": "1 longo + 3 Shorts", "gate": "pesquisa pendente bloqueia produção" },
+    { "week": 12, "date": "2027-02-02", "episode": "ep_012", "title": "The Quiet Case Against Tracking Everything", "status": "pauta — fontes ainda genéricas", "deliverables": "1 longo + 3 Shorts", "gate": "pesquisa pendente bloqueia produção; revisão mensal nº 3" }
+  ],
+  "capacity_note": "Medido nesta máquina (4 vCPU): um episódio inteiro cabe em uma sessão de produção. O número real por episódio está em quality_report.json.",
+  "no_promises": "Nenhuma projeção de views, inscritos, CPM, RPM ou receita. Este calendário é de produção, não de resultado."
+}

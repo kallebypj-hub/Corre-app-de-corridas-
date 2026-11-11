@@ -1,0 +1,906 @@
+{
+  "episode_id": "ep_001",
+  "channel_id": "ch_practical_discipline",
+  "visual_identity": {
+    "principle": "tipografia grande e geometria desenhada por código; nenhuma foto de banco de imagem, nenhuma imagem generativa",
+    "palette": {
+      "bg_deep": "#0B0D10",
+      "bg_soft": "#141821",
+      "ink": "#F2F4F7",
+      "ink_dim": "#9AA4B2",
+      "accent": "#E8552F",
+      "accent_2": "#2F7FE8",
+      "line": "#2A313D"
+    },
+    "type": {
+      "display": "Inter Display",
+      "body": "Inter",
+      "license": "SIL Open Font License 1.1 (instalada no sistema)"
+    },
+    "motion": "câmera lenta e contínua por cena (deriva/zoom) com revelação de texto em batidas sincronizadas à narração"
+  },
+  "note": "Duracoes medidas do audio sintetizado (amostras do wav), nao estimadas.",
+  "scenes": [
+    {
+      "id": "s01",
+      "index": 0,
+      "role": "hook",
+      "motif": "single_statement",
+      "accent": "accent",
+      "visual_purpose": "Nomear o problema real nos primeiros segundos: a informacao nao falta. Tirar culpa de cena para o espectador continuar.",
+      "camera": "push_in",
+      "on_screen": {
+        "kicker": "",
+        "title": "You already know what to do.",
+        "sub": "That is the strange part."
+      },
+      "narration": [
+        "You already know what to do.",
+        "That's the part nobody wants to look at.",
+        "The plan isn't missing. The information isn't missing.",
+        "You could write the steps down right now, in order, from memory.",
+        "And still, nothing moves.",
+        "So you tell yourself the truth as you understand it. You're just not feeling it yet."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "You already know what to do.",
+          "screen": "title",
+          "duration_s": 3.405
+        },
+        {
+          "index": 1,
+          "text": "That's the part nobody wants to look at.",
+          "screen": "sub",
+          "duration_s": 3.405
+        },
+        {
+          "index": 2,
+          "text": "The plan isn't missing. The information isn't missing.",
+          "screen": "beat:The plan isn't missing.",
+          "duration_s": 4.705
+        },
+        {
+          "index": 3,
+          "text": "You could write the steps down right now, in order, from memory.",
+          "screen": "hold",
+          "duration_s": 4.805
+        },
+        {
+          "index": 4,
+          "text": "And still, nothing moves.",
+          "screen": "beat:And still, nothing moves.",
+          "duration_s": 2.73
+        },
+        {
+          "index": 5,
+          "text": "So you tell yourself the truth as you understand it. You're just not feeling it yet.",
+          "screen": "beat:“I'm just not feeling it yet.”",
+          "duration_s": 6.825
+        }
+      ],
+      "duration_s": 25.875,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s02",
+      "index": 1,
+      "role": "mechanism",
+      "motif": "rule_box",
+      "accent": "ink",
+      "visual_purpose": "Converter a frase comum em uma regra explicita, para que ela possa ser examinada e atacada.",
+      "camera": "drift_right",
+      "on_screen": {
+        "kicker": "The rule you never agreed to",
+        "title": "Feeling → Action",
+        "sub": "Get the feeling. Then act. No feeling, no action."
+      },
+      "narration": [
+        "That sentence sounds like an observation. It isn't. It's a strategy.",
+        "Underneath it sits a rule you never agreed to out loud.",
+        "Action requires a feeling first. Get the feeling, then act. No feeling, no action.",
+        "It's a clean rule. It's also backwards.",
+        "And it gets more expensive every time you apply it."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "That sentence sounds like an observation. It isn't. It's a strategy.",
+          "screen": "title",
+          "duration_s": 5.73
+        },
+        {
+          "index": 1,
+          "text": "Underneath it sits a rule you never agreed to out loud.",
+          "screen": "kicker",
+          "duration_s": 4.83
+        },
+        {
+          "index": 2,
+          "text": "Action requires a feeling first. Get the feeling, then act. No feeling, no action.",
+          "screen": "sub",
+          "duration_s": 6.83
+        },
+        {
+          "index": 3,
+          "text": "It's a clean rule. It's also backwards.",
+          "screen": "beat:It is also backwards.",
+          "duration_s": 3.83
+        },
+        {
+          "index": 4,
+          "text": "And it gets more expensive every time you apply it.",
+          "screen": "hold",
+          "duration_s": 4.925
+        }
+      ],
+      "duration_s": 26.145,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s03",
+      "index": 2,
+      "role": "contradiction",
+      "motif": "evidence_list",
+      "accent": "accent_2",
+      "visual_purpose": "Mostrar que o proprio espectador ja refutou a regra, criando a tensao que sustenta o resto do episodio.",
+      "camera": "pull_out",
+      "on_screen": {
+        "kicker": "You already ran the experiment",
+        "title": "Times you moved without wanting to",
+        "items": [
+          "You got out of bed for a flight.",
+          "You showed up for someone else.",
+          "You answered the message you dreaded."
+        ]
+      },
+      "narration": [
+        "Here's the strange part. You already have evidence against it.",
+        "Think about the last time you did something hard without wanting to.",
+        "You got out of bed for a flight.",
+        "You showed up for someone else.",
+        "You answered a message you'd been dreading.",
+        "No motivation arrived first. You moved, and the resistance thinned out somewhere in the middle.",
+        "You have run that experiment hundreds of times. It keeps coming out the same way.",
+        "So why does the rule survive?"
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Here's the strange part. You already have evidence against it.",
+          "screen": "kicker",
+          "duration_s": 4.83
+        },
+        {
+          "index": 1,
+          "text": "Think about the last time you did something hard without wanting to.",
+          "screen": "title",
+          "duration_s": 5.205
+        },
+        {
+          "index": 2,
+          "text": "You got out of bed for a flight.",
+          "screen": "item:0",
+          "duration_s": 2.855
+        },
+        {
+          "index": 3,
+          "text": "You showed up for someone else.",
+          "screen": "item:1",
+          "duration_s": 2.78
+        },
+        {
+          "index": 4,
+          "text": "You answered a message you'd been dreading.",
+          "screen": "item:2",
+          "duration_s": 3.53
+        },
+        {
+          "index": 5,
+          "text": "No motivation arrived first. You moved, and the resistance thinned out somewhere in the middle.",
+          "screen": "hold",
+          "duration_s": 6.955
+        },
+        {
+          "index": 6,
+          "text": "You have run that experiment hundreds of times. It keeps coming out the same way.",
+          "screen": "hold",
+          "duration_s": 6.005
+        },
+        {
+          "index": 7,
+          "text": "So why does the rule survive?",
+          "screen": "beat:So why does the rule survive?",
+          "duration_s": 3.775
+        }
+      ],
+      "duration_s": 35.935,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s04",
+      "index": 3,
+      "role": "evidence",
+      "motif": "citation",
+      "accent": "accent",
+      "visual_purpose": "Explicar o pagamento imediato do adiamento com base em pesquisa, substituindo a explicacao moral por uma mecanica.",
+      "camera": "drift_up",
+      "on_screen": {
+        "kicker": "Procrastination research",
+        "title": "Delay is short-term mood repair",
+        "cite": "Sirois & Pychyl, 2013 — Social and Personality Psychology Compass 7(2)"
+      },
+      "narration": [
+        "Because waiting pays. Immediately.",
+        "Procrastination research points at something less flattering than laziness.",
+        "Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair.",
+        "The task carries discomfort. Putting it off removes the discomfort now.",
+        "The cost gets handed to a version of you who isn't in the room yet.",
+        "So you're not failing at discipline. You're succeeding at something else. Feeling better in the next ten minutes."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Because waiting pays. Immediately.",
+          "screen": "beat:Waiting pays. Immediately.",
+          "duration_s": 3.43
+        },
+        {
+          "index": 1,
+          "text": "Procrastination research points at something less flattering than laziness.",
+          "screen": "kicker",
+          "duration_s": 5.63
+        },
+        {
+          "index": 2,
+          "text": "Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair.",
+          "screen": "title",
+          "duration_s": 9.03
+        },
+        {
+          "index": 3,
+          "text": "The task carries discomfort. Putting it off removes the discomfort now.",
+          "screen": "cite",
+          "duration_s": 5.655
+        },
+        {
+          "index": 4,
+          "text": "The cost gets handed to a version of you who isn't in the room yet.",
+          "screen": "hold",
+          "duration_s": 5.28
+        },
+        {
+          "index": 5,
+          "text": "So you're not failing at discipline. You're succeeding at something else. Feeling better in the next ten minutes.",
+          "screen": "beat:You are succeeding at something else.",
+          "duration_s": 8.35
+        }
+      ],
+      "duration_s": 37.375,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s05",
+      "index": 4,
+      "role": "escalation",
+      "motif": "inflation_chart",
+      "accent": "accent",
+      "visual_purpose": "Mostrar o juro composto do adiamento: a tarefa nao muda, o preco percebido sobe. Este e o nucleo original do episodio.",
+      "camera": "push_diag",
+      "on_screen": {
+        "kicker": "The compounding part",
+        "title": "Task inflation",
+        "sub": "Nothing about the work changed. The price tag did."
+      },
+      "narration": [
+        "And the bill compounds.",
+        "Every time you skip a task while telling yourself you need more motivation, you teach yourself one more thing about that task.",
+        "That it requires an unusual state to attempt.",
+        "Ordinary tasks get promoted into heavy ones.",
+        "A folder of unpaid bills becomes a confrontation. A thirty minute walk becomes an identity test.",
+        "Nothing about the work changed. The price tag did.",
+        "That's the trap, and it's circular. Waiting for motivation is the thing that makes the task need motivation."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "And the bill compounds.",
+          "screen": "kicker",
+          "duration_s": 2.58
+        },
+        {
+          "index": 1,
+          "text": "Every time you skip a task while telling yourself you need more motivation, you teach yourself one more thing about that task.",
+          "screen": "title",
+          "duration_s": 8.98
+        },
+        {
+          "index": 2,
+          "text": "That it requires an unusual state to attempt.",
+          "screen": "beat:It requires an unusual state.",
+          "duration_s": 4.005
+        },
+        {
+          "index": 3,
+          "text": "Ordinary tasks get promoted into heavy ones.",
+          "screen": "hold",
+          "duration_s": 4.23
+        },
+        {
+          "index": 4,
+          "text": "A folder of unpaid bills becomes a confrontation. A thirty minute walk becomes an identity test.",
+          "screen": "hold",
+          "duration_s": 8.005
+        },
+        {
+          "index": 5,
+          "text": "Nothing about the work changed. The price tag did.",
+          "screen": "sub",
+          "duration_s": 4.505
+        },
+        {
+          "index": 6,
+          "text": "That's the trap, and it's circular. Waiting for motivation is the thing that makes the task need motivation.",
+          "screen": "beat:Waiting is what makes the task need it.",
+          "duration_s": 8.525
+        }
+      ],
+      "duration_s": 40.83,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s06",
+      "index": 5,
+      "role": "turn",
+      "motif": "citation",
+      "accent": "accent_2",
+      "visual_purpose": "Virar o episodio com uma evidencia de alto risco: se a ordem inversa funciona na clinica, nao e truque de produtividade.",
+      "camera": "drift_left",
+      "on_screen": {
+        "kicker": "Where the stakes are higher",
+        "title": "Behavioral activation",
+        "sub": "Schedule the action before the mood exists.",
+        "cite": "Dimidjian et al., 2006 — J. Consult. Clin. Psychol. 74(4), N = 241"
+      },
+      "narration": [
+        "Now the useful part.",
+        "If motivation follows action, you'd expect that to show up somewhere serious. Somewhere with higher stakes than a tidy desk.",
+        "It does. There's a treatment for depression built on exactly that order of operations. It's called behavioral activation.",
+        "Patients schedule activity before the mood that would support it exists. Not when they feel ready. On a schedule.",
+        "In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidepressant medication among the more severely depressed patients.",
+        "I want to be careful here. A later reanalysis did not reproduce its advantage over cognitive therapy, so treat this as one strong result, not a settled ranking.",
+        "But the order of operations held up well enough to become standard practice. You can act your way into the state. You cannot reliably wait your way into it.",
+        "If that order works in the treatment of clinical depression, your Tuesday afternoon is not a special case."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Now the useful part.",
+          "screen": "kicker",
+          "duration_s": 2.48
+        },
+        {
+          "index": 1,
+          "text": "If motivation follows action, you'd expect that to show up somewhere serious. Somewhere with higher stakes than a tidy desk.",
+          "screen": "hold",
+          "duration_s": 9.13
+        },
+        {
+          "index": 2,
+          "text": "It does. There's a treatment for depression built on exactly that order of operations. It's called behavioral activation.",
+          "screen": "title",
+          "duration_s": 9.105
+        },
+        {
+          "index": 3,
+          "text": "Patients schedule activity before the mood that would support it exists. Not when they feel ready. On a schedule.",
+          "screen": "sub",
+          "duration_s": 8.055
+        },
+        {
+          "index": 4,
+          "text": "In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidepressant medication among the more severely depressed patients.",
+          "screen": "cite",
+          "duration_s": 16.155
+        },
+        {
+          "index": 5,
+          "text": "I want to be careful here. A later reanalysis did not reproduce its advantage over cognitive therapy, so treat this as one strong result, not a settled ranking.",
+          "screen": "beat:A later reanalysis did not reproduce it.",
+          "duration_s": 12.505
+        },
+        {
+          "index": 6,
+          "text": "But the order of operations held up well enough to become standard practice. You can act your way into the state. You cannot reliably wait your way into it.",
+          "screen": "hold",
+          "duration_s": 10.955
+        },
+        {
+          "index": 7,
+          "text": "If that order works in the treatment of clinical depression, your Tuesday afternoon is not a special case.",
+          "screen": "beat:Your Tuesday afternoon is not a special case.",
+          "duration_s": 8.6
+        }
+      ],
+      "duration_s": 76.985,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s07",
+      "index": 6,
+      "role": "method",
+      "motif": "if_then",
+      "accent": "accent",
+      "visual_purpose": "Entregar o movimento aplicavel: trocar a pergunta do sentimento para o custo de comecar, com evidencia e exemplo concreto.",
+      "camera": "slow_push",
+      "on_screen": {
+        "kicker": "The real question",
+        "title": "If this situation → then this action",
+        "sub": "When I finish dinner on Monday, I put on my shoes and walk to the end of the street.",
+        "cite": "Gollwitzer & Sheeran, 2006 — 94 independent tests, d = .65"
+      },
+      "narration": [
+        "Which changes the question.",
+        "The question was never how to feel more like it. The question is how much it costs you to start.",
+        "And cost is a design problem, not a character problem.",
+        "Peter Gollwitzer's work on implementation intentions is the cleanest version of this.",
+        "Instead of writing a goal, you write a trigger. If this situation, then this action.",
+        "Not exercise more. Instead, when I finish dinner on Monday, I put on my shoes and walk to the end of the street.",
+        "A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. A d of point six five.",
+        "Notice what the if then plan removes. Not the discomfort. The decision.",
+        "Deciding is the expensive part. And it's exactly the part you were asking motivation to pay for."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Which changes the question.",
+          "screen": "kicker",
+          "duration_s": 2.73
+        },
+        {
+          "index": 1,
+          "text": "The question was never how to feel more like it. The question is how much it costs you to start.",
+          "screen": "beat:How much does it cost to start?",
+          "duration_s": 6.755
+        },
+        {
+          "index": 2,
+          "text": "And cost is a design problem, not a character problem.",
+          "screen": "hold",
+          "duration_s": 5.08
+        },
+        {
+          "index": 3,
+          "text": "Peter Gollwitzer's work on implementation intentions is the cleanest version of this.",
+          "screen": "title",
+          "duration_s": 6.68
+        },
+        {
+          "index": 4,
+          "text": "Instead of writing a goal, you write a trigger. If this situation, then this action.",
+          "screen": "title",
+          "duration_s": 6.205
+        },
+        {
+          "index": 5,
+          "text": "Not exercise more. Instead, when I finish dinner on Monday, I put on my shoes and walk to the end of the street.",
+          "screen": "sub",
+          "duration_s": 8.605
+        },
+        {
+          "index": 6,
+          "text": "A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. A d of point six five.",
+          "screen": "cite",
+          "duration_s": 13.705
+        },
+        {
+          "index": 7,
+          "text": "Notice what the if then plan removes. Not the discomfort. The decision.",
+          "screen": "beat:It removes the decision.",
+          "duration_s": 5.83
+        },
+        {
+          "index": 8,
+          "text": "Deciding is the expensive part. And it's exactly the part you were asking motivation to pay for.",
+          "screen": "hold",
+          "duration_s": 8.1
+        }
+      ],
+      "duration_s": 63.69,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s08",
+      "index": 7,
+      "role": "honest_limit",
+      "motif": "correction",
+      "accent": "ink",
+      "visual_purpose": "Admitir o limite dentro do proprio video. Corrigir dois numeros que o nicho repete errado, o que diferencia o canal.",
+      "camera": "pull_diag",
+      "on_screen": {
+        "kicker": "Where I stop selling",
+        "title": "Two numbers the internet gets wrong",
+        "items": [
+          "66 days is a median of those who got there — about half never crossed the threshold in 84 days.",
+          "Willpower as a draining fuel tank: d = 0.04, CI crossing zero, across 23 labs."
+        ],
+        "cite": "Lally et al., 2010 — EJSP 40(6) · Hagger et al., 2016 — PoPS 11(4), N = 2,141"
+      },
+      "narration": [
+        "Here's where I stop selling.",
+        "In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days.",
+        "The number that escaped into the internet is sixty six days to form a habit.",
+        "The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve.",
+        "Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside the study window.",
+        "So arrangement beats motivation. It is still not fast, and it is not guaranteed.",
+        "One more correction worth having. For years the popular story was willpower as a fuel tank that drains through the day.",
+        "In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero. A d of point zero four, with a confidence interval crossing zero.",
+        "That doesn't prove the effect is absent. It does mean you shouldn't build your week on the fuel tank metaphor.",
+        "Which is quietly good news. If willpower isn't a tank, you aren't waiting for it to refill."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Here's where I stop selling.",
+          "screen": "kicker",
+          "duration_s": 2.68
+        },
+        {
+          "index": 1,
+          "text": "In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days.",
+          "screen": "title",
+          "duration_s": 8.83
+        },
+        {
+          "index": 2,
+          "text": "The number that escaped into the internet is sixty six days to form a habit.",
+          "screen": "hold",
+          "duration_s": 5.93
+        },
+        {
+          "index": 3,
+          "text": "The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve.",
+          "screen": "item:0",
+          "duration_s": 8.155
+        },
+        {
+          "index": 4,
+          "text": "Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside the study window.",
+          "screen": "item:0",
+          "duration_s": 11.83
+        },
+        {
+          "index": 5,
+          "text": "So arrangement beats motivation. It is still not fast, and it is not guaranteed.",
+          "screen": "hold",
+          "duration_s": 6.58
+        },
+        {
+          "index": 6,
+          "text": "One more correction worth having. For years the popular story was willpower as a fuel tank that drains through the day.",
+          "screen": "item:1",
+          "duration_s": 8.93
+        },
+        {
+          "index": 7,
+          "text": "In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero. A d of point zero four, with a confidence interval crossing zero.",
+          "screen": "cite",
+          "duration_s": 16.38
+        },
+        {
+          "index": 8,
+          "text": "That doesn't prove the effect is absent. It does mean you shouldn't build your week on the fuel tank metaphor.",
+          "screen": "beat:Do not build your week on it.",
+          "duration_s": 7.68
+        },
+        {
+          "index": 9,
+          "text": "Which is quietly good news. If willpower isn't a tank, you aren't waiting for it to refill.",
+          "screen": "hold",
+          "duration_s": 7.5
+        }
+      ],
+      "duration_s": 84.495,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s09",
+      "index": 8,
+      "role": "lineage",
+      "motif": "quote_pair",
+      "accent": "accent_2",
+      "visual_purpose": "Ancorar a tese em texto primario de dominio publico, mostrando que a ideia e antiga e foi dita com mais cuidado.",
+      "camera": "drift_down",
+      "on_screen": {
+        "kicker": "None of this is new",
+        "title": "It has just been said less carefully",
+        "items": [
+          "Aristotle, Nicomachean Ethics II — we become just by doing just acts (Ross translation).",
+          "William James, 1890 — “make automatic and habitual, as early as possible, as many useful actions as we can.”"
+        ]
+      },
+      "narration": [
+        "None of this is new. It's just been said less carefully since.",
+        "Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling.",
+        "In the Ross translation, we become just by doing just acts, and brave by doing brave acts.",
+        "William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can.",
+        "Both are saying the same unglamorous thing. The state you want is downstream."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "None of this is new. It's just been said less carefully since.",
+          "screen": "kicker",
+          "duration_s": 4.755
+        },
+        {
+          "index": 1,
+          "text": "Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling.",
+          "screen": "item:0",
+          "duration_s": 7.43
+        },
+        {
+          "index": 2,
+          "text": "In the Ross translation, we become just by doing just acts, and brave by doing brave acts.",
+          "screen": "item:0",
+          "duration_s": 7.28
+        },
+        {
+          "index": 3,
+          "text": "William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can.",
+          "screen": "item:1",
+          "duration_s": 11.055
+        },
+        {
+          "index": 4,
+          "text": "Both are saying the same unglamorous thing. The state you want is downstream.",
+          "screen": "title",
+          "duration_s": 6.95
+        }
+      ],
+      "duration_s": 37.47,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s10",
+      "index": 9,
+      "role": "payoff",
+      "motif": "closing_statement",
+      "accent": "accent",
+      "visual_purpose": "Entregar a instrucao minima e honesta e fechar com a reformulacao da tese. Convite que depende do video, nao generico.",
+      "camera": "final_push",
+      "on_screen": {
+        "kicker": "The instruction",
+        "title": "Motivation is the receipt, not the ticket.",
+        "sub": "Write one sentence: when X happens, I do Y. Make Y small enough that it needs no state."
+      },
+      "narration": [
+        "So the instruction is small, and a little disappointing.",
+        "Pick the one task you've been circling. Don't make it meaningful. Make it cheap.",
+        "Write one sentence in the form, when X happens, I do Y. Make Y small enough that it doesn't need a state.",
+        "Then do it once while still unconvinced. That part matters.",
+        "Because the motivation you were waiting for was never the ticket.",
+        "It's the receipt. It shows up after.",
+        "If you write that one sentence, put it in the comments as the if then. Not the goal, the trigger. I read those."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "So the instruction is small, and a little disappointing.",
+          "screen": "kicker",
+          "duration_s": 4.48
+        },
+        {
+          "index": 1,
+          "text": "Pick the one task you've been circling. Don't make it meaningful. Make it cheap.",
+          "screen": "beat:Do not make it meaningful. Make it cheap.",
+          "duration_s": 5.605
+        },
+        {
+          "index": 2,
+          "text": "Write one sentence in the form, when X happens, I do Y. Make Y small enough that it doesn't need a state.",
+          "screen": "sub",
+          "duration_s": 7.68
+        },
+        {
+          "index": 3,
+          "text": "Then do it once while still unconvinced. That part matters.",
+          "screen": "hold",
+          "duration_s": 4.93
+        },
+        {
+          "index": 4,
+          "text": "Because the motivation you were waiting for was never the ticket.",
+          "screen": "title",
+          "duration_s": 5.105
+        },
+        {
+          "index": 5,
+          "text": "It's the receipt. It shows up after.",
+          "screen": "title",
+          "duration_s": 3.555
+        },
+        {
+          "index": 6,
+          "text": "If you write that one sentence, put it in the comments as the if then. Not the goal, the trigger. I read those.",
+          "screen": "beat:Post your if–then. Not the goal. The trigger.",
+          "duration_s": 9.35
+        }
+      ],
+      "duration_s": 40.705,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    }
+  ],
+  "total_duration_s": 469.505
+}

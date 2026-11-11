@@ -1,0 +1,14 @@
+{
+  "cues": 104,
+  "aligned_by_asr": 99,
+  "proportional_fallback": 5,
+  "alignment_rate": 0.952,
+  "coverage_s": 432.17,
+  "video_duration_s": 469.5,
+  "last_cue_end_s": 467.705,
+  "max_chars_per_cue": 84,
+  "cues_over_90_chars": 0,
+  "problems": [],
+  "verdict": "APROVADO",
+  "method": "Fronteira de cada fala = duracao medida do wav. Quebra interna realinhada pelos timestamps de palavra do faster-whisper; divisao proporcional por caractere apenas quando o alinhamento nao encontra as palavras."
+}

@@ -1,0 +1,165 @@
+{
+  "summary": {
+    "total_claims": 11,
+    "sourced": 11,
+    "unsourced": 0,
+    "attributions_checked": 7,
+    "attributions_without_source": 0,
+    "withheld_from_script": 3,
+    "verdict": "APROVADO"
+  },
+  "claims": [
+    {
+      "scene": "s04",
+      "text": "Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair.",
+      "markers": [
+        "ano_falado",
+        "pessoa_real"
+      ],
+      "sources": [
+        "src_sirois_pychyl_2013"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s06",
+      "text": "In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidepressant medication among the more severely depressed patients.",
+      "markers": [
+        "ano_falado",
+        "numero_falado",
+        "pessoa_real",
+        "termo_de_evidencia"
+      ],
+      "sources": [
+        "src_dimidjian_2006"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s07",
+      "text": "Peter Gollwitzer's work on implementation intentions is the cleanest version of this.",
+      "markers": [
+        "pessoa_real"
+      ],
+      "sources": [
+        "src_gollwitzer_1999"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s07",
+      "text": "A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. A d of point six five.",
+      "markers": [
+        "ano_falado",
+        "tamanho_de_efeito",
+        "numero_falado",
+        "pessoa_real",
+        "termo_de_evidencia"
+      ],
+      "sources": [
+        "src_gollwitzer_sheeran_2006"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s08",
+      "text": "In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days.",
+      "markers": [
+        "ano_falado",
+        "numero_falado",
+        "pessoa_real"
+      ],
+      "sources": [
+        "src_lally_2010"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s08",
+      "text": "The number that escaped into the internet is sixty six days to form a habit.",
+      "markers": [
+        "numero_falado"
+      ],
+      "sources": [
+        "src_lally_2010"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s08",
+      "text": "The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve.",
+      "markers": [
+        "numero_falado"
+      ],
+      "sources": [
+        "src_lally_2010"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s08",
+      "text": "Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside the study window.",
+      "markers": [
+        "numero_falado"
+      ],
+      "sources": [
+        "src_lally_2010"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s08",
+      "text": "In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero. A d of point zero four, with a confidence interval crossing zero.",
+      "markers": [
+        "ano_falado",
+        "tamanho_de_efeito",
+        "numero_falado",
+        "termo_de_evidencia"
+      ],
+      "sources": [
+        "src_hagger_2016"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s09",
+      "text": "Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling.",
+      "markers": [
+        "pessoa_real"
+      ],
+      "sources": [
+        "src_aristotle_ne"
+      ],
+      "status": "sourced"
+    },
+    {
+      "scene": "s09",
+      "text": "William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can.",
+      "markers": [
+        "numero_falado",
+        "pessoa_real"
+      ],
+      "sources": [
+        "src_james_1890"
+      ],
+      "status": "sourced"
+    }
+  ],
+  "withheld": [
+    {
+      "claim": "intencoes de implementacao elevaram a pratica de exercicio de 35% para 91% (Milne, Orbell e Sheeran, 2002)",
+      "status": "NAO USADO",
+      "reason": "a citacao do artigo existe e foi confirmada (BJHP 7(2), 163-184, doi 10.1348/135910702169420), mas os percentuais 91% e 35% nao foram confirmados no texto primario na verificacao de 2026-11-11. Numero nao confirmado nao entra na narracao."
+    },
+    {
+      "claim": "meta-analise de 2024 (Sheeran, Listrom e Gollwitzer) com 642 testes reporta d = 0,36 geral e d = 0,27 para comportamento",
+      "status": "NAO USADO",
+      "reason": "aparece apenas em fontes secundarias na verificacao; primaria nao lida. Fica como pendencia de pesquisa para o episodio 2, nao como afirmacao."
+    },
+    {
+      "claim": "a metafora do musculo da forca de vontade foi refutada",
+      "status": "REFORMULADO",
+      "reason": "a replicacao de 2016 encontrou efeito proximo de zero com IC cruzando zero; isso nao equivale a refutacao. A narracao usa a formulacao precisa."
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "episode_id": "ep_001",
+  "channel_id": "ch_practical_discipline",
+  "language": "en-US",
+  "working_title": "Why Waiting for Motivation Keeps You Stuck",
+  "thesis": "Waiting for motivation is not laziness and not a character flaw: it is a bet that pays immediately and compounds against you, because the act of waiting is what turns an ordinary task into one that requires an unusual state.",
+  "production_mode": "assisted_pilot",
+  "authorship_note": "Roteiro original escrito nesta sessao pelo Claude Code em modo PILOTO ASSISTIDO (nenhuma chave de LLM externa configurada; nenhuma despesa). Direcao editorial do canal ch_practical_discipline. Nenhuma citacao atribuida a pessoa real sem fonte verificada em sources.json.",
+  "target_minutes": [6, 9],
+  "scenes": [
+    { "id": "s01", "role": "hook", "motif": "single_statement", "accent": "accent",
+      "purpose": "Nomear o problema real nos primeiros segundos: a informacao nao falta. Tirar culpa de cena para o espectador continuar.",
+      "on_screen": { "kicker": "", "title": "You already know what to do.", "sub": "That is the strange part." },
+      "beats": [
+        { "text": "You already know what to do.", "screen": "title" },
+        { "text": "That's the part nobody wants to look at.", "screen": "sub" },
+        { "text": "The plan isn't missing. The information isn't missing.", "screen": "beat:The plan isn't missing." },
+        { "text": "You could write the steps down right now, in order, from memory.", "screen": "hold" },
+        { "text": "And still, nothing moves.", "screen": "beat:And still, nothing moves." },
+        { "text": "So you tell yourself the truth as you understand it. You're just not feeling it yet.", "screen": "beat:“I'm just not feeling it yet.”" }
+      ]},
+
+    { "id": "s02", "role": "mechanism", "motif": "rule_box", "accent": "ink",
+      "purpose": "Converter a frase comum em uma regra explicita, para que ela possa ser examinada e atacada.",
+      "on_screen": { "kicker": "The rule you never agreed to", "title": "Feeling → Action", "sub": "Get the feeling. Then act. No feeling, no action." },
+      "beats": [
+        { "text": "That sentence sounds like an observation. It isn't. It's a strategy.", "screen": "title" },
+        { "text": "Underneath it sits a rule you never agreed to out loud.", "screen": "kicker" },
+        { "text": "Action requires a feeling first. Get the feeling, then act. No feeling, no action.", "screen": "sub" },
+        { "text": "It's a clean rule. It's also backwards.", "screen": "beat:It is also backwards." },
+        { "text": "And it gets more expensive every time you apply it.", "screen": "hold" }
+      ]},
+
+    { "id": "s03", "role": "contradiction", "motif": "evidence_list", "accent": "accent_2",
+      "purpose": "Mostrar que o proprio espectador ja refutou a regra, criando a tensao que sustenta o resto do episodio.",
+      "on_screen": { "kicker": "You already ran the experiment", "title": "Times you moved without wanting to",
+        "items": ["You got out of bed for a flight.", "You showed up for someone else.", "You answered the message you dreaded."] },
+      "beats": [
+        { "text": "Here's the strange part. You already have evidence against it.", "screen": "kicker" },
+        { "text": "Think about the last time you did something hard without wanting to.", "screen": "title" },
+        { "text": "You got out of bed for a flight.", "screen": "item:0" },
+        { "text": "You showed up for someone else.", "screen": "item:1" },
+        { "text": "You answered a message you'd been dreading.", "screen": "item:2" },
+        { "text": "No motivation arrived first. You moved, and the resistance thinned out somewhere in the middle.", "screen": "hold" },
+        { "text": "You have run that experiment hundreds of times. It keeps coming out the same way.", "screen": "hold" },
+        { "text": "So why does the rule survive?", "screen": "beat:So why does the rule survive?" }
+      ]},
+
+    { "id": "s04", "role": "evidence", "motif": "citation", "accent": "accent",
+      "purpose": "Explicar o pagamento imediato do adiamento com base em pesquisa, substituindo a explicacao moral por uma mecanica.",
+      "on_screen": { "kicker": "Procrastination research", "title": "Delay is short-term mood repair",
+        "cite": "Sirois & Pychyl, 2013 — Social and Personality Psychology Compass 7(2)" },
+      "beats": [
+        { "text": "Because waiting pays. Immediately.", "screen": "beat:Waiting pays. Immediately." },
+        { "text": "Procrastination research points at something less flattering than laziness.", "screen": "kicker" },
+        { "text": "Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair.", "screen": "title" },
+        { "text": "The task carries discomfort. Putting it off removes the discomfort now.", "screen": "cite" },
+        { "text": "The cost gets handed to a version of you who isn't in the room yet.", "screen": "hold" },
+        { "text": "So you're not failing at discipline. You're succeeding at something else. Feeling better in the next ten minutes.", "screen": "beat:You are succeeding at something else." }
+      ]},
+
+    { "id": "s05", "role": "escalation", "motif": "inflation_chart", "accent": "accent",
+      "purpose": "Mostrar o juro composto do adiamento: a tarefa nao muda, o preco percebido sobe. Este e o nucleo original do episodio.",
+      "on_screen": { "kicker": "The compounding part", "title": "Task inflation",
+        "sub": "Nothing about the work changed. The price tag did." },
+      "beats": [
+        { "text": "And the bill compounds.", "screen": "kicker" },
+        { "text": "Every time you skip a task while telling yourself you need more motivation, you teach yourself one more thing about that task.", "screen": "title" },
+        { "text": "That it requires an unusual state to attempt.", "screen": "beat:It requires an unusual state." },
+        { "text": "Ordinary tasks get promoted into heavy ones.", "screen": "hold" },
+        { "text": "A folder of unpaid bills becomes a confrontation. A thirty minute walk becomes an identity test.", "screen": "hold" },
+        { "text": "Nothing about the work changed. The price tag did.", "screen": "sub" },
+        { "text": "That's the trap, and it's circular. Waiting for motivation is the thing that makes the task need motivation.", "screen": "beat:Waiting is what makes the task need it." }
+      ]},
+
+    { "id": "s06", "role": "turn", "motif": "citation", "accent": "accent_2",
+      "purpose": "Virar o episodio com uma evidencia de alto risco: se a ordem inversa funciona na clinica, nao e truque de produtividade.",
+      "on_screen": { "kicker": "Where the stakes are higher", "title": "Behavioral activation",
+        "sub": "Schedule the action before the mood exists.",
+        "cite": "Dimidjian et al., 2006 — J. Consult. Clin. Psychol. 74(4), N = 241" },
+      "beats": [
+        { "text": "Now the useful part.", "screen": "kicker" },
+        { "text": "If motivation follows action, you'd expect that to show up somewhere serious. Somewhere with higher stakes than a tidy desk.", "screen": "hold" },
+        { "text": "It does. There's a treatment for depression built on exactly that order of operations. It's called behavioral activation.", "screen": "title" },
+        { "text": "Patients schedule activity before the mood that would support it exists. Not when they feel ready. On a schedule.", "screen": "sub" },
+        { "text": "In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidepressant medication among the more severely depressed patients.", "screen": "cite" },
+        { "text": "I want to be careful here. A later reanalysis did not reproduce its advantage over cognitive therapy, so treat this as one strong result, not a settled ranking.", "screen": "beat:A later reanalysis did not reproduce it." },
+        { "text": "But the order of operations held up well enough to become standard practice. You can act your way into the state. You cannot reliably wait your way into it.", "screen": "hold" },
+        { "text": "If that order works in the treatment of clinical depression, your Tuesday afternoon is not a special case.", "screen": "beat:Your Tuesday afternoon is not a special case." }
+      ]},
+
+    { "id": "s07", "role": "method", "motif": "if_then", "accent": "accent",
+      "purpose": "Entregar o movimento aplicavel: trocar a pergunta do sentimento para o custo de comecar, com evidencia e exemplo concreto.",
+      "on_screen": { "kicker": "The real question", "title": "If this situation → then this action",
+        "sub": "When I finish dinner on Monday, I put on my shoes and walk to the end of the street.",
+        "cite": "Gollwitzer & Sheeran, 2006 — 94 independent tests, d = .65" },
+      "beats": [
+        { "text": "Which changes the question.", "screen": "kicker" },
+        { "text": "The question was never how to feel more like it. The question is how much it costs you to start.", "screen": "beat:How much does it cost to start?" },
+        { "text": "And cost is a design problem, not a character problem.", "screen": "hold" },
+        { "text": "Peter Gollwitzer's work on implementation intentions is the cleanest version of this.", "screen": "title" },
+        { "text": "Instead of writing a goal, you write a trigger. If this situation, then this action.", "screen": "title" },
+        { "text": "Not exercise more. Instead, when I finish dinner on Monday, I put on my shoes and walk to the end of the street.", "screen": "sub" },
+        { "text": "A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. A d of point six five.", "screen": "cite" },
+        { "text": "Notice what the if then plan removes. Not the discomfort. The decision.", "screen": "beat:It removes the decision." },
+        { "text": "Deciding is the expensive part. And it's exactly the part you were asking motivation to pay for.", "screen": "hold" }
+      ]},
+
+    { "id": "s08", "role": "honest_limit", "motif": "correction", "accent": "ink",
+      "purpose": "Admitir o limite dentro do proprio video. Corrigir dois numeros que o nicho repete errado, o que diferencia o canal.",
+      "on_screen": { "kicker": "Where I stop selling", "title": "Two numbers the internet gets wrong",
+        "items": ["66 days is a median of those who got there — about half never crossed the threshold in 84 days.",
+                  "Willpower as a draining fuel tank: d = 0.04, CI crossing zero, across 23 labs."],
+        "cite": "Lally et al., 2010 — EJSP 40(6) · Hagger et al., 2016 — PoPS 11(4), N = 2,141" },
+      "beats": [
+        { "text": "Here's where I stop selling.", "screen": "kicker" },
+        { "text": "In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days.", "screen": "title" },
+        { "text": "The number that escaped into the internet is sixty six days to form a habit.", "screen": "hold" },
+        { "text": "The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve.", "screen": "item:0" },
+        { "text": "Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside the study window.", "screen": "item:0" },
+        { "text": "So arrangement beats motivation. It is still not fast, and it is not guaranteed.", "screen": "hold" },
+        { "text": "One more correction worth having. For years the popular story was willpower as a fuel tank that drains through the day.", "screen": "item:1" },
+        { "text": "In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero. A d of point zero four, with a confidence interval crossing zero.", "screen": "cite" },
+        { "text": "That doesn't prove the effect is absent. It does mean you shouldn't build your week on the fuel tank metaphor.", "screen": "beat:Do not build your week on it." },
+        { "text": "Which is quietly good news. If willpower isn't a tank, you aren't waiting for it to refill.", "screen": "hold" }
+      ]},
+
+    { "id": "s09", "role": "lineage", "motif": "quote_pair", "accent": "accent_2",
+      "purpose": "Ancorar a tese em texto primario de dominio publico, mostrando que a ideia e antiga e foi dita com mais cuidado.",
+      "on_screen": { "kicker": "None of this is new", "title": "It has just been said less carefully",
+        "items": ["Aristotle, Nicomachean Ethics II — we become just by doing just acts (Ross translation).",
+                  "William James, 1890 — “make automatic and habitual, as early as possible, as many useful actions as we can.”"] },
+      "beats": [
+        { "text": "None of this is new. It's just been said less carefully since.", "screen": "kicker" },
+        { "text": "Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling.", "screen": "item:0" },
+        { "text": "In the Ross translation, we become just by doing just acts, and brave by doing brave acts.", "screen": "item:0" },
+        { "text": "William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can.", "screen": "item:1" },
+        { "text": "Both are saying the same unglamorous thing. The state you want is downstream.", "screen": "title" }
+      ]},
+
+    { "id": "s10", "role": "payoff", "motif": "closing_statement", "accent": "accent",
+      "purpose": "Entregar a instrucao minima e honesta e fechar com a reformulacao da tese. Convite que depende do video, nao generico.",
+      "on_screen": { "kicker": "The instruction", "title": "Motivation is the receipt, not the ticket.",
+        "sub": "Write one sentence: when X happens, I do Y. Make Y small enough that it needs no state." },
+      "beats": [
+        { "text": "So the instruction is small, and a little disappointing.", "screen": "kicker" },
+        { "text": "Pick the one task you've been circling. Don't make it meaningful. Make it cheap.", "screen": "beat:Do not make it meaningful. Make it cheap." },
+        { "text": "Write one sentence in the form, when X happens, I do Y. Make Y small enough that it doesn't need a state.", "screen": "sub" },
+        { "text": "Then do it once while still unconvinced. That part matters.", "screen": "hold" },
+        { "text": "Because the motivation you were waiting for was never the ticket.", "screen": "title" },
+        { "text": "It's the receipt. It shows up after.", "screen": "title" },
+        { "text": "If you write that one sentence, put it in the comments as the if then. Not the goal, the trigger. I read those.", "screen": "beat:Post your if–then. Not the goal. The trigger." }
+      ]}
+  ]
+}
