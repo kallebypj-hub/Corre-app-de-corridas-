@@ -11,8 +11,8 @@
     "outro": 1.8
   },
   "total_duration_s": 469.505,
-  "synthesis_cpu_ms": 111496,
-  "realtime_factor": 4.21,
+  "synthesis_cpu_ms": 0,
+  "realtime_factor": null,
   "audio_stats": {
     "mean_volume_db": -23.8,
     "max_volume_db": -3

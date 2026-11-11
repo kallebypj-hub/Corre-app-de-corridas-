@@ -1,150 +1,300 @@
 {
   "summary": {
-    "total_claims": 11,
-    "sourced": 11,
-    "unsourced": 0,
-    "attributions_checked": 7,
-    "attributions_without_source": 0,
+    "lines_scanned": 71,
+    "factual_lines_detected": 11,
+    "voluntary_coverage_lines": 5,
+    "verified": 14,
+    "exempt_illustrative": 2,
+    "blocked": 0,
+    "assertions_in_matrix": 14,
+    "orphan_assertions": 0,
+    "sources_in_dossier": 9,
     "withheld_from_script": 3,
     "verdict": "APROVADO"
   },
-  "claims": [
+  "rows": [
     {
       "scene": "s04",
       "text": "Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair.",
       "markers": [
         "ano_falado",
-        "pessoa_real"
+        "atribuicao:Fuschia+Sirois+Timothy+Pychyl"
       ],
+      "assertion": "a01",
+      "type": "attribution_and_paraphrase",
       "sources": [
         "src_sirois_pychyl_2013"
       ],
-      "status": "sourced"
+      "evidence": "Artigo de 2013 em Social and Personality Psychology Compass 7(2), 115-127, doi 10.1111/spc3.12011. O resumo no repositório White Rose enquadra procrastinação como falha de autorregulação ligada a reparo de humor de curto prazo e regulação emocional, com o custo recaindo sobre o self futuro.",
+      "checked_against": "resumo no repositório aberto (eprints.whiterose.ac.uk/91793)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
+    },
+    {
+      "scene": "s04",
+      "text": "So you're not failing at discipline. You're succeeding at something else. Feeling better in the next ten minutes.",
+      "markers": [
+        "quantidade_com_unidade"
+      ],
+      "assertion": null,
+      "type": "isencao_ilustrativa",
+      "sources": [],
+      "evidence": "\"nos proximos dez minutos\" e uma figura de linguagem para o horizonte imediato do alivio, nao um dado medido. Nenhuma fonte afirma dez minutos.",
+      "checked_against": "nao se aplica — uso ilustrativo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "ISENTA"
+    },
+    {
+      "scene": "s05",
+      "text": "A folder of unpaid bills becomes a confrontation. A thirty minute walk becomes an identity test.",
+      "markers": [
+        "quantidade_com_unidade"
+      ],
+      "assertion": null,
+      "type": "isencao_ilustrativa",
+      "sources": [],
+      "evidence": "\"caminhada de trinta minutos\" e exemplo hipotetico do espectador, nao resultado de estudo. Nenhum numero deste trecho e apresentado como evidencia.",
+      "checked_against": "nao se aplica — uso ilustrativo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "ISENTA"
     },
     {
       "scene": "s06",
       "text": "In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidepressant medication among the more severely depressed patients.",
       "markers": [
         "ano_falado",
-        "numero_falado",
-        "pessoa_real",
-        "termo_de_evidencia"
+        "quantidade_com_unidade",
+        "nome_em_contexto_factual:Sona+Dimidjian"
       ],
+      "assertion": "a02",
+      "type": "study_design_and_result",
       "sources": [
         "src_dimidjian_2006"
       ],
-      "status": "sourced"
+      "evidence": "JCCP 74(4), 658-670, doi 10.1037/0022-006X.74.4.658. Ensaio randomizado controlado por placebo, N = 241 adultos com transtorno depressivo maior. Entre os pacientes mais severamente deprimidos, ativação comportamental foi comparável à medicação antidepressiva e ambas superaram terapia cognitiva.",
+      "checked_against": "registro do artigo e texto no PMC (PMC2918721)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
+    },
+    {
+      "scene": "s06",
+      "text": "I want to be careful here. A later reanalysis did not reproduce its advantage over cognitive therapy, so treat this as one strong result, not a settled ranking.",
+      "markers": [
+        "cobertura_voluntaria"
+      ],
+      "assertion": "a03",
+      "type": "limitation",
+      "sources": [
+        "src_lorenzoluaces_dobson_2019"
+      ],
+      "evidence": "Lorenzo-Luaces e Dobson (2019), International Journal of Cognitive Therapy, doi 10.1007/s41811-019-00044-8: reanálise concluiu que BA e CT podem ser aproximadamente equivalentes em depressão leve, moderada e severa; os resultados de Dimidjian et al. (2006) não foram replicados.",
+      "checked_against": "PDF aberto no Springer",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s07",
       "text": "Peter Gollwitzer's work on implementation intentions is the cleanest version of this.",
       "markers": [
-        "pessoa_real"
+        "cobertura_voluntaria"
       ],
+      "assertion": "a04",
+      "type": "attribution",
       "sources": [
         "src_gollwitzer_1999"
       ],
-      "status": "sourced"
+      "evidence": "Gollwitzer, P. M. (1999). Implementation intentions: Strong effects of simple plans. American Psychologist 54(7), 493-503, doi 10.1037/0003-066X.54.7.493. Usado apenas para atribuir a origem do conceito; nenhum número desta fonte entra na narração.",
+      "checked_against": "referência bibliográfica",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s07",
       "text": "A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. A d of point six five.",
       "markers": [
         "ano_falado",
-        "tamanho_de_efeito",
-        "numero_falado",
-        "pessoa_real",
-        "termo_de_evidencia"
+        "estatistica",
+        "atribuicao:Gollwitzer+Sheeran"
       ],
+      "assertion": "a05",
+      "type": "statistic",
       "sources": [
         "src_gollwitzer_sheeran_2006"
       ],
-      "status": "sourced"
+      "evidence": "Advances in Experimental Social Psychology 38, 69-119, doi 10.1016/S0065-2601(06)38002-1. O resumo reporta que 94 testes independentes mostraram efeito de magnitude média a grande (d = .65) sobre atingimento de meta. Os dois números (94 e .65) aparecem no próprio resumo.",
+      "checked_against": "registro no repositório da Universidade de Konstanz",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s08",
       "text": "In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days.",
       "markers": [
         "ano_falado",
-        "numero_falado",
-        "pessoa_real"
+        "quantidade_com_unidade",
+        "atribuicao:Phillippa+Lally"
       ],
+      "assertion": "a06",
+      "type": "study_design",
       "sources": [
         "src_lally_2010"
       ],
-      "status": "sourced"
+      "evidence": "European Journal of Social Psychology 40(6), 998-1009, doi 10.1002/ejsp.674. 96 participantes adotaram um comportamento de saúde repetido uma vez por dia durante 84 dias.",
+      "checked_against": "release da UCL e registro do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s08",
       "text": "The number that escaped into the internet is sixty six days to form a habit.",
       "markers": [
-        "numero_falado"
+        "quantidade_com_unidade"
       ],
+      "assertion": "a07",
+      "type": "popular_misreading",
       "sources": [
         "src_lally_2010"
       ],
-      "status": "sourced"
+      "evidence": "A leitura popular trata 66 dias como prazo geral. A narração apresenta isso explicitamente como a versão que circulou, e corrige em seguida.",
+      "checked_against": "comparação entre divulgação popular e o estudo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s08",
       "text": "The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve.",
       "markers": [
-        "numero_falado"
+        "quantidade_com_unidade",
+        "estatistica"
       ],
+      "assertion": "a08",
+      "type": "correction",
       "sources": [
         "src_lally_2010"
       ],
-      "status": "sourced"
+      "evidence": "66 dias é mediana do subconjunto cujos dados se ajustaram à curva de automaticidade, não média geral nem prazo mínimo.",
+      "checked_against": "leitura crítica do estudo primário",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s08",
       "text": "Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside the study window.",
       "markers": [
-        "numero_falado"
+        "quantidade_com_unidade"
       ],
+      "assertion": "a09",
+      "type": "statistic_range",
       "sources": [
         "src_lally_2010"
       ],
-      "status": "sourced"
+      "evidence": "Faixa reportada de ~18 dias a uma projeção de 254 dias (o limite superior é projeção do modelo, pois o estudo durou 84 dias). Cerca de metade dos participantes não atingiu automaticidade suficiente dentro da janela.",
+      "checked_against": "release da UCL e leituras críticas do estudo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s08",
       "text": "In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero. A d of point zero four, with a confidence interval crossing zero.",
       "markers": [
         "ano_falado",
-        "tamanho_de_efeito",
-        "numero_falado",
-        "termo_de_evidencia"
+        "quantidade_com_unidade",
+        "estatistica"
       ],
+      "assertion": "a10",
+      "type": "statistic",
       "sources": [
         "src_hagger_2016"
       ],
-      "status": "sourced"
+      "evidence": "Perspectives on Psychological Science 11(4), 546-573, doi 10.1177/1745691616652873. Registered Replication Report com k = 23 laboratórios e N total = 2.141. Meta-análise: d = 0,04, IC 95% [-0,07, 0,15].",
+      "checked_against": "PDF aberto do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
+    },
+    {
+      "scene": "s08",
+      "text": "That doesn't prove the effect is absent. It does mean you shouldn't build your week on the fuel tank metaphor.",
+      "markers": [
+        "cobertura_voluntaria"
+      ],
+      "assertion": "a11",
+      "type": "limitation",
+      "sources": [
+        "src_hagger_2016"
+      ],
+      "evidence": "O próprio artigo registra efeito próximo de zero com IC que inclui zero, e limita as conclusões a este paradigma; isso não equivale a demonstrar ausência do efeito.",
+      "checked_against": "seção de conclusões do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s09",
       "text": "Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling.",
       "markers": [
-        "pessoa_real"
+        "cobertura_voluntaria"
       ],
+      "assertion": "a12",
+      "type": "primary_text_paraphrase",
       "sources": [
         "src_aristotle_ne"
       ],
-      "status": "sourced"
+      "evidence": "Ética a Nicômaco, Livro II, 1103a-1103b: a virtude moral nasce do hábito (ethos), não da natureza nem do sentimento.",
+      "checked_against": "texto de domínio público (Project Gutenberg 8438)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
+    },
+    {
+      "scene": "s09",
+      "text": "In the Ross translation, we become just by doing just acts, and brave by doing brave acts.",
+      "markers": [
+        "cobertura_voluntaria"
+      ],
+      "assertion": "a13",
+      "type": "translation_quotation",
+      "sources": [
+        "src_aristotle_ne"
+      ],
+      "evidence": "Formulação da tradução de W. D. Ross de 1103b: tornamo-nos justos praticando atos justos, temperantes praticando atos temperantes, corajosos praticando atos corajosos. A narração identifica que é a tradução de Ross, não citação do grego.",
+      "checked_against": "texto de domínio público (Project Gutenberg 8438)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     },
     {
       "scene": "s09",
       "text": "William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can.",
       "markers": [
-        "numero_falado",
-        "pessoa_real"
+        "citacao_direta",
+        "atribuicao:William+James"
       ],
+      "assertion": "a14",
+      "type": "direct_quotation",
       "sources": [
         "src_james_1890"
       ],
-      "status": "sourced"
+      "evidence": "The Principles of Psychology, vol. 1 (1890), capítulo IV (Habit): \"we must make automatic and habitual, as early as possible, as many useful actions as we can\".",
+      "checked_against": "texto de domínio público (Project Gutenberg 57628)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verificada"
     }
   ],
+  "problems": [],
+  "matrix_verifier": "Claude Code — sessão 2026-11-11 (busca web contra fonte primária ou repositório aberto)",
   "withheld": [
     {
       "claim": "intencoes de implementacao elevaram a pratica de exercicio de 35% para 91% (Milne, Orbell e Sheeran, 2002)",

@@ -10,10 +10,24 @@ const pill = (txt, cls) => `<span class="pill ${cls}">${h(txt)}</span>`;
 const stageIcon = { done: ['ok', 'concluído'], failed: ['bad', 'falhou'], running: ['warn', 'rodando'], stale: ['warn', 'desatualizado'], pending: ['idle', 'pendente'] };
 
 async function load() {
+  const list = await api('/api/episodes').catch(() => ({ episodes: [] }));
+  S.list = list.episodes || [];
+  if (!S.list.find(e => e.id === S.ep) && S.list.length) S.ep = S.list[0].id;
   const [d, ch] = await Promise.all([api(`/api/episodes/${S.ep}`).catch(() => null), api('/api/channel')]);
   S.data = d; S.channel = ch;
   $('#chName').textContent = ch.working_name + ' · identidade provisória';
+  renderEpPicker();
   render();
+}
+function renderEpPicker() {
+  let el = $('#epPicker');
+  if (!el) {
+    const nav = $('#nav');
+    nav.insertAdjacentHTML('afterbegin', '<div class="sec">Episódio</div><div id="epPicker" style="padding:0 16px 8px"></div>');
+    el = $('#epPicker');
+  }
+  el.innerHTML = `<select id="epSel">${S.list.map(e => `<option value="${h(e.id)}" ${e.id === S.ep ? 'selected' : ''}>${h(e.id)} — ${h((e.title || '').slice(0, 26))}</option>`).join('')}</select>`;
+  $('#epSel').onchange = (ev) => { S.ep = ev.target.value; load(); };
 }
 function setView(v) { S.view = v; document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.v === v)); render(); }
 document.addEventListener('click', e => { const a = e.target.closest('#nav a'); if (a) { e.preventDefault(); setView(a.dataset.v); } });
@@ -96,13 +110,17 @@ V.pautas = () => { const ideas = (S.data.ideas || {}).ideas || []; const ds = (S
 V.producao = () => { const st = S.data.pipeline;
   return `<h2>Produção</h2><p class="sub">Cada estágio tem artefato, checksum, custo e tempo. Reiniciar um estágio invalida os que dependem dele.</p>
   <div class="flex" style="margin-bottom:14px"><button class="p" id="runAll">Rodar pipeline (retoma do checkpoint)</button><span id="jobState" class="muted small"></span></div>
-  <div class="card"><table><tr><th>Estágio</th><th>Agente</th><th>Status</th><th>Modo</th><th>Tempo</th><th>Artefatos</th><th></th></tr>
+  <div class="card"><table><tr><th>Estágio</th><th>Agente</th><th>Status</th><th>Autonomia</th><th>Tempo</th><th>Artef.</th><th></th></tr>
   ${st.map(s => `<tr><td><b>${h(s.title)}</b><div class="mono muted" style="font-size:11px">${h(s.id)}</div></td>
     <td class="muted small">${h(s.agent)}</td><td>${pill(stageIcon[s.status][1], stageIcon[s.status][0])}</td>
-    <td class="muted small">${h(s.mode || '—')}</td><td class="muted small">${s.durationMs ? (s.durationMs / 1000).toFixed(1) + 's' : '—'}</td>
+    <td class="small">${s.autonomy ? pill(s.autonomy.label, s.autonomy.level === 'automated' ? 'ok' : (s.autonomy.level === 'local_model' ? 'idle' : 'warn')) : '<span class="muted">—</span>'}
+      ${s.autonomy && s.autonomy.gap ? `<div class="muted" style="font-size:11px;margin-top:4px;max-width:46ch">${h(s.autonomy.gap)}</div>` : ''}</td>
+    <td class="muted small">${s.durationMs ? (s.durationMs / 1000).toFixed(1) + 's' : '—'}</td>
     <td class="muted small">${(s.artifacts || []).length}</td>
     <td><button class="rs" data-s="${h(s.id)}" ${s.runnable ? '' : 'disabled'}>Reiniciar</button></td></tr>
+    ${s.stale_reason ? `<tr><td colspan="7" class="small" style="color:var(--warn)">${h(s.stale_reason)}</td></tr>` : ''}
     ${s.error ? `<tr><td colspan="7" class="block small">${h(s.error)}</td></tr>` : ''}`).join('')}</table></div>
+  <div class="notice">A coluna de autonomia diz a verdade sobre cada etapa: <b>automático</b> roda sozinho; <b>modelo local</b> usa um modelo desta máquina; <b>assistido</b> foi trabalho intelectual desta sessão e vai exigir o mesmo trabalho no próximo episódio, por uma pessoa ou por um agente com LLM configurada.</div>
   <div class="card"><h3>Artefatos no disco</h3><table><tr><th>Arquivo</th><th>Tamanho</th><th></th></tr>
   ${S.data.artifacts.map(a => `<tr><td class="mono">${h(a.rel)}</td><td class="muted small">${mb(a.bytes)}</td><td><a href="${h(a.url)}" download>baixar</a></td></tr>`).join('')}</table></div>`;
 };
@@ -128,7 +146,8 @@ V.estudio = () => { const d = S.data, md = d.metadata, q = d.quality, ep = d.epi
       <div style="margin-top:11px">${(q ? q.tests : []).map(t => `<div class="between" style="padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--line)">
         <span><span class="mono" style="font-size:11px">${h(t.id)}</span><div class="muted" style="font-size:11.5px">${h(t.detail)}</div></span>${pill(t.pass ? 'ok' : 'falhou', t.pass ? 'ok' : 'bad')}</div>`).join('')}</div></div>
     <div class="card"><h3>Fontes e direitos</h3>
-      <div class="small muted">Afirmações factuais: <b>${d.claims ? d.claims.summary.total_claims : '—'}</b>, sem fonte: <b>${d.claims ? d.claims.summary.unsourced : '—'}</b>.</div>
+      <div class="small muted">Afirmações factuais: <b>${d.claims ? d.claims.summary.factual_lines_detected : '—'}</b> · verificadas na matriz: <b>${d.claims ? d.claims.summary.verified : '—'}</b> · isentas (ilustrativas): <b>${d.claims ? (d.claims.summary.exempt_illustrative || 0) : '—'}</b> · bloqueios: <b>${d.claims ? d.claims.summary.blocked : '—'}</b></div>
+      <div class="small muted">Verificador da matriz: ${d.claims && d.claims.matrix_verifier ? h(d.claims.matrix_verifier) : '—'}</div>
       <div class="small muted">Ativos de terceiros: <b>${d.provenance ? (d.provenance.third_party_media_used ? 'sim' : 'nenhum') : '—'}</b> · Imagens generativas: <b>${d.provenance ? (d.provenance.generative_images_used ? 'sim' : 'nenhuma') : '—'}</b></div>
       <div class="flex" style="margin-top:10px"><a href="/files/${S.ep}/claims_review.md">claims_review.md</a><a href="/files/${S.ep}/provenance.json">provenance.json</a><a href="/files/${S.ep}/sources.md">sources.md</a></div></div>
     <div class="card"><h3>Decisão do presidente</h3>
@@ -165,7 +184,16 @@ async function wire() {
       poll(); });
     async function poll() { const j = await api(`/api/episodes/${S.ep}/job`);
       if (j.job && j.job.status === 'running') { $('#jobState').textContent = `rodando ${j.job.stageId}…`; setTimeout(poll, 2500); }
-      else { $('#jobState').textContent = j.job ? `${j.job.stageId}: ${j.job.status}${j.job.error ? ' — ' + j.job.error : ''}` : ''; await load(); } }
+      else { $('#jobState').textContent = j.job ? `${j.job.stageId}: ${j.job.status}${j.job.error ? ' — ' + j.job.error : ''}` : ''; await async function ensureSession() {
+  const r = await fetch('/api/episodes');
+  if (r.status !== 401) return true;
+  const k = prompt('Este painel está protegido. Cole a API_KEY:');
+  if (!k) return false;
+  const s2 = await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: k }) });
+  if (!s2.ok) { alert('Chave inválida.'); return false; }
+  return true;
+}
+ensureSession().then(ok => { if (ok) load(); }); } }
     poll();
   }
   if (S.view === 'estudio') {
@@ -180,15 +208,51 @@ async function wire() {
     $('#pub').innerHTML = `<div class="card"><h3>YouTube OAuth</h3><div class="between"><span class="muted small">Estado</span>${pill(d.youtube.status, d.youtube.status === 'AUTORIZADO' ? 'ok' : 'bad')}</div>
       <div class="block" style="margin-top:11px"><b>Motivo:</b> ${h(d.youtube.reason || '—')}<br><br><b>Próximo passo (é seu):</b> ${h(d.youtube.next_step || 'autorizar no navegador')}</div>
       <div class="small muted" style="margin-top:10px">Escopos que serão pedidos:<div class="tags" style="margin-top:6px">${(d.youtube.scopes_requested || []).map(s => `<span class="tag mono">${h(s.split('/auth/')[1])}</span>`).join('')}</div></div>
-      <div class="notice" style="margin-top:11px">Este sistema nunca pede senha nem código de autenticação por chat. O login acontece no seu navegador, na sua conta.</div></div>
+      <div class="notice" style="margin-top:11px">Este sistema nunca pede senha nem código de autenticação por chat. O login acontece no seu navegador, na sua conta.</div>
+      <div class="flex" style="margin-top:12px">
+        ${d.youtube.status === 'BLOQUEADO' ? '<button disabled>Autorizar (falta credencial no .env)</button>'
+          : `<a class="p" href="/api/youtube/oauth/start"><button class="p">Autorizar no Google</button></a>`}
+        ${d.youtube.status === 'AUTORIZADO' ? '<button id="ytRevoke">Revogar acesso</button>' : ''}
+      </div>
+      ${d.youtube.status === 'AUTORIZADO' ? `<div class="small muted" style="margin-top:10px">Canal verificado na API: <b>${h(d.youtube.channel_title || d.youtube.youtube_channel_id)}</b> · conferido em ${h((d.youtube.verified_at || '').slice(0, 19).replace('T', ' '))}</div>` : ''}
+      </div>
+      <div class="card"><h3>Envio privado deste episódio</h3>
+        <div class="small muted">O envio exige as três chaves: gates verdes, sua aprovação <b>deste</b> vídeo com autorização de envio, e OAuth verificado. O arquivo sobe como <b>private</b>; publicar em público é outra decisão, depois.</div>
+        <div class="flex" style="margin-top:11px"><button class="p" id="ytUpload" ${d.youtube.upload_possible ? '' : 'disabled'}>Enviar ${h(S.ep)} como privado</button><span id="upState" class="muted small"></span></div>
+      </div>
       <div class="card"><h3>Fila</h3>${d.publications.length ? `<table><tr><th>Episódio</th><th>Privacidade</th><th>Agendado</th><th>Status</th><th>ID do vídeo</th></tr>
       ${d.publications.map(p => `<tr><td class="mono">${h(p.epId)}</td><td>${h(p.privacy)}</td><td>${h(p.publishAt || '—')}</td><td>${pill(p.status, p.status === 'READY_TO_UPLOAD' ? 'ok' : 'bad')}</td><td class="mono">${h(p.video_id || '—')}</td></tr>`).join('')}</table>`
       : `<p class="muted small">Fila vazia. Um item só entra com gates verdes <b>e</b> aprovação específica do vídeo.</p>`}
       <div class="block" style="margin-top:11px">Padrão operacional: todo primeiro envio é <b>privado</b>. Autorizar upload, enviar privado, agendar e publicar em público são quatro decisões distintas.</div></div>`;
   }
+  if (S.view === 'publicacao') {
+    const rv = $('#ytRevoke');
+    if (rv) rv.onclick = async () => { if (!confirm('Revogar o acesso ao YouTube? Será preciso autorizar de novo.')) return;
+      const r = await post('/api/youtube/revoke'); alert(r.ok ? 'Acesso revogado.' : ('Falhou: ' + (r.reason || r.error))); wire(); };
+    const up = $('#ytUpload');
+    if (up) up.onclick = async () => {
+      if (!confirm(`Enviar ${S.ep} ao YouTube como PRIVADO?`)) return;
+      up.disabled = true;
+      const r = await post('/api/youtube/upload', { epId: S.ep });
+      if (r.error) { $('#upState').textContent = r.error; up.disabled = false; return; }
+      (async function poll() {
+        const j = await api(`/api/youtube/upload/${S.ep}/job`);
+        if (!j.job) { $('#upState').textContent = ''; return; }
+        if (j.job.status === 'running') { $('#upState').textContent = `enviando ${Math.floor((j.job.sent / j.job.total) * 100)}%`; return setTimeout(poll, 2000); }
+        $('#upState').textContent = j.job.status === 'done' ? `enviado: ${j.job.video_id} (${j.job.privacy})` : `falhou: ${j.job.error}`;
+      })();
+    };
+  }
   if (S.view === 'analytics') {
     const d = await api('/api/analytics');
-    $('#an').innerHTML = `<div class="card"><div class="between"><h3 style="margin:0">Estado</h3>${pill(d.status, 'bad')}</div>
+    $('#an').innerHTML = d.status === 'COLETADO'
+      ? `<div class="card"><div class="between"><h3 style="margin:0">Coletado</h3>${pill(d.status, 'ok')}</div>
+         <div class="small muted" style="margin-top:8px">Janela: ${h(d.from)} a ${h(d.to)} (${d.window_days} dias)</div>
+         ${d.videos.map(v => `<table style="margin-top:14px"><tr><th colspan="2">${h(v.video_id)}${v.episode ? ' · ' + h(v.episode) : ''}</th></tr>
+         ${Object.entries(v.metrics).map(([k, val]) => `<tr><td class="mono small">${h(k)}</td><td>${val === 'indisponivel' ? pill('indisponível', 'idle') : '<b>' + h(val) + '</b>'}</td></tr>`).join('')}</table>
+         ${(v.notes || []).map(n => `<div class="small muted" style="margin-top:6px">${h(n)}</div>`).join('')}`).join('')}
+         <div class="small muted" style="margin-top:12px">${h(d.hypotheses_separated || '')}</div></div>`
+      : `<div class="card"><div class="between"><h3 style="margin:0">Estado</h3>${pill(d.status, 'bad')}</div>
       <div class="block" style="margin-top:11px">${h(d.reason || '')}</div>
       <table style="margin-top:12px"><tr><th>Métrica</th><th>Valor</th></tr>
       ${Object.entries(d.metrics || {}).map(([k, v]) => `<tr><td class="mono">${h(k)}</td><td>${pill(String(v), 'idle')}</td></tr>`).join('')}</table>

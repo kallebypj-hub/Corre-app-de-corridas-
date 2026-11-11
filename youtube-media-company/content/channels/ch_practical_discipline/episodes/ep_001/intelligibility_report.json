@@ -5,6 +5,6 @@
   "word_error_rate": 0.0645,
   "intelligibility_verdict": "APROVADO",
   "low_confidence_words": 19,
-  "elapsed_ms": 38682,
+  "elapsed_ms": 36974,
   "method": "faster-whisper local (CPU, int8). WER calculado entre o texto do roteiro e a transcricao do audio sintetizado."
 }

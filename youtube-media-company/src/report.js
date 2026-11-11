@@ -9,7 +9,9 @@ const { STAGES } = require('./pipeline');
 const { probe } = require('./media');
 
 const CH = process.env.CHANNEL_ID || 'ch_practical_discipline';
-const EP = process.argv[2] || 'ep_001';
+const { listEpisodeDirs } = require('./episode-config');
+const EP = process.argv[2] || listEpisodeDirs(process.env.CHANNEL_ID || 'ch_practical_discipline')[0];
+if (!EP) { console.error('nenhum episodio no disco'); process.exit(1); }
 const ROOT = path.join(__dirname, '..');
 const BASE = path.join(ROOT, 'content', 'channels', CH, 'episodes', EP);
 const J = (f) => JSON.parse(fs.readFileSync(path.join(BASE, f), 'utf8'));
@@ -21,8 +23,10 @@ const fmt = (n) => (n / 1048576).toFixed(2) + ' MB';
   const company = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'company.json'), 'utf8'));
   const q = J('quality_report.json'); const md = J('metadata.json'); const pv = J('provenance.json');
   const tl = J('narration_timeline.json'); const ir = J('intelligibility_report.json');
-  const cr = J('captions_report.json'); const sm = J('shorts_manifest.json'); const sb = J('storyboard.json');
+  const cr = J('captions_report.json'); const cl = J('claims_review.json'); const sm = J('shorts_manifest.json'); const sb = J('storyboard.json');
   const vp = await probe(path.join(BASE, 'video_long_1080p.mp4'));
+  const ytState = await require('./youtube/oauth').state(CH).catch((e) => ({ status: 'ERRO', reason: e.message, upload_possible: false, analytics_possible: false }));
+  const pubs = (store.state.publications || []).filter((x) => x.video_id);
 
   const agentsRan = [...new Set(Object.values(ep.stages).filter((s) => s.status === 'done').map((s) => s.agent))];
   const totalMs = Object.values(ep.stages).reduce((a, s) => a + (s.durationMs || 0), 0);
@@ -31,11 +35,17 @@ const fmt = (n) => (n / 1048576).toFixed(2) + ' MB';
     '## Máquina', '', '| Item | Valor |', '|---|---|',
     `| Sistema | ${os.platform()} ${os.release()} |`, `| CPU | ${(os.cpus()[0] || {}).model} · ${os.cpus().length} vCPU |`,
     `| Memória | ${(os.totalmem() / 1073741824).toFixed(1)} GB |`, `| Node | ${process.version} |`, '',
-    '## Pipeline executado', '', '| Estágio | Agente | Modo | Tempo | Artefatos | Custo |', '|---|---|---|---|---|---|');
+    '## Pipeline executado', '', '| Estágio | Agente | Autonomia | Tempo | Artefatos | Custo |', '|---|---|---|---|---|---|');
   for (const s of STAGES) {
     const st = ep.stages[s.id] || {};
-    L.push(`| ${s.title} \`${s.id}\` | ${s.agent} | ${st.mode || '—'} | ${st.durationMs ? (st.durationMs / 1000).toFixed(1) + 's' : '—'} | ${(st.artifacts || []).length} | US$ ${(((st.cost || {}).usd) || 0).toFixed(2)} |`);
+    const au = st.autonomy ? st.autonomy.label : (st.mode || '—');
+    L.push(`| ${s.title} \`${s.id}\` | ${s.agent} | ${au} | ${st.durationMs ? (st.durationMs / 1000).toFixed(1) + 's' : '—'} | ${(st.artifacts || []).length} | US$ ${(((st.cost || {}).usd) || 0).toFixed(2)} |`);
   }
+  const na = require('./autonomy').notAutonomous();
+  L.push('', '### O que NÃO é autônomo hoje', '',
+    'Isto fica escrito de propósito. O pipeline produz, valida e bloqueia sozinho; a parte intelectual não.', '',
+    '| Estágio | Nível | O que falta para rodar sozinho |', '|---|---|---|');
+  for (const x of na) L.push(`| \`${x.stage}\` | ${x.label} | ${x.gap || '—'} |`);
   L.push('', `**Tempo somado de execução:** ${(totalMs / 60000).toFixed(1)} min · **Despesa externa total: US$ ${(ep.cost_usd || 0).toFixed(2)}**`, '',
     '## Vídeo longo', '', '| Medida | Valor (medido por ffprobe) |', '|---|---|',
     `| Arquivo | \`content/channels/${CH}/episodes/${EP}/video_long_1080p.mp4\` |`,
@@ -51,6 +61,7 @@ const fmt = (n) => (n / 1048576).toFixed(2) + ' MB';
     `| Motor | ${tl.engine} ${tl.engine_version} — ${tl.weights_license} |`,
     `| Voz | \`${tl.voice}\` · ${tl.sample_rate} Hz |`,
     `| Falas sintetizadas | ${tl.lines.length}, todas com duração medida em amostras |`,
+    `| Afirmações factuais | ${cl.summary.factual_lines_detected} detectadas · ${cl.summary.verified} verificadas na matriz · ${cl.summary.exempt_illustrative || 0} isentas por uso ilustrativo · ${cl.summary.orphan_assertions} órfãs |`,
     `| Velocidade de síntese | ${tl.realtime_factor ? tl.realtime_factor + 'x tempo real' : 'reaproveitada do cache'} |`,
     `| Inteligibilidade (WER por reconhecimento de fala) | **${(ir.word_error_rate * 100).toFixed(2)}%** (limite 15%) · modelo ${ir.model} |`,
     `| Legendas | ${cr.cues} cues · ${(cr.alignment_rate * 100).toFixed(0)}% alinhados por timestamp de palavra · última em ${cr.last_cue_end_s.toFixed(1)}s |`, '',
@@ -71,9 +82,10 @@ const fmt = (n) => (n / 1048576).toFixed(2) + ' MB';
   }
   const notRan = company.agents.filter((a) => !agentsRan.includes(a.id));
   L.push('', `Funções configuradas mas **sem execução neste piloto**: ${notRan.map((a) => `${a.name} (${a.id})`).join(', ') || 'nenhuma'} — o CEO virtual opera por chat/API e o editor de publicação está bloqueado por falta de OAuth.`, '',
-    '## YouTube', '', '- OAuth: **' + (process.env.YOUTUBE_CLIENT_ID ? 'configurado' : 'NÃO CONFIGURADO') + '**',
-    '- Publicação: **BLOQUEADA**. Nenhum upload foi feito, nenhum ID de vídeo existe.',
-    '- Analytics: **BLOQUEADO**. Todas as métricas respondem `indisponivel`, nunca zero.',
+    '## YouTube', '', `- Estado real: **${ytState.status}**${ytState.reason ? ` — ${ytState.reason}` : ''}`,
+    `- Upload possível: **${ytState.upload_possible ? 'sim' : 'não'}** · Analytics possível: **${ytState.analytics_possible ? 'sim' : 'não'}**`,
+    `- Vídeos enviados por este sistema: **${pubs.length}**${pubs.length ? ' (' + pubs.map((x) => x.video_id).join(', ') + ')' : ''}`,
+    '- Token guardado não é prova: o estado `AUTORIZADO` só é declarado depois de uma chamada real à API que confirme o canal.',
     `- Privacidade padrão configurada: \`${md.privacy_status}\`. Público infantil declarado: \`${md.made_for_kids}\`.`, '',
     '## Aprovação', '', `- Estado: **${ep.approval.status}**`,
     '- Aprovar no painel vale **somente para este vídeo** e não autoriza envios futuros.');

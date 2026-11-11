@@ -87,14 +87,14 @@ class Store {
     return this.append('stage.started', { epId, stageId, ...meta });
   }
   /** Conclui estagio registrando artefatos com checksum real do arquivo em disco. */
-  stageDone(epId, stageId, { outputs = [], artifacts = [], cost = { usd: 0, provider: 'local' }, model = null, mode = 'real', agent = null, notes = null, durationMs = 0 }) {
+  stageDone(epId, stageId, { outputs = [], artifacts = [], cost = { usd: 0, provider: 'local' }, model = null, mode = 'real', agent = null, notes = null, durationMs = 0, autonomy = null, inputs = null }) {
     const withChecksum = artifacts.map((a) => {
       const abs = a.path;
       let size = null, checksum = null;
       try { size = fs.statSync(abs).size; checksum = sha256File(abs); } catch (_) {}
       return { ...a, size, checksum };
     });
-    return this.append('stage.completed', { epId, stageId, outputs, artifacts: withChecksum, cost, model, mode, agent, notes, durationMs });
+    return this.append('stage.completed', { epId, stageId, outputs, artifacts: withChecksum, cost, model, mode, agent, notes, durationMs, autonomy, inputs });
   }
   stageFailed(epId, stageId, error, agent) {
     return this.append('stage.failed', { epId, stageId, error: String(error && error.message || error), agent });
@@ -120,7 +120,7 @@ function applyEvent(st, ev) {
     case 'stage.completed': {
       const ep = st.episodes[p.epId]; if (!ep) break;
       ep.stages[p.stageId] = { ...(ep.stages[p.stageId] || {}), id: p.stageId, status: 'done', finishedAt: ev.ts,
-        outputs: p.outputs, artifacts: p.artifacts, cost: p.cost, model: p.model, mode: p.mode, agent: p.agent, notes: p.notes, durationMs: p.durationMs, error: null };
+        outputs: p.outputs, artifacts: p.artifacts, cost: p.cost, model: p.model, mode: p.mode, agent: p.agent, notes: p.notes, durationMs: p.durationMs, autonomy: p.autonomy || null, inputs: p.inputs || null, error: null };
       ep.cost_usd = Object.values(ep.stages).reduce((s, x) => s + (((x.cost || {}).usd) || 0), 0);
       ep.mode_map[p.stageId] = p.mode;
       break;

@@ -3,15 +3,18 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { art, W, chCfg } = require('./editorial');
+const cfg = require('../episode-config');
+const { declare, notAutonomous } = require('../autonomy');
 const { probe, fullDecodeCheck, audioStats, blackFrameRatio } = require('../media');
 
 const sha = (p) => crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 
 /** 18. Manifesto de origem, licenca e atribuicao de TODO ativo, por cena e por arquivo. */
-async function provenance({ paths, channelId }) {
+async function provenance({ paths, channelId, epId }) {
   const sb = JSON.parse(fs.readFileSync(path.join(paths.base, 'storyboard.json'), 'utf8'));
   const tl = JSON.parse(fs.readFileSync(path.join(paths.base, 'narration_timeline.json'), 'utf8'));
-  const sources = JSON.parse(fs.readFileSync(path.join(paths.base, 'sources.json'), 'utf8'));
+  const sources = cfg.loadSources(channelId, epId);
+  const brief = cfg.loadBrief(channelId, epId);
   const sm = JSON.parse(fs.readFileSync(path.join(paths.base, 'shorts_manifest.json'), 'utf8'));
   const c = chCfg(channelId);
 
@@ -22,7 +25,10 @@ async function provenance({ paths, channelId }) {
   for (const s of sm.shorts) addFile(path.join('shorts', `${s.short_id}.mp4`), 'short');
 
   const out = {
-    episode_id: 'ep_001', channel_id: channelId, compiled_at: new Date().toISOString(),
+    episode_id: epId, channel_id: channelId, compiled_at: new Date().toISOString(),
+    production_mode: brief.production_mode,
+    autonomy_disclosure: { statement: brief.authorship.honest_statement,
+      stages_not_autonomous: notAutonomous() },
     visual_assets_by_scene: sb.scenes.map((s) => ({ scene: s.id, motif: s.motif, camera: s.camera,
       asset_type: s.asset.type, generator: s.asset.generator, origin: s.asset.source, license: s.asset.license,
       attribution: s.asset.attribution_required ? 'requerida' : 'nao requerida', third_party_media: s.asset.third_party_media })),
@@ -45,7 +51,7 @@ async function provenance({ paths, channelId }) {
       { name: 'faster-whisper (base.en)', role: 'alinhamento e verificacao de inteligibilidade', license: 'MIT (lib) / MIT (modelo Whisper)', cost_usd: 0 },
       { name: 'FFmpeg 6.1.1', role: 'render e montagem', license: 'LGPL/GPL conforme build do sistema', cost_usd: 0 },
       { name: 'Chromium via Playwright', role: 'rasterizacao dos frames-chave', license: 'BSD / Apache-2.0', cost_usd: 0 },
-      { name: 'Claude Code', role: 'roteiro em modo piloto assistido e engenharia do pipeline', license: 'n/a', cost_usd: 0 }
+      { name: 'Claude Code', role: brief.authorship.script_by, license: 'n/a', cost_usd: 0 }
     ],
     third_party_media_used: false, stock_footage_used: false, generative_images_used: false,
     delivered_files: files,
@@ -54,7 +60,7 @@ async function provenance({ paths, channelId }) {
   const f = W(path.join(paths.base, 'provenance.json'), out);
   const bad = out.visual_assets_by_scene.filter((a) => !a.license || /unknown/i.test(a.license));
   if (bad.length) throw new Error(`${bad.length} ativo(s) sem licenca`);
-  return { mode: 'real', outputs: ['provenance.json'], artifacts: [art(f, 'json')],
+  return { mode: 'real', autonomy: declare('provenance'), outputs: ['provenance.json'], artifacts: [art(f, 'json')],
     notes: `${out.visual_assets_by_scene.length} cenas, ${files.length} arquivos com sha256, 0 ativo de terceiro.`,
     cost: { usd: 0, provider: 'local' } };
 }
@@ -116,9 +122,13 @@ async function qa({ paths, channelId, store, epId, log }) {
   t('shorts_sem_sobreposicao', !overlap, wins.map((w) => `${w.start}-${w.end}s`).join(' · '));
 
   const cl = JSON.parse(fs.readFileSync(path.join(base, 'claims_review.json'), 'utf8'));
-  t('fontes_revisadas', cl.summary.verdict === 'APROVADO' && cl.summary.unsourced === 0,
-    `${cl.summary.total_claims} afirmacoes, ${cl.summary.unsourced} sem fonte, ${cl.summary.attributions_without_source} atribuicoes sem fonte`);
+  t('fontes_revisadas_por_matriz', cl.summary.verdict === 'APROVADO' && cl.summary.blocked === 0 && cl.summary.orphan_assertions === 0,
+    `${cl.summary.factual_lines_detected} falas factuais, ${cl.summary.verified} com entrada verificada, ${cl.summary.blocked} bloqueios, ${cl.summary.orphan_assertions} entradas orfas, verificador: ${cl.matrix_verifier || 'ausente'}`);
   const pv = JSON.parse(fs.readFileSync(path.join(base, 'provenance.json'), 'utf8'));
+  const pvAuto = (pv.autonomy_disclosure || {}).stages_not_autonomous;
+  t('autonomia_declarada_honestamente', Array.isArray(pvAuto) && pvAuto.length > 0,
+    `${(pvAuto || []).length} estagio(s) declarados como NAO autonomos: ${(pvAuto || []).map((x) => x.stage).join(', ')}`);
+
   t('direitos_dos_ativos_revisados', pv.visual_assets_by_scene.every((a) => a.license && !/unknown/i.test(a.license)) && !pv.third_party_media_used,
     `${pv.visual_assets_by_scene.length} cenas com licenca declarada, 0 midia de terceiro`);
   t('nenhum_ativo_simulado', !fs.existsSync(path.join(base, 'SIMULATED')) && pv.generative_images_used === false,
@@ -152,6 +162,7 @@ async function qa({ paths, channelId, store, epId, log }) {
     evaluated_at: new Date().toISOString()
   };
   const report = { episode_id: epId, channel_id: channelId, gates,
+    autonomy_disclosure: pv.autonomy_disclosure || null,
     tests, passed: tests.length - failed.length, total: tests.length,
     measurements: { video: vp, decode_check: { ok: decode.ok, elapsed_ms: decode.ms }, audio_stats: astats, black_frames: black, shorts: shortChecks },
     external_cost_usd: cost,
@@ -165,7 +176,7 @@ async function qa({ paths, channelId, store, epId, log }) {
   store.append('gates.evaluated', { epId, gates });
   log.info(`  gates: ${report.passed}/${report.total} — ${gates.verdict}`);
   if (failed.length) throw new Error(`gates reprovados: ${failed.map((f) => f.id).join(', ')}`);
-  return { mode: 'real', outputs: ['quality_report.json'], artifacts: [art(f, 'json')],
+  return { mode: 'real', autonomy: declare('qa'), outputs: ['quality_report.json'], artifacts: [art(f, 'json')],
     notes: `${report.passed}/${report.total} testes aprovados, custo externo US$ ${cost.toFixed(2)}.`,
     cost: { usd: 0, provider: 'local' } };
 }

@@ -1,0 +1,323 @@
+{
+  "episode_id": "ep_002",
+  "matrix_version": 1,
+  "verifier": "Claude Code — sessao 2026-11-11 (busca web contra registro do artigo, resumo em repositorio aberto ou texto primario)",
+  "verification_policy": [
+    "Toda fala que dispara marcador factual PRECISA de entrada nesta matriz ou de isencao declarada.",
+    "Entrada sem evidencia, sem verificador ou sem data bloqueia o episodio.",
+    "Entrada que aponta para fonte fora do sources.json deste episodio bloqueia.",
+    "Entrada ou isencao que descreve fala inexistente no roteiro bloqueia, para a matriz nao envelhecer calada.",
+    "Isencao so vale para QUANTIDADE ILUSTRATIVA e exige justificativa, autor e data."
+  ],
+  "exemption_policy": "Isencao nao e atalho: e um registro assinado de que aquele numero e ilustracao, nao dado.",
+  "assertions": [
+    {
+      "id": "b01",
+      "scene": "s01",
+      "type": "number_inventory",
+      "claim": "Twenty one days.",
+      "sources": [
+        "src_maltz_1960"
+      ],
+      "evidence": "21 e o numero de Maltz (1960). Apresentado como numero em circulacao, nao como verdade.",
+      "checked_against": "Psycho-Cybernetics (1960)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b01b",
+      "scene": "s01",
+      "type": "number_inventory",
+      "claim": "Sixty six days. Fifty nine days.",
+      "sources": [
+        "src_lally_2010_ep2",
+        "src_singh_2024"
+      ],
+      "evidence": "66 vem de Lally et al. (2010) e 59 vem de Singh et al. (2024). Nenhum dos dois e apresentado aqui como verdadeiro para o espectador.",
+      "checked_against": "as duas fontes do dossie deste episodio",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b02",
+      "scene": "s02",
+      "type": "framing",
+      "claim": "Start with twenty one, because it's the oldest and the most wrong.",
+      "sources": [
+        "src_maltz_1960"
+      ],
+      "evidence": "Referencia ao numero 21 como o mais antigo dos tres. A fonte e o livro de 1960, anterior a qualquer um dos estudos citados.",
+      "checked_against": "Psycho-Cybernetics (1960)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b03",
+      "scene": "s02",
+      "type": "attribution",
+      "claim": "It comes from a book published in nineteen sixty. Psycho-Cybernetics, by Maxwell Maltz.",
+      "sources": [
+        "src_maltz_1960"
+      ],
+      "evidence": "Psycho-Cybernetics, de Maxwell Maltz, publicado em 1960. Maltz era cirurgiao plastico.",
+      "checked_against": "registro bibliografico do livro",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b04",
+      "scene": "s02",
+      "type": "paraphrase_of_original_wording",
+      "claim": "What he wrote was that it requires a minimum of about twenty one days for an old mental image to dissolve and a new one to jell.",
+      "sources": [
+        "src_maltz_1960"
+      ],
+      "evidence": "Formulacao de Maltz com os qualificadores preservados: um minimo de cerca de 21 dias para uma imagem mental antiga se dissolver e uma nova assentar. A narracao mantem os qualificadores exatamente porque sao eles que se perderam na repeticao popular.",
+      "checked_against": "texto do livro conforme relatado nas fontes consultadas",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified",
+      "caveat_required_in_script": "A narracao precisa deixar claro que Maltz falava de autoimagem apos cirurgia, nao de habitos.",
+      "caveat_present": true
+    },
+    {
+      "id": "b05",
+      "scene": "s03",
+      "type": "study_design",
+      "claim": "In two thousand ten, Phillippa Lally's team at University College London followed ninety six people for eighty four days.",
+      "sources": [
+        "src_lally_2010_ep2"
+      ],
+      "evidence": "Lally, van Jaarsveld, Potts e Wardle (2010), EJSP 40(6): 96 participantes acompanhados por 84 dias, no University College London.",
+      "checked_against": "release da UCL e registro do artigo (doi 10.1002/ejsp.674)",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b06",
+      "scene": "s03",
+      "type": "interpretation_of_measure",
+      "claim": "Sixty six days is roughly where the average curve got close to its own ceiling. It describes a shape. It is not a deadline.",
+      "sources": [
+        "src_lally_2010_ep2"
+      ],
+      "evidence": "O estudo modelou automaticidade autorreportada ao longo do tempo; 66 dias e o ponto em que a curva media se aproxima do proprio platô. Nao e prazo prescrito nem garantia.",
+      "checked_against": "descricao do metodo do estudo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b07",
+      "scene": "s04",
+      "type": "framing",
+      "claim": "Then two thousand twenty four, and the biggest look at this so far.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "A revisao sistematica de Singh et al. foi publicada em 2024 em Healthcare 12(23), 2488.",
+      "checked_against": "registro do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b08",
+      "scene": "s04",
+      "type": "study_design",
+      "claim": "Singh, Murphy, Maher and Smith pulled together twenty studies covering two thousand six hundred and one adults.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Revisao sistematica com 20 estudos e 2.601 adultos.",
+      "checked_against": "resumo do artigo e repositorio da Universidade de Adelaide",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b09",
+      "scene": "s04",
+      "type": "evidence_base_size",
+      "claim": "Here's the first uncomfortable detail. Of those twenty studies, only four actually reported how long habit formation took.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Dos 20 estudos incluidos, apenas 4 reportaram diretamente o tempo necessario para formar habito.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b10",
+      "scene": "s04",
+      "type": "statistic",
+      "claim": "Among the people who did form a habit, the median was about fifty nine days.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Entre os participantes que formaram habito, a mediana do tempo modelado para atingir 95% do pico de automaticidade foi de 59 dias.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b11",
+      "scene": "s04",
+      "type": "statistic_range",
+      "claim": "And the range ran from four days to three hundred and thirty five.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "A faixa reportada vai de 4 a 335 dias entre os que formaram habito.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b12",
+      "scene": "s05",
+      "type": "statistic_range",
+      "claim": "Four days to three hundred and thirty five days.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Repeticao enfatica da mesma faixa de 4 a 335 dias da revisao de 2024.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b13",
+      "scene": "s06",
+      "type": "statistic",
+      "claim": "Only twenty three percent of participants reached the threshold the researchers had set for a habit.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Apenas 23% dos participantes atingiram o limiar de formacao de habito definido pelos pesquisadores.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b14",
+      "scene": "s06",
+      "type": "statistic",
+      "claim": "Twenty three percent.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Repeticao enfatica do mesmo 23% da revisao de 2024.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b15",
+      "scene": "s06",
+      "type": "interpretation",
+      "claim": "So the median isn't the midpoint of everyone who tried. It's the midpoint of the people who got there.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Decorre diretamente dos dois numeros da revisao: a mediana de tempo foi calculada entre os que formaram habito, e apenas 23% chegaram la. Logo a mediana descreve os que terminaram, nao os que tentaram.",
+      "checked_against": "deducao explicita a partir dos dois numeros reportados no mesmo artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b16",
+      "scene": "s07",
+      "type": "illustrative_use_of_cited_number",
+      "claim": "Pick sixty six. Day sixty seven arrives, and it still takes effort.",
+      "sources": [
+        "src_lally_2010_ep2"
+      ],
+      "evidence": "Uso do numero 66 (Lally et al., 2010) como exemplo de prazo mental. Nenhuma afirmacao empirica nova e feita aqui.",
+      "checked_against": "o proprio numero ja verificado em b06",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b17",
+      "scene": "s07",
+      "type": "statistic_range",
+      "claim": "The honest reading says you're sitting comfortably inside a range that runs to three hundred and thirty five days.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Refere-se a faixa de 4 a 335 dias da revisao de 2024, ja verificada.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b18",
+      "scene": "s09",
+      "type": "attribution",
+      "claim": "In two thousand twelve, Gardner, Lally and Wardle published guidance in the British Journal of General Practice.",
+      "sources": [
+        "src_gardner_2012"
+      ],
+      "evidence": "Gardner, Lally e Wardle (2012), British Journal of General Practice 62(605), 664-666, doi 10.3399/bjgp12X659466.",
+      "checked_against": "texto completo aberto no PMC3505409",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    },
+    {
+      "id": "b19",
+      "scene": "s09",
+      "type": "limitation",
+      "claim": "And here's the limit I owe you. Four studies is thin. That twenty twenty four review used narrative synthesis rather than pooling the numbers, because the designs disagreed too much to average.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "A revisao usou sintese narrativa em vez de estimativa agrupada porque desenhos e definicoes dos estudos divergiam demais para serem combinados.",
+      "checked_against": "resumo e descricao de metodo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified",
+      "caveat_required_in_script": "A narracao precisa admitir que a base de evidencia para o tempo e fina.",
+      "caveat_present": true
+    },
+    {
+      "id": "b20",
+      "scene": "s10",
+      "type": "statistic_range",
+      "claim": "You're inside a range that runs to three hundred and thirty five days, and you're still in it.",
+      "sources": [
+        "src_singh_2024"
+      ],
+      "evidence": "Mesma faixa de 4 a 335 dias da revisao de 2024.",
+      "checked_against": "resumo do artigo",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11",
+      "status": "verified"
+    }
+  ],
+  "exemptions": [
+    {
+      "claim": "The number in your head says you failed six weeks ago.",
+      "type": "illustrative_quantity",
+      "justification": "\"seis semanas atras\" e consequencia aritmetica do exemplo do dia 67 contra o prazo de 66 dias, nao um dado de estudo. Nenhuma fonte afirma seis semanas.",
+      "verified_by": "claude-code-2026-11-11",
+      "verified_at": "2026-11-11"
+    }
+  ]
+}

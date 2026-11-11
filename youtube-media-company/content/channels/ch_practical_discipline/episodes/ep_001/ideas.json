@@ -1,5 +1,7 @@
 {
-  "generated_by": "demand_researcher + editorial_director (modo piloto assistido)",
+  "source_file": "content/channels/ch_practical_discipline/ideas.json",
+  "authored_by": "diretor editorial + pesquisador de demanda, em modo ASSISTIDO (escrito nesta sessao do Claude Code)",
+  "autonomy_note": "O pipeline NAO gera estas pautas. Ele le este arquivo. Gerar pauta com evidencia sozinho exigiria LLM configurada e sinal de busca autenticado.",
   "count": 12,
   "ideas": [
     {

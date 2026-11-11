@@ -1,0 +1,404 @@
+{
+  "episode_id": "ep_002",
+  "channel_id": "ch_practical_discipline",
+  "language": "en-US",
+  "scenes": [
+    {
+      "id": "s01",
+      "role": "hook",
+      "motif": "number_trio",
+      "accent": "accent_2",
+      "purpose": "Colocar os tres numeros em cena e quebrar os dois primeiros, sem ainda dizer por que. A tensao sustenta o episodio.",
+      "on_screen": {
+        "kicker": "",
+        "title": "21. 66. 59.",
+        "sub": "All three are real. None of them is about you."
+      },
+      "beats": [
+        {
+          "text": "Twenty one days.",
+          "screen": "title"
+        },
+        {
+          "text": "Sixty six days. Fifty nine days.",
+          "screen": "hold"
+        },
+        {
+          "text": "All three of those numbers are real. Each one comes from an actual book or an actual study.",
+          "screen": "hold"
+        },
+        {
+          "text": "And not one of them is about you.",
+          "screen": "sub"
+        },
+        {
+          "text": "Not because you're special. Because of what those numbers are, underneath.",
+          "screen": "beat:None of them is about you."
+        }
+      ]
+    },
+    {
+      "id": "s02",
+      "role": "origin",
+      "motif": "origin_timeline",
+      "accent": "accent",
+      "purpose": "Desmontar o numero mais antigo mostrando a fonte real e o que ela descrevia, sem acusar ninguem de ma fe.",
+      "on_screen": {
+        "kicker": "Where 21 came from",
+        "title": "A plastic surgeon, in 1960",
+        "sub": "He was describing self-image after surgery. Not habits.",
+        "cite": "Maltz, Psycho-Cybernetics (1960)"
+      },
+      "beats": [
+        {
+          "text": "Start with twenty one, because it's the oldest and the most wrong.",
+          "screen": "kicker"
+        },
+        {
+          "text": "It comes from a book published in nineteen sixty. Psycho-Cybernetics, by Maxwell Maltz.",
+          "screen": "title"
+        },
+        {
+          "text": "Maltz was a plastic surgeon. He was not studying habits.",
+          "screen": "sub"
+        },
+        {
+          "text": "He noticed that his patients took a while to stop seeing their old face. That amputees sensed a phantom limb for a stretch before it faded.",
+          "screen": "hold"
+        },
+        {
+          "text": "What he wrote was that it requires a minimum of about twenty one days for an old mental image to dissolve and a new one to jell.",
+          "screen": "cite"
+        },
+        {
+          "text": "A minimum. About. And it's describing self-image after surgery, not flossing.",
+          "screen": "beat:A minimum. About."
+        },
+        {
+          "text": "Those qualifiers fell off somewhere in the decades since. The number kept travelling without them.",
+          "screen": "hold"
+        }
+      ]
+    },
+    {
+      "id": "s03",
+      "role": "what_was_measured",
+      "motif": "asymptote_curve",
+      "accent": "accent_2",
+      "purpose": "Mostrar que 66 descreve a forma de uma curva, nao um prazo. Esta e a reinterpretacao central do episodio.",
+      "on_screen": {
+        "kicker": "What 66 actually measured",
+        "title": "The shape of a curve",
+        "sub": "Not completion. Automaticity — how little deliberation the action needed.",
+        "cite": "Lally et al., 2010 — 96 people, 84 days"
+      },
+      "beats": [
+        {
+          "text": "Now sixty six, which at least came from a study.",
+          "screen": "kicker"
+        },
+        {
+          "text": "In two thousand ten, Phillippa Lally's team at University College London followed ninety six people for eighty four days.",
+          "screen": "cite"
+        },
+        {
+          "text": "Each person picked one daily behaviour and reported, every single day, how automatic it felt.",
+          "screen": "hold"
+        },
+        {
+          "text": "That last part matters more than the number. What got measured was not whether they finished the task.",
+          "screen": "sub"
+        },
+        {
+          "text": "It was automaticity. How little deliberation the action still needed.",
+          "screen": "sub"
+        },
+        {
+          "text": "Plot that over time and you get a curve that climbs fast and then flattens out.",
+          "screen": "title"
+        },
+        {
+          "text": "Sixty six days is roughly where the average curve got close to its own ceiling. It describes a shape. It is not a deadline.",
+          "screen": "beat:It describes a shape, not a deadline."
+        }
+      ]
+    },
+    {
+      "id": "s04",
+      "role": "evidence_base",
+      "motif": "evidence_gap",
+      "accent": "accent",
+      "purpose": "Revelar o tamanho real do corpo de evidencia antes de dar o numero novo, para o espectador receber o numero ja relativizado.",
+      "on_screen": {
+        "kicker": "The newest number",
+        "title": "Four studies",
+        "sub": "Twenty studies reviewed. Only four reported how long it took.",
+        "cite": "Singh, Murphy, Maher & Smith, 2024 — Healthcare 12(23), 2,601 adults"
+      },
+      "beats": [
+        {
+          "text": "Then two thousand twenty four, and the biggest look at this so far.",
+          "screen": "kicker"
+        },
+        {
+          "text": "Singh, Murphy, Maher and Smith pulled together twenty studies covering two thousand six hundred and one adults.",
+          "screen": "cite"
+        },
+        {
+          "text": "Here's the first uncomfortable detail. Of those twenty studies, only four actually reported how long habit formation took.",
+          "screen": "title"
+        },
+        {
+          "text": "Four. That's the entire evidence base under the number everyone repeats.",
+          "screen": "sub"
+        },
+        {
+          "text": "Among the people who did form a habit, the median was about fifty nine days.",
+          "screen": "hold"
+        },
+        {
+          "text": "And the range ran from four days to three hundred and thirty five.",
+          "screen": "beat:Four days to 335 days."
+        }
+      ]
+    },
+    {
+      "id": "s05",
+      "role": "spread",
+      "motif": "distribution_spread",
+      "accent": "accent",
+      "purpose": "Tese original do episodio, parte um: o espalhamento nao e ruido em volta do numero, o espalhamento e o achado.",
+      "on_screen": {
+        "kicker": "The part that gets dropped",
+        "title": "The spread is the finding",
+        "sub": "Four to 335 days is not a timeline with error bars. It is a statement about how much this varies."
+      },
+      "beats": [
+        {
+          "text": "Sit with that range for a second.",
+          "screen": "kicker"
+        },
+        {
+          "text": "Four days to three hundred and thirty five days.",
+          "screen": "hold"
+        },
+        {
+          "text": "That is not a timeline with error bars around it.",
+          "screen": "title"
+        },
+        {
+          "text": "It's a statement that this varies by almost two orders of magnitude, depending on the person and the behaviour.",
+          "screen": "sub"
+        },
+        {
+          "text": "When a range is that wide, the middle of it stops being a prediction. It becomes trivia.",
+          "screen": "beat:The middle of that range is trivia."
+        }
+      ]
+    },
+    {
+      "id": "s06",
+      "role": "survivorship",
+      "motif": "survivorship_funnel",
+      "accent": "accent_2",
+      "purpose": "Tese original parte dois: o numero e uma estatistica de sobreviventes, entregue como previsao. E o golpe silencioso do nicho.",
+      "on_screen": {
+        "kicker": "Who the number is about",
+        "title": "23 percent",
+        "sub": "The median is the midpoint of the people who finished — not of the people who tried.",
+        "cite": "Singh et al., 2024"
+      },
+      "beats": [
+        {
+          "text": "And there's a second detail in that same review, which I think is the important one.",
+          "screen": "kicker"
+        },
+        {
+          "text": "Only twenty three percent of participants reached the threshold the researchers had set for a habit.",
+          "screen": "title"
+        },
+        {
+          "text": "Twenty three percent.",
+          "screen": "cite"
+        },
+        {
+          "text": "So the median isn't the midpoint of everyone who tried. It's the midpoint of the people who got there.",
+          "screen": "sub"
+        },
+        {
+          "text": "That's a survivorship number. You're being quoted the average time of the finishers and handed it as a forecast for yourself.",
+          "screen": "beat:You are being quoted the finishers."
+        },
+        {
+          "text": "Nobody is lying to you. The number just lost its denominator on the way over.",
+          "screen": "hold"
+        }
+      ]
+    },
+    {
+      "id": "s07",
+      "role": "harm",
+      "motif": "deadline_calendar",
+      "accent": "accent",
+      "purpose": "Mostrar o dano concreto: a pergunta instala um prazo, e prazo produz veredicto sobre a pessoa. Isto conecta com a linha editorial do canal sem repetir o ep_001.",
+      "on_screen": {
+        "kicker": "Why the question hurts",
+        "title": "A timeline is a deadline",
+        "sub": "And a deadline produces a verdict — about you, not about the behaviour."
+      },
+      "beats": [
+        {
+          "text": "Which would be a harmless statistics complaint, except for what the number does once it's in your head.",
+          "screen": "kicker"
+        },
+        {
+          "text": "A timeline is a deadline. And a deadline produces a verdict.",
+          "screen": "title"
+        },
+        {
+          "text": "Pick sixty six. Day sixty seven arrives, and it still takes effort.",
+          "screen": "hold"
+        },
+        {
+          "text": "You now have evidence. Not about the behaviour. About yourself.",
+          "screen": "sub"
+        },
+        {
+          "text": "The honest reading says you're sitting comfortably inside a range that runs to three hundred and thirty five days.",
+          "screen": "hold"
+        },
+        {
+          "text": "The number in your head says you failed six weeks ago.",
+          "screen": "beat:The number says you failed six weeks ago."
+        },
+        {
+          "text": "A statistic quietly became a character assessment, and nobody asked it to.",
+          "screen": "hold"
+        }
+      ]
+    },
+    {
+      "id": "s08",
+      "role": "replacement",
+      "motif": "cue_repetition",
+      "accent": "accent_2",
+      "purpose": "Entregar a troca aplicavel: o que a pesquisa realmente faz variar nao e o calendario, e repeticao em contexto estavel.",
+      "on_screen": {
+        "kicker": "Swap the question",
+        "title": "Repetitions in a stable context",
+        "sub": "Same trigger, same place, same position in the day."
+      },
+      "beats": [
+        {
+          "text": "So change what you're asking.",
+          "screen": "kicker"
+        },
+        {
+          "text": "Every one of these studies is measuring the same underlying thing: how automatic an action becomes when it's repeated in a stable context.",
+          "screen": "title"
+        },
+        {
+          "text": "The clock is not the input. Repetition in the same setting is.",
+          "screen": "sub"
+        },
+        {
+          "text": "Same trigger, same place, same position in the day.",
+          "screen": "sub"
+        },
+        {
+          "text": "That's the variable you actually hold.",
+          "screen": "hold"
+        },
+        {
+          "text": "Days pass whether or not you do anything. Repetitions don't.",
+          "screen": "beat:Days pass on their own. Repetitions do not."
+        }
+      ]
+    },
+    {
+      "id": "s09",
+      "role": "clinical_and_limit",
+      "motif": "citation",
+      "accent": "ink",
+      "purpose": "Ancorar a troca numa recomendacao clinica real e, na mesma cena, admitir o quanto a evidencia e fina. Admitir o limite e a assinatura do canal.",
+      "on_screen": {
+        "kicker": "Written for doctors",
+        "title": "Repeat it in the same context until it is effortless",
+        "sub": "And start absurdly small — one bus stop, not the whole route.",
+        "cite": "Gardner, Lally & Wardle, 2012 — BJGP 62(605)"
+      },
+      "beats": [
+        {
+          "text": "There's a version of this written for doctors, and it's refreshingly boring.",
+          "screen": "kicker"
+        },
+        {
+          "text": "In two thousand twelve, Gardner, Lally and Wardle published guidance in the British Journal of General Practice.",
+          "screen": "cite"
+        },
+        {
+          "text": "Have the patient repeat one chosen behaviour in the same context until it becomes automatic and effortless.",
+          "screen": "title"
+        },
+        {
+          "text": "And start absurdly small. Their example is a sedentary person getting off the bus one stop early, instead of walking the whole route.",
+          "screen": "sub"
+        },
+        {
+          "text": "There is no timeline anywhere in that advice.",
+          "screen": "hold"
+        },
+        {
+          "text": "And here's the limit I owe you. Four studies is thin. That twenty twenty four review used narrative synthesis rather than pooling the numbers, because the designs disagreed too much to average.",
+          "screen": "beat:Four studies is thin."
+        },
+        {
+          "text": "So even fifty nine is soft. I'm not handing you a better number. I'm saying the number is the wrong object.",
+          "screen": "hold"
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "role": "payoff",
+      "motif": "closing_statement",
+      "accent": "accent",
+      "purpose": "Fechar com a instrucao minima, concreta e verificavel, e um convite que so faz sentido para quem assistiu.",
+      "on_screen": {
+        "kicker": "The swap",
+        "title": "Count repetitions. Not days.",
+        "sub": "Write down the cue, not the deadline. Then tally how many times the cue fired and you went."
+      },
+      "beats": [
+        {
+          "text": "So here's the swap.",
+          "screen": "kicker"
+        },
+        {
+          "text": "Stop counting days. Count repetitions in the same context.",
+          "screen": "title"
+        },
+        {
+          "text": "Write down the cue, not the deadline. After I pour the coffee. When I close the laptop. Before I take my shoes off.",
+          "screen": "sub"
+        },
+        {
+          "text": "Then keep a tally of how many times that cue fired and you went. That number means something. Day forty one does not.",
+          "screen": "hold"
+        },
+        {
+          "text": "And when it still feels like effort at week ten, you haven't missed a deadline.",
+          "screen": "hold"
+        },
+        {
+          "text": "You're inside a range that runs to three hundred and thirty five days, and you're still in it.",
+          "screen": "beat:You are still inside the range."
+        },
+        {
+          "text": "If you want to try it, put your cue in the comments. Not the goal. The thing that happens right before.",
+          "screen": "title"
+        }
+      ]
+    }
+  ]
+}

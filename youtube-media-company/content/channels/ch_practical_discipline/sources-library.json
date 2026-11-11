@@ -1,0 +1,146 @@
+{
+  "channel": "ch_practical_discipline",
+  "compiled_by": "source_researcher + fact_checker",
+  "compiled_at": "2026-11-11",
+  "verification_method": "busca web em 2026-11-11; cada item confere citacao bibliografica e o numero efetivamente usado na narracao. Numero nao confirmado na fonte primaria NAO entra na narracao.",
+  "sources": [
+    {
+      "id": "src_sirois_pychyl_2013",
+      "type": "peer_reviewed_article",
+      "authors": "Sirois, F. M.; Pychyl, T. A.",
+      "year": 2013,
+      "title": "Procrastination and the Priority of Short-Term Mood Regulation: Consequences for Future Self",
+      "venue": "Social and Personality Psychology Compass, 7(2), 115-127",
+      "doi": "10.1111/spc3.12011",
+      "url": "https://eprints.whiterose.ac.uk/91793/",
+      "used_for": "procrastinacao entendida como reparo de humor de curto prazo, com o custo transferido para o self futuro",
+      "verification": "verificado",
+      "verified_at": "2026-11-11",
+      "note": "manuscrito aceito em acesso aberto no repositorio White Rose"
+    },
+    {
+      "id": "src_dimidjian_2006",
+      "type": "randomized_trial",
+      "authors": "Dimidjian, S.; Hollon, S. D.; Dobson, K. S.; et al.",
+      "year": 2006,
+      "title": "Randomized trial of behavioral activation, cognitive therapy, and antidepressant medication in the acute treatment of adults with major depression",
+      "venue": "Journal of Consulting and Clinical Psychology, 74(4), 658-670",
+      "doi": "10.1037/0022-006X.74.4.658",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2918721",
+      "used_for": "ativacao comportamental: agir antes do humor; N=241; entre os pacientes mais severamente deprimidos foi comparavel a medicacao antidepressiva",
+      "verification": "verificado",
+      "verified_at": "2026-11-11",
+      "caveat_in_script": "SIM - a narracao declara que reanalise posterior (Lorenzo-Luaces e Dobson, 2019) nao replicou a vantagem sobre terapia cognitiva"
+    },
+    {
+      "id": "src_lorenzoluaces_dobson_2019",
+      "type": "reanalysis",
+      "authors": "Lorenzo-Luaces, L.; Dobson, K. S.",
+      "year": 2019,
+      "title": "Is Behavioral Activation (BA) More Effective than Cognitive Therapy (CT) in Severe Depression? A Reanalysis",
+      "venue": "International Journal of Cognitive Therapy",
+      "doi": "10.1007/s41811-019-00044-8",
+      "url": "https://link.springer.com/content/pdf/10.1007/s41811-019-00044-8.pdf",
+      "used_for": "ressalva explicita no roteiro de que o resultado de 2006 nao se sustentou na reanalise",
+      "verification": "verificado",
+      "verified_at": "2026-11-11"
+    },
+    {
+      "id": "src_gollwitzer_sheeran_2006",
+      "type": "meta_analysis",
+      "authors": "Gollwitzer, P. M.; Sheeran, P.",
+      "year": 2006,
+      "title": "Implementation Intentions and Goal Achievement: A Meta-analysis of Effects and Processes",
+      "venue": "Advances in Experimental Social Psychology, 38, 69-119",
+      "doi": "10.1016/S0065-2601(06)38002-1",
+      "url": "https://kops.uni-konstanz.de/entities/publication/2e749bfb-8533-437c-8203-7e788c910c5f",
+      "used_for": "intencoes de implementacao (plano se-entao): 94 testes independentes, efeito medio-a-grande d = .65 sobre atingimento de meta",
+      "verification": "verificado",
+      "verified_at": "2026-11-11",
+      "number_confirmed_in_abstract": "94 testes independentes; d = .65"
+    },
+    {
+      "id": "src_gollwitzer_1999",
+      "type": "review_article",
+      "authors": "Gollwitzer, P. M.",
+      "year": 1999,
+      "title": "Implementation intentions: Strong effects of simple plans",
+      "venue": "American Psychologist, 54(7), 493-503",
+      "doi": "10.1037/0003-066X.54.7.493",
+      "used_for": "atribuicao do conceito de intencao de implementacao a Gollwitzer",
+      "verification": "verificado_bibliograficamente",
+      "verified_at": "2026-11-11",
+      "note": "usado apenas para atribuir a origem do conceito; nenhum numero desta fonte entra na narracao"
+    },
+    {
+      "id": "src_lally_2010",
+      "type": "longitudinal_study",
+      "authors": "Lally, P.; van Jaarsveld, C. H. M.; Potts, H. W. W.; Wardle, J.",
+      "year": 2010,
+      "title": "How are habits formed: Modelling habit formation in the real world",
+      "venue": "European Journal of Social Psychology, 40(6), 998-1009",
+      "doi": "10.1002/ejsp.674",
+      "url": "https://www.ucl.ac.uk/news/2009/aug/how-long-does-it-take-form-habit",
+      "used_for": "96 participantes, 84 dias; 66 dias e a MEDIANA do subconjunto cuja curva se ajustou, faixa de ~18 dias a projecao acima de 250, e cerca de metade nao atingiu o limiar de automaticidade na janela do estudo",
+      "verification": "verificado",
+      "verified_at": "2026-11-11",
+      "correction_made": "o roteiro corrige explicitamente a leitura popular de '66 dias para criar um habito'"
+    },
+    {
+      "id": "src_hagger_2016",
+      "type": "registered_replication",
+      "authors": "Hagger, M. S.; Chatzisarantis, N. L. D.; et al.",
+      "year": 2016,
+      "title": "A Multilab Preregistered Replication of the Ego-Depletion Effect",
+      "venue": "Perspectives on Psychological Science, 11(4), 546-573",
+      "doi": "10.1177/1745691616652873",
+      "url": "https://nature.berkeley.edu/garbelottoat/wp-content/uploads/hagger-chatzisarantis-2016.pdf",
+      "used_for": "23 laboratorios, N = 2.141; efeito de exaustao do ego pequeno, d = 0,04 com IC 95% [-0,07, 0,15] cruzando zero",
+      "verification": "verificado",
+      "verified_at": "2026-11-11",
+      "caveat_in_script": "SIM - a narracao afirma que isso NAO prova ausencia do efeito, apenas que a metafora do tanque de combustivel nao sustenta um plano"
+    },
+    {
+      "id": "src_aristotle_ne",
+      "type": "primary_text_public_domain",
+      "authors": "Aristoteles (trad. W. D. Ross)",
+      "year": "c. 350 a.C. / traducao 1908",
+      "title": "Nicomachean Ethics, Book II, 1103a-1103b",
+      "url": "https://www.gutenberg.org/ebooks/8438",
+      "used_for": "virtude como habito: tornamo-nos justos praticando atos justos, corajosos praticando atos corajosos",
+      "verification": "verificado_texto_primario",
+      "verified_at": "2026-11-11",
+      "rights": "dominio publico; a narracao identifica que se trata da traducao de Ross, nao de citacao direta do grego"
+    },
+    {
+      "id": "src_james_1890",
+      "type": "primary_text_public_domain",
+      "authors": "James, W.",
+      "year": 1890,
+      "title": "The Principles of Psychology, Vol. 1, Chapter IV: Habit",
+      "url": "https://www.gutenberg.org/ebooks/57628",
+      "used_for": "citacao direta: tornar automaticas e habituais, o mais cedo possivel, tantas acoes uteis quanto possamos",
+      "verification": "verificado_texto_primario",
+      "verified_at": "2026-11-11",
+      "rights": "dominio publico"
+    }
+  ],
+  "rejected_or_withheld": [
+    {
+      "claim": "intencoes de implementacao elevaram a pratica de exercicio de 35% para 91% (Milne, Orbell e Sheeran, 2002)",
+      "status": "NAO USADO",
+      "reason": "a citacao do artigo existe e foi confirmada (BJHP 7(2), 163-184, doi 10.1348/135910702169420), mas os percentuais 91% e 35% nao foram confirmados no texto primario na verificacao de 2026-11-11. Numero nao confirmado nao entra na narracao."
+    },
+    {
+      "claim": "meta-analise de 2024 (Sheeran, Listrom e Gollwitzer) com 642 testes reporta d = 0,36 geral e d = 0,27 para comportamento",
+      "status": "NAO USADO",
+      "reason": "aparece apenas em fontes secundarias na verificacao; primaria nao lida. Fica como pendencia de pesquisa para o episodio 2, nao como afirmacao."
+    },
+    {
+      "claim": "a metafora do musculo da forca de vontade foi refutada",
+      "status": "REFORMULADO",
+      "reason": "a replicacao de 2016 encontrou efeito proximo de zero com IC cruzando zero; isso nao equivale a refutacao. A narracao usa a formulacao precisa."
+    }
+  ],
+  "role": "BIBLIOTECA do canal. O dossie que vale para producao e o sources.json DENTRO da pasta do episodio."
+}

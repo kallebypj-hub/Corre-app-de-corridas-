@@ -39,12 +39,12 @@
     {
       "id": "tem_limite_admitido",
       "pass": true,
-      "detail": "o episodio admite explicitamente o limite da propria tese"
+      "detail": "4 afirmacao(oes) marcada(s) como limitacao ou com ressalva exigida presente no roteiro"
     },
     {
       "id": "convite_pertinente",
       "pass": true,
-      "detail": "o convite final depende do conteudo do episodio, nao e generico"
+      "detail": "a cena final faz um pedido concreto usando vocabulario proprio do episodio, em vez de um convite generico"
     }
   ],
   "stats": {
@@ -102,5 +102,5 @@
     "Decidir se o título definitivo é o provisório ou um dos alternativos do metadata."
   ],
   "reviewed_by": "narrative_editor",
-  "reviewed_at": "2026-11-11T15:11:16.184Z"
+  "reviewed_at": "2026-11-11T17:02:02.291Z"
 }

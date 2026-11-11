@@ -1,7 +1,31 @@
 {
   "episode_id": "ep_001",
   "channel_id": "ch_practical_discipline",
-  "compiled_at": "2026-11-11T15:52:24.111Z",
+  "compiled_at": "2026-11-11T17:31:42.884Z",
+  "production_mode": "assisted_pilot",
+  "autonomy_disclosure": {
+    "statement": "O roteiro, a pesquisa e a verificação deste episódio foram trabalho intelectual desta sessão. O pipeline NÃO gerou nada disso sozinho e não vai gerar no próximo episódio sem uma LLM configurada ou uma pessoa fazendo o mesmo trabalho.",
+    "stages_not_autonomous": [
+      {
+        "stage": "ideation",
+        "level": "assisted",
+        "label": "assistido",
+        "gap": "Gerar pauta com evidencia sozinho exigiria LLM configurada + fonte de sinal de busca autenticada. Hoje a lista vem de config/ e foi escrita nesta sessao."
+      },
+      {
+        "stage": "research",
+        "level": "assisted",
+        "label": "assistido",
+        "gap": "Encontrar e ler fontes primarias exige agente com acesso a web ou pessoa. O pipeline apenas VALIDA o dossie que recebe."
+      },
+      {
+        "stage": "script",
+        "level": "assisted",
+        "label": "assistido",
+        "gap": "Roteiro original exige LLM configurada ou pessoa. O pipeline le o roteiro do episodio e o transforma em markdown."
+      }
+    ]
+  },
   "visual_assets_by_scene": [
     {
       "scene": "s01",
@@ -264,7 +288,7 @@
     },
     {
       "name": "Claude Code",
-      "role": "roteiro em modo piloto assistido e engenharia do pipeline",
+      "role": "Claude Code — sessão 2026-11-11, modo assistido",
       "license": "n/a",
       "cost_usd": 0
     }

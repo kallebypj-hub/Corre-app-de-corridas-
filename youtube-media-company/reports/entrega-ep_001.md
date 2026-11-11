@@ -1,6 +1,6 @@
 # Entrega do piloto — youtube-media-company
 
-Gerado automaticamente a partir do store e do disco em 2026-11-11T15:53:54.733Z.
+Gerado automaticamente a partir do store e do disco em 2026-11-11T17:35:10.297Z.
 
 ## Máquina
 
@@ -13,29 +13,39 @@ Gerado automaticamente a partir do store e do disco em 2026-11-11T15:53:54.733Z.
 
 ## Pipeline executado
 
-| Estágio | Agente | Modo | Tempo | Artefatos | Custo |
+| Estágio | Agente | Autonomia | Tempo | Artefatos | Custo |
 |---|---|---|---|---|---|
-| Nicho e tese editorial `strategy` | editorial_director | real | 0.0s | 1 | US$ 0.00 |
-| Ideias com evidencia `ideation` | demand_researcher | assisted | 0.0s | 1 | US$ 0.00 |
-| Selecao editorial `selection` | editorial_director | assisted | — | 1 | US$ 0.00 |
-| Dossie de pesquisa `research` | source_researcher | real | — | 2 | US$ 0.00 |
-| Roteiro EN-US `script` | scriptwriter | assisted | 0.0s | 1 | US$ 0.00 |
-| Auditoria de fatos `factcheck` | fact_checker | real | 0.0s | 2 | US$ 0.00 |
-| Revisao de narrativa `narrative_review` | narrative_editor | real | 0.0s | 1 | US$ 0.00 |
-| Storyboard `storyboard` | art_director | real | 0.0s | 1 | US$ 0.00 |
-| Licenciamento de midia `media_rights` | media_rights_curator | real | 0.0s | 1 | US$ 0.00 |
-| Narracao (TTS local) `voice` | voice_producer | real | 120.8s | 2 | US$ 0.00 |
-| Alinhamento por reconhecimento de fala `align` | voice_producer | real | 39.1s | 2 | US$ 0.00 |
-| Render de cenas 1080p `scenes` | editor_renderer | real | 48.8s | 11 | US$ 0.00 |
-| Montagem final MP4 `edit` | editor_renderer | real | 11.3s | 1 | US$ 0.00 |
-| Legendas SRT `captions` | voice_producer | real | 0.1s | 2 | US$ 0.00 |
-| Miniaturas A/B `thumbnail` | thumbnail_designer | real | 0.8s | 3 | US$ 0.00 |
-| Titulo, descricao, capitulos `seo` | discovery_seo | real | 0.1s | 1 | US$ 0.00 |
-| Tres Shorts 9:16 `shorts` | shorts_producer | real | 64.8s | 7 | US$ 0.00 |
-| Manifesto de origem e direitos `provenance` | media_rights_curator | real | 0.2s | 1 | US$ 0.00 |
-| Auditoria tecnica e gates `qa` | compliance_auditor | real | 52.2s | 1 | US$ 0.00 |
+| Nicho e tese editorial `strategy` | editorial_director | automatico | 0.0s | 1 | US$ 0.00 |
+| Ideias com evidencia `ideation` | demand_researcher | assistido | 0.0s | 1 | US$ 0.00 |
+| Selecao editorial `selection` | editorial_director | automatico | 0.0s | 1 | US$ 0.00 |
+| Dossie de pesquisa `research` | source_researcher | assistido | 0.0s | 2 | US$ 0.00 |
+| Roteiro EN-US `script` | scriptwriter | assistido | 0.0s | 1 | US$ 0.00 |
+| Auditoria de fatos `factcheck` | fact_checker | automatico | 0.0s | 2 | US$ 0.00 |
+| Revisao de narrativa `narrative_review` | narrative_editor | automatico | 0.0s | 1 | US$ 0.00 |
+| Storyboard `storyboard` | art_director | automatico | 0.0s | 1 | US$ 0.00 |
+| Licenciamento de midia `media_rights` | media_rights_curator | automatico | 0.0s | 1 | US$ 0.00 |
+| Narracao (TTS local) `voice` | voice_producer | modelo local | 11.5s | 2 | US$ 0.00 |
+| Alinhamento por reconhecimento de fala `align` | voice_producer | modelo local | 37.3s | 2 | US$ 0.00 |
+| Render de cenas 1080p `scenes` | editor_renderer | automatico | 491.3s | 11 | US$ 0.00 |
+| Montagem final MP4 `edit` | editor_renderer | automatico | 11.5s | 1 | US$ 0.00 |
+| Legendas SRT `captions` | voice_producer | automatico | 0.1s | 2 | US$ 0.00 |
+| Miniaturas A/B `thumbnail` | thumbnail_designer | automatico | 0.7s | 3 | US$ 0.00 |
+| Titulo, descricao, capitulos `seo` | discovery_seo | automatico | 0.1s | 1 | US$ 0.00 |
+| Tres Shorts 9:16 `shorts` | shorts_producer | automatico | 63.9s | 7 | US$ 0.00 |
+| Manifesto de origem e direitos `provenance` | media_rights_curator | automatico | 0.2s | 1 | US$ 0.00 |
+| Auditoria tecnica e gates `qa` | compliance_auditor | automatico | 53.2s | 1 | US$ 0.00 |
 
-**Tempo somado de execução:** 5.6 min · **Despesa externa total: US$ 0.00**
+### O que NÃO é autônomo hoje
+
+Isto fica escrito de propósito. O pipeline produz, valida e bloqueia sozinho; a parte intelectual não.
+
+| Estágio | Nível | O que falta para rodar sozinho |
+|---|---|---|
+| `ideation` | assistido | Gerar pauta com evidencia sozinho exigiria LLM configurada + fonte de sinal de busca autenticada. Hoje a lista vem de config/ e foi escrita nesta sessao. |
+| `research` | assistido | Encontrar e ler fontes primarias exige agente com acesso a web ou pessoa. O pipeline apenas VALIDA o dossie que recebe. |
+| `script` | assistido | Roteiro original exige LLM configurada ou pessoa. O pipeline le o roteiro do episodio e o transforma em markdown. |
+
+**Tempo somado de execução:** 11.2 min · **Despesa externa total: US$ 0.00**
 
 ## Vídeo longo
 
@@ -47,7 +57,7 @@ Gerado automaticamente a partir do store e do disco em 2026-11-11T15:53:54.733Z.
 | Vídeo | h264 High, yuv420p, 14085 frames |
 | Áudio | aac, 48000 Hz, 2 canais |
 | Tamanho | 74.21 MB |
-| Decodificação completa | OK em 21.2s |
+| Decodificação completa | OK em 21.8s |
 | Volume médio / pico | -26.8 dBFS / -5.8 dBFS |
 | Tela preta | 0s (0.00%) |
 
@@ -58,7 +68,8 @@ Gerado automaticamente a partir do store e do disco em 2026-11-11T15:53:54.733Z.
 | Motor | kokoro 0.9.4 — Apache-2.0 (pesos hexgrad/Kokoro-82M) |
 | Voz | `am_michael` · 24000 Hz |
 | Falas sintetizadas | 71, todas com duração medida em amostras |
-| Velocidade de síntese | 4.21x tempo real |
+| Afirmações factuais | 11 detectadas · 14 verificadas na matriz · 2 isentas por uso ilustrativo · 0 órfãs |
+| Velocidade de síntese | reaproveitada do cache |
 | Inteligibilidade (WER por reconhecimento de fala) | **6.45%** (limite 15%) · modelo undefined |
 | Legendas | 104 cues · 95% alinhados por timestamp de palavra · última em 467.7s |
 
@@ -66,17 +77,17 @@ Gerado automaticamente a partir do store e do disco em 2026-11-11T15:53:54.733Z.
 
 | Arquivo | Duração | Resolução | Janela no vídeo longo | Autossuficiência |
 |---|---|---|---|---|
-| `shorts/short_01.mp4` | 25.27s | 1080x1920 | 0.25s–25.52s | Abre nomeando o problema e fecha na frase que o espectador reconhece como propria. Nao depende de nada dito antes. |
-| `shorts/short_02.mp4` | 40.83s | 1080x1920 | 124.98s–165.81s | Argumento circular completo: premissa, mecanismo e conclusao dentro do proprio trecho. |
-| `shorts/short_03.mp4` | 42.05s | 1080x1920 | 309.16s–351.21s | Correcao factual autossuficiente, com o numero, a fonte e a ressalva no mesmo trecho. |
+| `shorts/short_01.mp4` | 25.27s | 1080x1920 | 0.25s–25.52s | Abre nomeando o problema e fecha na frase que o espectador reconhece como própria. Não depende de nada dito antes. |
+| `shorts/short_02.mp4` | 40.83s | 1080x1920 | 124.98s–165.81s | Argumento circular completo: premissa, mecanismo e conclusão dentro do próprio trecho. |
+| `shorts/short_03.mp4` | 42.05s | 1080x1920 | 309.16s–351.21s | Correção factual autossuficiente, com o número, a fonte e a ressalva no mesmo trecho. |
 
 ## Gates
 
-**APROVADO_PARA_REVISAO_HUMANA** — 27/27 testes.
+**APROVADO_PARA_REVISAO_HUMANA** — 28/28 testes.
 
 | Teste | Resultado | Evidência |
 |---|---|---|
-| `mp4_decodifica_inteiro` | OK | ffmpeg -xerror decodificou todo o arquivo em 21.2s |
+| `mp4_decodifica_inteiro` | OK | ffmpeg -xerror decodificou todo o arquivo em 21.8s |
 | `tem_faixa_de_video` | OK | h264 1920x1080 |
 | `tem_faixa_de_audio` | OK | aac 48000Hz 2ch |
 | `resolucao_1080p` | OK | 1920x1080 |
@@ -91,9 +102,10 @@ Gerado automaticamente a partir do store e do disco em 2026-11-11T15:53:54.733Z.
 | `miniatura_B` | OK | 1280x720 |
 | `miniaturas_distintas_e_nao_enganosas` | OK | Waiting is the trap / The task got heavier. The work did not. |
 | `tres_shorts_verticais_reais` | OK | short_01 1080x1920 25.27s audio:true decod:true · short_02 1080x1920 40.83s audio:true decod:true · short_03 1080x1920 42.05s audio:true decod:true |
-| `shorts_com_legenda_queimada_medida` | OK | short_01: 3.856% de pixels de texto na faixa (fundo 0%) · short_02: 5.005% de pixels de texto na faixa (fundo 0%) · short_03: 1.039% de pixels de texto na faixa (fundo 0%) |
+| `shorts_com_legenda_queimada_medida` | OK | short_01: 4.683% de pixels de texto na faixa (fundo 0%) · short_02: 4.721% de pixels de texto na faixa (fundo 0%) · short_03: 5.017% de pixels de texto na faixa (fundo 0%) |
 | `shorts_sem_sobreposicao` | OK | 0.25-25.52s · 124.98-165.81s · 309.16-351.21s |
-| `fontes_revisadas` | OK | 11 afirmacoes, 0 sem fonte, 0 atribuicoes sem fonte |
+| `fontes_revisadas_por_matriz` | OK | 11 falas factuais, 14 com entrada verificada, 0 bloqueios, 0 entradas orfas, verificador: Claude Code — sessão 2026-11-11 (busca web contra fonte primária ou repositório aberto) |
+| `autonomia_declarada_honestamente` | OK | 3 estagio(s) declarados como NAO autonomos: ideation, research, script |
 | `direitos_dos_ativos_revisados` | OK | 10 cenas com licenca declarada, 0 midia de terceiro |
 | `nenhum_ativo_simulado` | OK | nenhum artefato marcado como simulado; visuais gerados por codigo proprio |
 | `publico_configurado` | OK | made_for_kids=false (declarado explicitamente) |
@@ -135,9 +147,10 @@ Funções configuradas mas **sem execução neste piloto**: CEO Virtual / Direto
 
 ## YouTube
 
-- OAuth: **NÃO CONFIGURADO**
-- Publicação: **BLOQUEADA**. Nenhum upload foi feito, nenhum ID de vídeo existe.
-- Analytics: **BLOQUEADO**. Todas as métricas respondem `indisponivel`, nunca zero.
+- Estado real: **BLOQUEADO** — YOUTUBE_CLIENT_ID/YOUTUBE_CLIENT_SECRET ausentes no .env
+- Upload possível: **não** · Analytics possível: **não**
+- Vídeos enviados por este sistema: **0**
+- Token guardado não é prova: o estado `AUTORIZADO` só é declarado depois de uma chamada real à API que confirme o canal.
 - Privacidade padrão configurada: `private`. Público infantil declarado: `false`.
 
 ## Aprovação

@@ -21,13 +21,40 @@ Para expor o painel fora da máquina, defina `HOST=0.0.0.0` **e** `API_KEY=<stri
 
 ## Produzir
 
+Nenhum episódio está embutido no código. O conteúdo vive na pasta do episódio; o pipeline lê.
+
 ```bash
-node src/cli.js produce ep_001          # roda a cadeia, pulando o que já está em checkpoint
-node src/cli.js produce ep_001 --from=voice   # retoma de um estágio
-node src/cli.js stage scenes ep_001     # refaz um estágio só (invalida os que dependem dele)
-node src/cli.js status ep_001           # estado real
-node src/cli.js verify ep_001           # verificação independente, lendo o disco
-node src/test.js                        # testes (decodificam mídia de verdade)
+node src/cli.js episodes                 # o que existe no disco
+node src/cli.js produce ep_002           # roda a cadeia, pulando o que já está em checkpoint
+node src/cli.js produce ep_002 --from=voice
+node src/cli.js stage scenes ep_002      # refaz um estágio só (invalida os que dependem dele)
+node src/cli.js status ep_002
+node src/cli.js verify ep_002            # verificação independente, lendo o disco
+```
+
+Para criar um episódio novo, veja [docs/novo-episodio.md](docs/novo-episodio.md). São quatro arquivos de configuração e zero linha de código.
+
+## YouTube
+
+```bash
+node src/cli.js youtube            # estado REAL, verificado contra a API
+node src/cli.js youtube authorize  # imprime a URL para você autorizar no navegador
+node src/cli.js youtube verify
+node src/cli.js youtube revoke     # revoga no Google e só então apaga o token local
+node src/cli.js upload ep_002      # envio PRIVADO real
+```
+
+O passo humano inevitável está em [docs/youtube-oauth.md](docs/youtube-oauth.md).
+
+## Testes
+
+```bash
+npm run test:all     # tudo
+node src/test.js ep_002           # artefatos reais do episódio (decodifica mídia)
+node src/test-gates.js            # negativos: prova que o sistema bloqueia
+node src/test-youtube.js          # cliente YouTube contra espelho local do Google
+node src/test-security.js         # travessia de caminho, chave, segredos, exposição
+node src/test-independence.js ep_001 ep_002   # prova que os episódios não se repetem
 ```
 
 ## Dependências
@@ -41,6 +68,18 @@ node src/test.js                        # testes (decodificam mídia de verdade)
 | Kokoro-82M (Python, `/opt/ymc-tts`) | narração local | Apache-2.0 (pesos) | US$ 0 |
 | faster-whisper `base.en` | alinhamento de legenda e prova de inteligibilidade | MIT | US$ 0 |
 
+## Honestidade de autonomia
+
+Cada estágio declara de quem depende, e isso aparece no painel, no `provenance.json` e no relatório:
+
+| Nível | O que significa |
+|---|---|
+| **automático** | código determinístico desta máquina; roda de novo igual |
+| **modelo local** | modelo que roda aqui (narração, reconhecimento de fala); sem rede, sem fatura |
+| **assistido** | conteúdo escrito por trabalho intelectual nesta sessão. O próximo episódio exige o mesmo trabalho, por uma pessoa ou por um agente com LLM configurada |
+
+Hoje são **assistidos**: `ideation`, `research` e `script`. O sistema não finge que se vira sozinho nessas três — e há um teste que reprova se nenhum estágio for declarado assim.
+
 ## Regras que o código faz valer, não só promete
 
 - **Despesa externa US$ 0,00.** Nenhum provedor pago é acionado. O gate `despesa_externa_zero` lê o custo somado de todos os estágios e reprova se for diferente de zero.
@@ -48,8 +87,11 @@ node src/test.js                        # testes (decodificam mídia de verdade)
 - **Publicação exige três chaves separadas:** gates verdes, aprovação do proprietário **para aquele vídeo**, e OAuth autorizado. Aprovar um vídeo não autoriza os próximos.
 - **Primeiro envio é sempre privado.** A fila recusa `public`.
 - **Métrica que não existe aparece como `indisponivel`** — nunca como zero, nunca estimada.
-- **Afirmação factual sem fonte reprova o episódio.** O verificador varre todas as falas atrás de ano, número, nome próprio e termo de evidência.
+- **Afirmação factual sem fonte reprova o episódio.** O detector varre as falas atrás de quantidade com unidade, ano, estatística, atribuição e verbo de citação — mas ele é só o gatilho. A autoridade é `claims.json`: cada afirmação diz contra o quê foi conferida, por quem e quando. Entrada sem evidência bloqueia; entrada órfã bloqueia; número usado como ilustração exige isenção assinada.
 - **Ativo sem licença declarada reprova o episódio.**
+- **Editar roteiro, brief, fontes ou matriz no disco** invalida os estágios já concluídos, por impressão digital das entradas.
+- **Token guardado não é prova de autorização.** O estado só vira `AUTORIZADO` depois de uma chamada real à API que confirme o canal.
+- **O painel exposto recusa subir** sem `API_KEY` de 32+ caracteres e sem HTTPS reconhecido.
 
 ## Estrutura
 

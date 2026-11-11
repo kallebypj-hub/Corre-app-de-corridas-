@@ -7,13 +7,36 @@
     "can_be_approved": true,
     "can_be_published": false,
     "publication_block_reason": "Publicação exige (1) todos os gates verdes, (2) aprovação específica do proprietário para ESTE vídeo e (3) OAuth do YouTube autorizado. Nenhuma das três é concedida automaticamente.",
-    "evaluated_at": "2026-11-11T15:53:16.358Z"
+    "evaluated_at": "2026-11-11T17:32:36.069Z"
+  },
+  "autonomy_disclosure": {
+    "statement": "O roteiro, a pesquisa e a verificação deste episódio foram trabalho intelectual desta sessão. O pipeline NÃO gerou nada disso sozinho e não vai gerar no próximo episódio sem uma LLM configurada ou uma pessoa fazendo o mesmo trabalho.",
+    "stages_not_autonomous": [
+      {
+        "stage": "ideation",
+        "level": "assisted",
+        "label": "assistido",
+        "gap": "Gerar pauta com evidencia sozinho exigiria LLM configurada + fonte de sinal de busca autenticada. Hoje a lista vem de config/ e foi escrita nesta sessao."
+      },
+      {
+        "stage": "research",
+        "level": "assisted",
+        "label": "assistido",
+        "gap": "Encontrar e ler fontes primarias exige agente com acesso a web ou pessoa. O pipeline apenas VALIDA o dossie que recebe."
+      },
+      {
+        "stage": "script",
+        "level": "assisted",
+        "label": "assistido",
+        "gap": "Roteiro original exige LLM configurada ou pessoa. O pipeline le o roteiro do episodio e o transforma em markdown."
+      }
+    ]
   },
   "tests": [
     {
       "id": "mp4_decodifica_inteiro",
       "pass": true,
-      "detail": "ffmpeg -xerror decodificou todo o arquivo em 21.2s",
+      "detail": "ffmpeg -xerror decodificou todo o arquivo em 21.8s",
       "evidence": "sem erro"
     },
     {
@@ -103,7 +126,7 @@
     {
       "id": "shorts_com_legenda_queimada_medida",
       "pass": true,
-      "detail": "short_01: 3.856% de pixels de texto na faixa (fundo 0%) · short_02: 5.005% de pixels de texto na faixa (fundo 0%) · short_03: 1.039% de pixels de texto na faixa (fundo 0%)",
+      "detail": "short_01: 4.683% de pixels de texto na faixa (fundo 0%) · short_02: 4.721% de pixels de texto na faixa (fundo 0%) · short_03: 5.017% de pixels de texto na faixa (fundo 0%)",
       "evidence": null
     },
     {
@@ -113,9 +136,15 @@
       "evidence": null
     },
     {
-      "id": "fontes_revisadas",
+      "id": "fontes_revisadas_por_matriz",
       "pass": true,
-      "detail": "11 afirmacoes, 0 sem fonte, 0 atribuicoes sem fonte",
+      "detail": "11 falas factuais, 14 com entrada verificada, 0 bloqueios, 0 entradas orfas, verificador: Claude Code — sessão 2026-11-11 (busca web contra fonte primária ou repositório aberto)",
+      "evidence": null
+    },
+    {
+      "id": "autonomia_declarada_honestamente",
+      "pass": true,
+      "detail": "3 estagio(s) declarados como NAO autonomos: ideation, research, script",
       "evidence": null
     },
     {
@@ -173,8 +202,8 @@
       "evidence": null
     }
   ],
-  "passed": 27,
-  "total": 27,
+  "passed": 28,
+  "total": 28,
   "measurements": {
     "video": {
       "file": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/video_long_1080p.mp4",
@@ -199,7 +228,7 @@
     },
     "decode_check": {
       "ok": true,
-      "elapsed_ms": 21179
+      "elapsed_ms": 21788
     },
     "audio_stats": {
       "mean_volume_db": -26.8,

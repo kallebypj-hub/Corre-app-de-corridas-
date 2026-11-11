@@ -16,9 +16,14 @@ const { sceneHTML, beatState } = require('./render/compose');
 const { levenshteinWords } = require('./stages/production');
 const ceo = require('./ceo');
 const yt = require('./youtube/oauth');
+const ytQueue = require('./youtube/queue');
+const ytAnalytics = require('./youtube/analytics');
 
+const { listEpisodeDirs, loadBrief } = require('./episode-config');
 const CH = process.env.CHANNEL_ID || 'ch_practical_discipline';
-const EP = 'ep_001';
+// Nenhum episodio e padrao no codigo: vem do argumento ou do disco.
+const EP = process.argv[2] || listEpisodeDirs(CH)[0];
+if (!EP) { console.error('nenhum episodio no disco'); process.exit(1); }
 const BASE = path.join(__dirname, '..', 'content', 'channels', CH, 'episodes', EP);
 let pass = 0, fail = 0; const failures = [];
 async function t(name, fn) {
@@ -28,7 +33,19 @@ async function t(name, fn) {
 const J = (f) => JSON.parse(fs.readFileSync(path.join(BASE, f), 'utf8'));
 
 (async () => {
+  console.log(`\n\x1b[1mepisodio sob teste: ${EP}\x1b[0m`);
   console.log('\n— estrutura e isolamento —');
+  await t('o episodio tem os quatro arquivos de configuracao, e o pipeline nao contem conteudo dele', () => {
+    const base = path.join(__dirname, '..', 'content', 'channels', CH, 'episodes', EP);
+    for (const f of ['brief.json', 'script_en.json', 'sources.json', 'claims.json'])
+      assert.ok(fs.existsSync(path.join(base, f)), `falta ${f}`);
+    // nenhum identificador de episodio aparece no codigo dos estagios
+    const src = ['stages/editorial.js', 'stages/audit.js', 'stages/production.js', 'stages/finishing.js',
+      'stages/shorts.js', 'stages/compliance.js'].map((f) => fs.readFileSync(path.join(__dirname, f), 'utf8')).join('\n');
+    assert.ok(!/ep_00\d/.test(src), 'codigo de estagio contem identificador de episodio');
+    const brief = loadBrief(CH, EP);
+    assert.ok(!src.includes(brief.metadata.title), 'o titulo do episodio esta embutido no codigo');
+  });
   await t('nenhuma dependencia npm declarada', () => {
     const p = require('../package.json');
     assert.strictEqual(Object.keys(p.dependencies || {}).length, 0, 'o projeto nao deve instalar pacotes npm');
@@ -79,26 +96,33 @@ const J = (f) => JSON.parse(fs.readFileSync(path.join(BASE, f), 'utf8'));
     assert.ok(/Pipeline: \d+\/\d+/.test(r.message), 'status deve conter contagem real de estagios');
     assert.ok(r.data && r.data.ep, 'status deve devolver o episodio lido do store');
   });
-  await t('sem OAuth, publicacao e analytics ficam BLOQUEADOS (nunca simulados)', () => {
-    const st = yt.state(CH);
-    assert.ok(['BLOQUEADO', 'PENDENTE_AUTORIZACAO'].includes(st.status), `estado inesperado ${st.status}`);
+  await t('sem OAuth, publicacao e analytics ficam BLOQUEADOS (nunca simulados)', async () => {
+    const st = await yt.state(CH);
+    assert.ok(['BLOQUEADO', 'PENDENTE_AUTORIZACAO', 'TOKEN_PRESENTE_NAO_VERIFICADO'].includes(st.status), `estado inesperado ${st.status}`);
     assert.strictEqual(st.upload_possible, false);
-    const an = yt.analytics(CH);
+    const an = await ytAnalytics.collect(CH, []);
     assert.strictEqual(an.status, 'BLOQUEADO');
     for (const v of Object.values(an.metrics)) assert.strictEqual(v, 'indisponivel', 'metrica ausente deve ser indisponivel, nunca 0');
   });
-  await t('fila de publicacao recusa video sem gates e sem aprovacao', () => {
+  await t('token guardado nao basta: sem verificacao viva nao ha AUTORIZADO', async () => {
+    const st = await yt.state(CH, { live: false });
+    assert.notStrictEqual(st.status, 'AUTORIZADO', 'estado AUTORIZADO sem checagem viva');
+  });
+  await t('fila de publicacao exige gates, auditoria atual, aprovacao e privacidade privada', async () => {
     const store = new Store('ch_test_queue');
     store.ensureEpisode('ep_q', {});
-    assert.throws(() => yt.enqueue(store, 'ep_q', { approvedBy: 'x' }), /gates/i);
+    await assert.rejects(() => ytQueue.enqueue(store, 'ep_q', { approvedBy: 'x' }), /gates/i);
     store.append('gates.evaluated', { epId: 'ep_q', gates: { can_be_approved: true, verdict: 'ok' } });
-    assert.throws(() => yt.enqueue(store, 'ep_q', { approvedBy: 'x' }), /aprovacao/i);
+    await assert.rejects(() => ytQueue.enqueue(store, 'ep_q', { approvedBy: 'x' }), /auditoria desatualizada/i);
+    store.stageStart('ep_q', 'qa', {}); store.stageDone('ep_q', 'qa', { mode: 'real' });
+    await assert.rejects(() => ytQueue.enqueue(store, 'ep_q', { approvedBy: 'x' }), /aprovacao/i);
     store.append('approval.decided', { epId: 'ep_q', status: 'approved', by: 'p', scheduled_upload_authorized: false });
-    assert.throws(() => yt.enqueue(store, 'ep_q', { approvedBy: 'x' }), /envio programado/i);
+    await assert.rejects(() => ytQueue.enqueue(store, 'ep_q', { approvedBy: 'x' }), /envio programado/i);
     store.append('approval.decided', { epId: 'ep_q', status: 'approved', by: 'p', scheduled_upload_authorized: true });
-    assert.throws(() => yt.enqueue(store, 'ep_q', { approvedBy: 'x', privacy: 'public' }), /privado/i);
-    const rec = yt.enqueue(store, 'ep_q', { approvedBy: 'p', privacy: 'private' });
+    await assert.rejects(() => ytQueue.enqueue(store, 'ep_q', { approvedBy: 'x', privacy: 'public' }), /privado/i);
+    const rec = await ytQueue.enqueue(store, 'ep_q', { approvedBy: 'p', privacy: 'private' });
     assert.strictEqual(rec.privacy, 'private');
+    assert.strictEqual(rec.status, 'BLOCKED_NO_OAUTH', 'sem OAuth a fila nao pode ficar pronta para enviar');
     fs.rmSync(path.dirname(store.statePath), { recursive: true, force: true });
   });
 
@@ -183,14 +207,28 @@ const J = (f) => JSON.parse(fs.readFileSync(path.join(BASE, f), 'utf8'));
   });
   await t('toda afirmacao factual tem fonte', () => {
     const c = J('claims_review.json');
-    assert.strictEqual(c.summary.unsourced, 0, `${c.summary.unsourced} sem fonte`);
-    assert.strictEqual(c.summary.attributions_without_source, 0, 'atribuicao a pessoa real sem fonte');
+    assert.strictEqual(c.summary.verdict, 'APROVADO', 'auditoria de fatos nao aprovada');
+    assert.strictEqual(c.summary.blocked, 0, `${c.summary.blocked} bloqueio(s)`);
+    assert.strictEqual(c.summary.orphan_assertions, 0, 'matriz com entrada orfa');
+    assert.ok(c.matrix_verifier, 'matriz sem verificador declarado');
   });
   await t('todo ativo tem licenca e nenhum e de terceiro', () => {
     const p = J('provenance.json');
     for (const a of p.visual_assets_by_scene) assert.ok(a.license && !/unknown/i.test(a.license), `${a.scene} sem licenca`);
     assert.strictEqual(p.third_party_media_used, false);
     assert.strictEqual(p.external_spend_usd, 0);
+  });
+  await t('toda afirmacao verificada aponta para fonte existente no dossie', () => {
+    const c = J('claims_review.json'); const src = new Set(J('sources.json').sources.map((x) => x.id));
+    for (const r of c.rows) for (const s2 of (r.sources || [])) assert.ok(src.has(s2), `fonte fantasma: ${s2}`);
+  });
+  await t('cada estagio declarou seu nivel de autonomia', () => {
+    const ep = new Store(CH).episode(EP);
+    const done = Object.values(ep.stages).filter((s2) => s2.status === 'done');
+    const sem = done.filter((s2) => !s2.autonomy || !s2.autonomy.level);
+    assert.strictEqual(sem.length, 0, `${sem.length} estagio(s) sem declaracao de autonomia`);
+    const assistidos = done.filter((s2) => s2.autonomy.level === 'assisted');
+    assert.ok(assistidos.length >= 1, 'nenhum estagio declarado como assistido — isso seria desonesto');
   });
   await t('narracao inteligivel comprovada por reconhecimento de fala', () => {
     const ir = J('intelligibility_report.json');

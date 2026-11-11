@@ -1,0 +1,749 @@
+{
+  "engine": "kokoro",
+  "engine_version": "0.9.4",
+  "weights_license": "Apache-2.0 (pesos hexgrad/Kokoro-82M)",
+  "voice": "am_michael",
+  "sample_rate": 24000,
+  "pauses": {
+    "beat": 0.38,
+    "scene": 1.1,
+    "lead": 0.6,
+    "outro": 1.8
+  },
+  "total_duration_s": 408.09,
+  "synthesis_cpu_ms": 0,
+  "realtime_factor": null,
+  "audio_stats": {
+    "mean_volume_db": -23.8,
+    "max_volume_db": -3
+  },
+  "scene_durations": {
+    "s01": 22.745,
+    "s02": 50.18,
+    "s03": 50.03,
+    "s04": 40.525,
+    "s05": 26.695,
+    "s06": 39.575,
+    "s07": 42.43,
+    "s08": 31.6,
+    "s09": 58.63,
+    "s10": 45.68
+  },
+  "beat_durations": {
+    "s01": [
+      2.98,
+      3.705,
+      6.905,
+      3.055,
+      6.1
+    ],
+    "s02": [
+      4.98,
+      6.88,
+      4.78,
+      9.855,
+      9.805,
+      6.18,
+      7.7
+    ],
+    "s03": [
+      4.305,
+      9.255,
+      7.605,
+      7.355,
+      5.48,
+      5.88,
+      10.15
+    ],
+    "s04": [
+      5.355,
+      8.08,
+      9.505,
+      5.68,
+      6.005,
+      5.9
+    ],
+    "s05": [
+      3.08,
+      4.105,
+      4.08,
+      7.83,
+      7.6
+    ],
+    "s06": [
+      6.255,
+      7.53,
+      2.555,
+      7.105,
+      8.98,
+      7.15
+    ],
+    "s07": [
+      7.08,
+      5.305,
+      5.53,
+      4.98,
+      8.58,
+      4.33,
+      6.625
+    ],
+    "s08": [
+      2.83,
+      10.105,
+      5.18,
+      4.405,
+      3.38,
+      5.7
+    ],
+    "s09": [
+      5.655,
+      8.255,
+      8.055,
+      9.98,
+      3.83,
+      14.08,
+      8.775
+    ],
+    "s10": [
+      2.355,
+      5.03,
+      8.58,
+      8.73,
+      5.555,
+      6.655,
+      8.775
+    ]
+  },
+  "lines": [
+    {
+      "lineId": "s01_b0",
+      "scene": "s01",
+      "beat": 0,
+      "text": "Twenty one days.",
+      "start": 0.6,
+      "end": 2.6,
+      "duration": 2,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b1",
+      "scene": "s01",
+      "beat": 1,
+      "text": "Sixty six days. Fifty nine days.",
+      "start": 2.98,
+      "end": 6.305,
+      "duration": 3.325,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b2",
+      "scene": "s01",
+      "beat": 2,
+      "text": "All three of those numbers are real. Each one comes from an actual book or an actual study.",
+      "start": 6.685,
+      "end": 13.21,
+      "duration": 6.525,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b3",
+      "scene": "s01",
+      "beat": 3,
+      "text": "And not one of them is about you.",
+      "start": 13.59,
+      "end": 16.265,
+      "duration": 2.675,
+      "measured": true
+    },
+    {
+      "lineId": "s01_b4",
+      "scene": "s01",
+      "beat": 4,
+      "text": "Not because you're special. Because of what those numbers are, underneath.",
+      "start": 16.645,
+      "end": 21.645,
+      "duration": 5,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b0",
+      "scene": "s02",
+      "beat": 0,
+      "text": "Start with twenty one, because it's the oldest and the most wrong.",
+      "start": 22.745,
+      "end": 27.345,
+      "duration": 4.6,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b1",
+      "scene": "s02",
+      "beat": 1,
+      "text": "It comes from a book published in nineteen sixty. Psycho-Cybernetics, by Maxwell Maltz.",
+      "start": 27.725,
+      "end": 34.225,
+      "duration": 6.5,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b2",
+      "scene": "s02",
+      "beat": 2,
+      "text": "Maltz was a plastic surgeon. He was not studying habits.",
+      "start": 34.605,
+      "end": 39.005,
+      "duration": 4.4,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b3",
+      "scene": "s02",
+      "beat": 3,
+      "text": "He noticed that his patients took a while to stop seeing their old face. That amputees sensed a phantom limb for a stretch before it faded.",
+      "start": 39.385,
+      "end": 48.86,
+      "duration": 9.475,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b4",
+      "scene": "s02",
+      "beat": 4,
+      "text": "What he wrote was that it requires a minimum of about twenty one days for an old mental image to dissolve and a new one to jell.",
+      "start": 49.24,
+      "end": 58.665,
+      "duration": 9.425,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b5",
+      "scene": "s02",
+      "beat": 5,
+      "text": "A minimum. About. And it's describing self-image after surgery, not flossing.",
+      "start": 59.045,
+      "end": 64.845,
+      "duration": 5.8,
+      "measured": true
+    },
+    {
+      "lineId": "s02_b6",
+      "scene": "s02",
+      "beat": 6,
+      "text": "Those qualifiers fell off somewhere in the decades since. The number kept travelling without them.",
+      "start": 65.225,
+      "end": 71.825,
+      "duration": 6.6,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b0",
+      "scene": "s03",
+      "beat": 0,
+      "text": "Now sixty six, which at least came from a study.",
+      "start": 72.925,
+      "end": 76.85,
+      "duration": 3.925,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b1",
+      "scene": "s03",
+      "beat": 1,
+      "text": "In two thousand ten, Phillippa Lally's team at University College London followed ninety six people for eighty four days.",
+      "start": 77.23,
+      "end": 86.105,
+      "duration": 8.875,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b2",
+      "scene": "s03",
+      "beat": 2,
+      "text": "Each person picked one daily behaviour and reported, every single day, how automatic it felt.",
+      "start": 86.485,
+      "end": 93.71,
+      "duration": 7.225,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b3",
+      "scene": "s03",
+      "beat": 3,
+      "text": "That last part matters more than the number. What got measured was not whether they finished the task.",
+      "start": 94.09,
+      "end": 101.065,
+      "duration": 6.975,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b4",
+      "scene": "s03",
+      "beat": 4,
+      "text": "It was automaticity. How little deliberation the action still needed.",
+      "start": 101.445,
+      "end": 106.545,
+      "duration": 5.1,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b5",
+      "scene": "s03",
+      "beat": 5,
+      "text": "Plot that over time and you get a curve that climbs fast and then flattens out.",
+      "start": 106.925,
+      "end": 112.425,
+      "duration": 5.5,
+      "measured": true
+    },
+    {
+      "lineId": "s03_b6",
+      "scene": "s03",
+      "beat": 6,
+      "text": "Sixty six days is roughly where the average curve got close to its own ceiling. It describes a shape. It is not a deadline.",
+      "start": 112.805,
+      "end": 121.855,
+      "duration": 9.05,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b0",
+      "scene": "s04",
+      "beat": 0,
+      "text": "Then two thousand twenty four, and the biggest look at this so far.",
+      "start": 122.955,
+      "end": 127.93,
+      "duration": 4.975,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b1",
+      "scene": "s04",
+      "beat": 1,
+      "text": "Singh, Murphy, Maher and Smith pulled together twenty studies covering two thousand six hundred and one adults.",
+      "start": 128.31,
+      "end": 136.01,
+      "duration": 7.7,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b2",
+      "scene": "s04",
+      "beat": 2,
+      "text": "Here's the first uncomfortable detail. Of those twenty studies, only four actually reported how long habit formation took.",
+      "start": 136.39,
+      "end": 145.515,
+      "duration": 9.125,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b3",
+      "scene": "s04",
+      "beat": 3,
+      "text": "Four. That's the entire evidence base under the number everyone repeats.",
+      "start": 145.895,
+      "end": 151.195,
+      "duration": 5.3,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b4",
+      "scene": "s04",
+      "beat": 4,
+      "text": "Among the people who did form a habit, the median was about fifty nine days.",
+      "start": 151.575,
+      "end": 157.2,
+      "duration": 5.625,
+      "measured": true
+    },
+    {
+      "lineId": "s04_b5",
+      "scene": "s04",
+      "beat": 5,
+      "text": "And the range ran from four days to three hundred and thirty five.",
+      "start": 157.58,
+      "end": 162.38,
+      "duration": 4.8,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b0",
+      "scene": "s05",
+      "beat": 0,
+      "text": "Sit with that range for a second.",
+      "start": 163.48,
+      "end": 166.18,
+      "duration": 2.7,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b1",
+      "scene": "s05",
+      "beat": 1,
+      "text": "Four days to three hundred and thirty five days.",
+      "start": 166.56,
+      "end": 170.285,
+      "duration": 3.725,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b2",
+      "scene": "s05",
+      "beat": 2,
+      "text": "That is not a timeline with error bars around it.",
+      "start": 170.665,
+      "end": 174.365,
+      "duration": 3.7,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b3",
+      "scene": "s05",
+      "beat": 3,
+      "text": "It's a statement that this varies by almost two orders of magnitude, depending on the person and the behaviour.",
+      "start": 174.745,
+      "end": 182.195,
+      "duration": 7.45,
+      "measured": true
+    },
+    {
+      "lineId": "s05_b4",
+      "scene": "s05",
+      "beat": 4,
+      "text": "When a range is that wide, the middle of it stops being a prediction. It becomes trivia.",
+      "start": 182.575,
+      "end": 189.075,
+      "duration": 6.5,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b0",
+      "scene": "s06",
+      "beat": 0,
+      "text": "And there's a second detail in that same review, which I think is the important one.",
+      "start": 190.175,
+      "end": 196.05,
+      "duration": 5.875,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b1",
+      "scene": "s06",
+      "beat": 1,
+      "text": "Only twenty three percent of participants reached the threshold the researchers had set for a habit.",
+      "start": 196.43,
+      "end": 203.58,
+      "duration": 7.15,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b2",
+      "scene": "s06",
+      "beat": 2,
+      "text": "Twenty three percent.",
+      "start": 203.96,
+      "end": 206.135,
+      "duration": 2.175,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b3",
+      "scene": "s06",
+      "beat": 3,
+      "text": "So the median isn't the midpoint of everyone who tried. It's the midpoint of the people who got there.",
+      "start": 206.515,
+      "end": 213.24,
+      "duration": 6.725,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b4",
+      "scene": "s06",
+      "beat": 4,
+      "text": "That's a survivorship number. You're being quoted the average time of the finishers and handed it as a forecast for yourself.",
+      "start": 213.62,
+      "end": 222.22,
+      "duration": 8.6,
+      "measured": true
+    },
+    {
+      "lineId": "s06_b5",
+      "scene": "s06",
+      "beat": 5,
+      "text": "Nobody is lying to you. The number just lost its denominator on the way over.",
+      "start": 222.6,
+      "end": 228.65,
+      "duration": 6.05,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b0",
+      "scene": "s07",
+      "beat": 0,
+      "text": "Which would be a harmless statistics complaint, except for what the number does once it's in your head.",
+      "start": 229.75,
+      "end": 236.45,
+      "duration": 6.7,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b1",
+      "scene": "s07",
+      "beat": 1,
+      "text": "A timeline is a deadline. And a deadline produces a verdict.",
+      "start": 236.83,
+      "end": 241.755,
+      "duration": 4.925,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b2",
+      "scene": "s07",
+      "beat": 2,
+      "text": "Pick sixty six. Day sixty seven arrives, and it still takes effort.",
+      "start": 242.135,
+      "end": 247.285,
+      "duration": 5.15,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b3",
+      "scene": "s07",
+      "beat": 3,
+      "text": "You now have evidence. Not about the behaviour. About yourself.",
+      "start": 247.665,
+      "end": 252.265,
+      "duration": 4.6,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b4",
+      "scene": "s07",
+      "beat": 4,
+      "text": "The honest reading says you're sitting comfortably inside a range that runs to three hundred and thirty five days.",
+      "start": 252.645,
+      "end": 260.845,
+      "duration": 8.2,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b5",
+      "scene": "s07",
+      "beat": 5,
+      "text": "The number in your head says you failed six weeks ago.",
+      "start": 261.225,
+      "end": 265.175,
+      "duration": 3.95,
+      "measured": true
+    },
+    {
+      "lineId": "s07_b6",
+      "scene": "s07",
+      "beat": 6,
+      "text": "A statistic quietly became a character assessment, and nobody asked it to.",
+      "start": 265.555,
+      "end": 271.08,
+      "duration": 5.525,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b0",
+      "scene": "s08",
+      "beat": 0,
+      "text": "So change what you're asking.",
+      "start": 272.18,
+      "end": 274.63,
+      "duration": 2.45,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b1",
+      "scene": "s08",
+      "beat": 1,
+      "text": "Every one of these studies is measuring the same underlying thing: how automatic an action becomes when it's repeated in a stable context.",
+      "start": 275.01,
+      "end": 284.735,
+      "duration": 9.725,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b2",
+      "scene": "s08",
+      "beat": 2,
+      "text": "The clock is not the input. Repetition in the same setting is.",
+      "start": 285.115,
+      "end": 289.915,
+      "duration": 4.8,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b3",
+      "scene": "s08",
+      "beat": 3,
+      "text": "Same trigger, same place, same position in the day.",
+      "start": 290.295,
+      "end": 294.32,
+      "duration": 4.025,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b4",
+      "scene": "s08",
+      "beat": 4,
+      "text": "That's the variable you actually hold.",
+      "start": 294.7,
+      "end": 297.7,
+      "duration": 3,
+      "measured": true
+    },
+    {
+      "lineId": "s08_b5",
+      "scene": "s08",
+      "beat": 5,
+      "text": "Days pass whether or not you do anything. Repetitions don't.",
+      "start": 298.08,
+      "end": 302.68,
+      "duration": 4.6,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b0",
+      "scene": "s09",
+      "beat": 0,
+      "text": "There's a version of this written for doctors, and it's refreshingly boring.",
+      "start": 303.78,
+      "end": 309.055,
+      "duration": 5.275,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b1",
+      "scene": "s09",
+      "beat": 1,
+      "text": "In two thousand twelve, Gardner, Lally and Wardle published guidance in the British Journal of General Practice.",
+      "start": 309.435,
+      "end": 317.31,
+      "duration": 7.875,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b2",
+      "scene": "s09",
+      "beat": 2,
+      "text": "Have the patient repeat one chosen behaviour in the same context until it becomes automatic and effortless.",
+      "start": 317.69,
+      "end": 325.365,
+      "duration": 7.675,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b3",
+      "scene": "s09",
+      "beat": 3,
+      "text": "And start absurdly small. Their example is a sedentary person getting off the bus one stop early, instead of walking the whole route.",
+      "start": 325.745,
+      "end": 335.345,
+      "duration": 9.6,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b4",
+      "scene": "s09",
+      "beat": 4,
+      "text": "There is no timeline anywhere in that advice.",
+      "start": 335.725,
+      "end": 339.175,
+      "duration": 3.45,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b5",
+      "scene": "s09",
+      "beat": 5,
+      "text": "And here's the limit I owe you. Four studies is thin. That twenty twenty four review used narrative synthesis rather than pooling the numbers, because the designs disagreed too much to average.",
+      "start": 339.555,
+      "end": 353.255,
+      "duration": 13.7,
+      "measured": true
+    },
+    {
+      "lineId": "s09_b6",
+      "scene": "s09",
+      "beat": 6,
+      "text": "So even fifty nine is soft. I'm not handing you a better number. I'm saying the number is the wrong object.",
+      "start": 353.635,
+      "end": 361.31,
+      "duration": 7.675,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b0",
+      "scene": "s10",
+      "beat": 0,
+      "text": "So here's the swap.",
+      "start": 362.41,
+      "end": 364.385,
+      "duration": 1.975,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b1",
+      "scene": "s10",
+      "beat": 1,
+      "text": "Stop counting days. Count repetitions in the same context.",
+      "start": 364.765,
+      "end": 369.415,
+      "duration": 4.65,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b2",
+      "scene": "s10",
+      "beat": 2,
+      "text": "Write down the cue, not the deadline. After I pour the coffee. When I close the laptop. Before I take my shoes off.",
+      "start": 369.795,
+      "end": 377.995,
+      "duration": 8.2,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b3",
+      "scene": "s10",
+      "beat": 3,
+      "text": "Then keep a tally of how many times that cue fired and you went. That number means something. Day forty one does not.",
+      "start": 378.375,
+      "end": 386.725,
+      "duration": 8.35,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b4",
+      "scene": "s10",
+      "beat": 4,
+      "text": "And when it still feels like effort at week ten, you haven't missed a deadline.",
+      "start": 387.105,
+      "end": 392.28,
+      "duration": 5.175,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b5",
+      "scene": "s10",
+      "beat": 5,
+      "text": "You're inside a range that runs to three hundred and thirty five days, and you're still in it.",
+      "start": 392.66,
+      "end": 398.935,
+      "duration": 6.275,
+      "measured": true
+    },
+    {
+      "lineId": "s10_b6",
+      "scene": "s10",
+      "beat": 6,
+      "text": "If you want to try it, put your cue in the comments. Not the goal. The thing that happens right before.",
+      "start": 399.315,
+      "end": 406.29,
+      "duration": 6.975,
+      "measured": true
+    }
+  ]
+}

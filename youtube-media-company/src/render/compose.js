@@ -111,6 +111,104 @@ function backdrop(motif, seed, accent, W, H) {
       for (let i = 0; i < 26; i++) { const yy = (H / 26) * i; P.push(`<line x1="${(W * 0.54).toFixed(0)}" y1="${yy.toFixed(0)}" x2="${W}" y2="${yy.toFixed(0)}" stroke="${dim}" stroke-width="0.8" opacity="0.22"/>`); }
       break;
     }
+    case 'number_trio': {
+      // tres fichas empilhadas: as duas de cima riscadas, a de baixo inteira
+      const x0 = W * 0.60, x1 = W * 0.955, bh = H * 0.155;
+      [0.20, 0.42, 0.64].forEach((yy, i) => {
+        const y = H * yy, live = i === 2;
+        P.push(`<rect x="${x0.toFixed(0)}" y="${y.toFixed(0)}" width="${(x1 - x0).toFixed(0)}" height="${bh.toFixed(0)}" fill="none" stroke="${live ? a : dim}" stroke-width="${live ? 4 : 2}" opacity="${live ? 0.95 : 0.55}"/>`);
+        if (!live) {
+          P.push(`<line x1="${(x0 + 6).toFixed(0)}" y1="${(y + bh - 6).toFixed(0)}" x2="${(x1 - 6).toFixed(0)}" y2="${(y + 6).toFixed(0)}" stroke="${a}" stroke-width="5" opacity="0.9"/>`);
+          P.push(`<line x1="${(x0 + 6).toFixed(0)}" y1="${(y + 6).toFixed(0)}" x2="${(x1 - 6).toFixed(0)}" y2="${(y + bh - 6).toFixed(0)}" stroke="${a}" stroke-width="5" opacity="0.9"/>`);
+        } else {
+          P.push(`<rect x="${(x0 + 10).toFixed(0)}" y="${(y + 10).toFixed(0)}" width="${(x1 - x0 - 20).toFixed(0)}" height="${(bh - 20).toFixed(0)}" fill="${a}" opacity="0.14"/>`);
+        }
+      });
+      break;
+    }
+    case 'origin_timeline': {
+      const y = H * 0.5, x0 = W * 0.56, x1 = W * 0.955;
+      P.push(`<line x1="${x0.toFixed(0)}" y1="${y}" x2="${x1.toFixed(0)}" y2="${y}" stroke="${PALETTE.ink_dim}" stroke-width="3" opacity="0.75"/>`);
+      [0, 0.46, 1].forEach((f, i) => {
+        const x = x0 + (x1 - x0) * f, first = i === 0;
+        P.push(`<line x1="${x.toFixed(0)}" y1="${(y - H * 0.16).toFixed(0)}" x2="${x.toFixed(0)}" y2="${(y + H * 0.16).toFixed(0)}" stroke="${first ? a : dim}" stroke-width="${first ? 3 : 2}" opacity="${first ? 0.75 : 0.45}"/>`);
+        P.push(`<circle cx="${x.toFixed(0)}" cy="${y}" r="${first ? 22 : 13}" fill="${first ? a : PALETTE.bg_deep}" stroke="${first ? a : PALETTE.ink_dim}" stroke-width="3" opacity="0.98"/>`);
+        if (first) P.push(`<circle cx="${x.toFixed(0)}" cy="${y}" r="38" fill="none" stroke="${a}" stroke-width="2" opacity="0.4"/>`);
+      });
+      break;
+    }
+    case 'survivorship_funnel': {
+      const cx = W * 0.78, top = H * 0.2, bot = H * 0.8;
+      for (let i = 0; i < 9; i++) {
+        const t2 = i / 8, yy = top + (bot - top) * t2;
+        const halfW = (W * 0.19) * (1 - t2 * 0.78);
+        P.push(`<line x1="${(cx - halfW).toFixed(0)}" y1="${yy.toFixed(0)}" x2="${(cx + halfW).toFixed(0)}" y2="${yy.toFixed(0)}" stroke="${i >= 7 ? a : dim}" stroke-width="${i >= 7 ? 4 : 2}" opacity="${i >= 7 ? 0.9 : 0.35 + t2 * 0.2}"/>`);
+      }
+      break;
+    }
+    case 'distribution_spread': {
+      // o espalhamento E o achado: os pontos precisam ser lidos, nao adivinhados
+      const x0 = W * 0.54, x1 = W * 0.96, base = H * 0.78, topY = H * 0.2;
+      P.push(`<line x1="${x0.toFixed(0)}" y1="${base.toFixed(0)}" x2="${x1.toFixed(0)}" y2="${base.toFixed(0)}" stroke="${PALETTE.ink_dim}" stroke-width="2.5" opacity="0.7"/>`);
+      for (let i = 0; i < 120; i++) {
+        const u = Math.pow(r(), 2.1);
+        const x = x0 + (x1 - x0) * u;
+        const y = topY + r() * (base - topY - H * 0.02);
+        const far = u > 0.55;
+        P.push(`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(4.5 + r() * 3.5).toFixed(1)}" fill="${far ? a : PALETTE.ink}" opacity="${far ? 0.75 : 0.42}"/>`);
+      }
+      const med = x0 + (x1 - x0) * 0.2;
+      P.push(`<line x1="${med.toFixed(0)}" y1="${(topY - H * 0.04).toFixed(0)}" x2="${med.toFixed(0)}" y2="${base.toFixed(0)}" stroke="${a}" stroke-width="4" opacity="1"/>`);
+      P.push(`<circle cx="${med.toFixed(0)}" cy="${(topY - H * 0.04).toFixed(0)}" r="9" fill="${a}"/>`);
+      break;
+    }
+    case 'asymptote_curve': {
+      const x0 = W * 0.55, x1 = W * 0.96, base = H * 0.8, top = H * 0.24;
+      const pts = [];
+      for (let i = 0; i <= 60; i++) { const t2 = i / 60; const y = base - (base - top) * (1 - Math.exp(-3.2 * t2)); pts.push(`${(x0 + (x1 - x0) * t2).toFixed(1)},${y.toFixed(1)}`); }
+      P.push(`<polyline points="${pts.join(' ')}" fill="none" stroke="${a}" stroke-width="3.5" opacity="0.9"/>`);
+      P.push(`<line x1="${x0}" y1="${top.toFixed(0)}" x2="${x1}" y2="${top.toFixed(0)}" stroke="${dim}" stroke-width="1.5" stroke-dasharray="10 12" opacity="0.6"/>`);
+      P.push(`<line x1="${x0}" y1="${base}" x2="${x1}" y2="${base}" stroke="${PALETTE.ink_dim}" stroke-width="2" opacity="0.5"/>`);
+      break;
+    }
+    case 'deadline_calendar': {
+      const cols = 10, rows = 8, gap = W * 0.006;
+      const cell = Math.min((W * 0.4) / cols, (H * 0.6) / rows);
+      const x0 = W * 0.555, y0 = H * 0.18;
+      for (let i = 0; i < cols * rows; i++) {
+        const cx2 = x0 + (i % cols) * (cell + gap), cy2 = y0 + Math.floor(i / cols) * (cell + gap);
+        const hot = i === 65;      // o dia 66
+        const past = i < 65;
+        P.push(`<rect x="${cx2.toFixed(0)}" y="${cy2.toFixed(0)}" width="${cell.toFixed(0)}" height="${cell.toFixed(0)}" rx="3" fill="${hot ? a : (past ? PALETTE.line : 'none')}" stroke="${hot ? a : PALETTE.line}" stroke-width="${hot ? 3 : 1.6}" opacity="${hot ? 1 : (past ? 0.8 : 0.55)}"/>`);
+      }
+      // o dia seguinte, vazio e marcado
+      const nx = x0 + (66 % cols) * (cell + gap), ny = y0 + Math.floor(66 / cols) * (cell + gap);
+      P.push(`<rect x="${nx.toFixed(0)}" y="${ny.toFixed(0)}" width="${cell.toFixed(0)}" height="${cell.toFixed(0)}" rx="3" fill="none" stroke="${PALETTE.ink}" stroke-width="3" stroke-dasharray="6 5" opacity="0.9"/>`);
+      break;
+    }
+    case 'cue_repetition': {
+      // o mesmo gatilho repetido: o que muda e a repeticao no mesmo contexto
+      const rows2 = 5, cols2 = 7, x0 = W * 0.56, y0 = H * 0.24;
+      const gx = (W * 0.4) / cols2, gy = (H * 0.52) / rows2;
+      for (let i = 0; i < rows2 * cols2; i++) {
+        const cx2 = x0 + (i % cols2) * gx + gx / 2, cy2 = y0 + Math.floor(i / cols2) * gy + gy / 2;
+        const strong = i % cols2 === 2;
+        P.push(`<circle cx="${cx2.toFixed(0)}" cy="${cy2.toFixed(0)}" r="${strong ? 11 : 6}" fill="none" stroke="${strong ? a : dim}" stroke-width="${strong ? 2.5 : 1.2}" opacity="${strong ? 0.9 : 0.3}"/>`);
+        if (strong) P.push(`<circle cx="${cx2.toFixed(0)}" cy="${cy2.toFixed(0)}" r="3.5" fill="${a}" opacity="0.9"/>`);
+      }
+      break;
+    }
+    case 'evidence_gap': {
+      const cx = W * 0.77, cy = H * 0.5, R = H * 0.3;
+      P.push(`<circle cx="${cx}" cy="${cy}" r="${R.toFixed(0)}" fill="none" stroke="${dim}" stroke-width="2" opacity="0.5"/>`);
+      // fatia pequena acesa: a parte do corpo de evidencia que realmente mediu
+      const frac = 0.2, a0 = -Math.PI / 2, a1 = a0 + frac * Math.PI * 2;
+      const x1p = cx + R * Math.cos(a0), y1p = cy + R * Math.sin(a0);
+      const x2p = cx + R * Math.cos(a1), y2p = cy + R * Math.sin(a1);
+      P.push(`<path d="M ${cx} ${cy} L ${x1p.toFixed(1)} ${y1p.toFixed(1)} A ${R.toFixed(0)} ${R.toFixed(0)} 0 0 1 ${x2p.toFixed(1)} ${y2p.toFixed(1)} Z" fill="${a}" opacity="0.85"/>`);
+      for (let i = 1; i < 5; i++) P.push(`<circle cx="${cx}" cy="${cy}" r="${(R * (1 + i * 0.16)).toFixed(0)}" fill="none" stroke="${dim}" stroke-width="1" opacity="0.2"/>`);
+      break;
+    }
     case 'closing_statement': default: {
       const cx = W * 0.5, cy = H * 0.5;
       for (let i = 0; i < 11; i++) {

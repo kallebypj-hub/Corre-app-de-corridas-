@@ -1,0 +1,28 @@
+{
+  "variants": [
+    {
+      "variant": "A",
+      "width": 1280,
+      "height": 720,
+      "aspect": 1.778,
+      "size_bytes": 329491,
+      "small_preview": "320x180",
+      "title": "21. 66. 59.",
+      "misleading_claim": false,
+      "claim_basis": "Ambas descrevem exatamente a tese do vídeo; nenhuma promete resultado, prazo ou número."
+    },
+    {
+      "variant": "B",
+      "width": 1280,
+      "height": 720,
+      "aspect": 1.778,
+      "size_bytes": 275871,
+      "small_preview": "320x180",
+      "title": "Only 23% ever got there",
+      "misleading_claim": false,
+      "claim_basis": "Ambas descrevem exatamente a tese do vídeo; nenhuma promete resultado, prazo ou número."
+    }
+  ],
+  "legibility_method": "Cada miniatura foi reduzida a 320px de largura e reexportada; o arquivo reduzido é anexado como prova visual de legibilidade.",
+  "human_review_pending": "Escolher A ou B antes da publicação."
+}

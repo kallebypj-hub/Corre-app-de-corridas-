@@ -3,30 +3,34 @@
     {
       "id": "s01",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s01.mp4",
+      "motion": "push_in",
       "duration": 25.866667,
       "sync_delta_s": 0.008,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s02",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s02.mp4",
+      "motion": "drift_right",
       "duration": 26.133333,
       "sync_delta_s": 0.012,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s03",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s03.mp4",
+      "motion": "pull_out",
       "duration": 35.933333,
       "sync_delta_s": 0.002,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s04",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s04.mp4",
+      "motion": "drift_up",
       "duration": 37.366667,
       "sync_delta_s": 0.008,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s05",
@@ -39,37 +43,42 @@
     {
       "id": "s06",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s06.mp4",
+      "motion": "drift_left",
       "duration": 77,
       "sync_delta_s": 0.015,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s07",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s07.mp4",
+      "motion": "slow_push",
       "duration": 63.7,
       "sync_delta_s": 0.01,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s08",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s08.mp4",
+      "motion": "pull_diag",
       "duration": 84.5,
       "sync_delta_s": 0.005,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s09",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s09.mp4",
+      "motion": "drift_down",
       "duration": 37.466667,
       "sync_delta_s": 0.003,
-      "reused": true
+      "reused": false
     },
     {
       "id": "s10",
       "path": "/home/user/Corre-app-de-corridas-/youtube-media-company/content/channels/ch_practical_discipline/episodes/ep_001/scenes/s10.mp4",
+      "motion": "final_push",
       "duration": 40.7,
       "sync_delta_s": 0.005,
-      "reused": true
+      "reused": false
     }
   ],
   "renderer": "playwright+ffmpeg zoompan/xfade",

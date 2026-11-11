@@ -1,0 +1,45 @@
+{
+  "channel_id": "ch_practical_discipline",
+  "language": "en-US",
+  "niche": "practical philosophy of discipline and habit",
+  "thesis": {
+    "statement": "Disciplina não é um traço de caráter nem um estado emocional: é o resultado de arranjos concretos que reduzem o custo de começar. Cada episódio isola um arranjo, mostra onde ele falha e entrega uma mudança aplicável no mesmo dia.",
+    "not_this": [
+      "frases motivacionais sobre imagens em sequência",
+      "citação atribuída a estoico sem fonte",
+      "promessa de transformação em 30 dias",
+      "resumo de livro de autoajuda"
+    ],
+    "this_instead": [
+      "miniensaio narrado que formula um problema, analisa uma contradição e entrega uma ideia útil",
+      "exemplo concreto e verificável",
+      "admitir o limite da ideia dentro do próprio vídeo"
+    ]
+  },
+  "audience": "adultos 25-45 que já tentaram rotina e falharam; procuram explicação mecânica, não entusiasmo",
+  "voice": {
+    "tone": "calmo, direto, analítico, sem grito e sem bordão",
+    "person": "segunda pessoa com reconhecimento do próprio esforço do espectador",
+    "forbidden": [
+      "hustle",
+      "grind",
+      "warrior",
+      "alpha",
+      "beast mode",
+      "no excuses"
+    ]
+  },
+  "cadence": {
+    "long_per_week": 1,
+    "target_minutes": [
+      6,
+      9
+    ],
+    "shorts_per_long": 3,
+    "weekly_review": true,
+    "monthly_analytics_review": true,
+    "scale_rule": "não aumentar volume se cair qualidade, se houver inconsistência ou risco de conteúdo repetitivo"
+  },
+  "differentiation_test": "Um episodio so passa se a tese dele nao puder ser trocada pela tese de outro episodio do canal.",
+  "name_status": "NENHUM nome registrado, nenhuma conta Google criada. Operação roda com identidade provisória até aprovação do proprietário."
+}

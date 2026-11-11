@@ -2,27 +2,34 @@
 
 **Veredicto:** APROVADO
 
-Afirmações factuais detectadas: **11** · com fonte: **11** · sem fonte: **0**
+Falas varridas: **71** · com marcador factual: **11** · verificadas: **14** · bloqueando: **0**
 
-Atribuições a pessoas reais: **7**, todas com fonte: **sim**
+Matriz: **14** afirmações, **0** órfãs, **2** isenções ilustrativas declaradas. Dossiê: **9** fontes.
 
-> O detector varre toda fala do roteiro em busca de ano, número falado, tamanho de efeito, percentual, nome próprio real ou termo de evidência. Qualquer afirmação nova sem fonte mapeada reprova este estágio e bloqueia a aprovação do episódio.
+Verificador declarado: Claude Code — sessão 2026-11-11 (busca web contra fonte primária ou repositório aberto)
+
+> O detector de marcadores é apenas o gatilho. A autoridade é a matriz `claims.json`: cada afirmação diz contra o quê foi conferida, por quem e quando. Fala com marcador e sem entrada bloqueia; entrada sem evidência bloqueia; entrada órfã bloqueia.
 
 ## Afirmação a afirmação
 
-| Cena | Afirmação | Marcadores | Fonte | Status |
-|---|---|---|---|---|
-| s04 | Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair. | ano_falado, pessoa_real | src_sirois_pychyl_2013 | sourced |
-| s06 | In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation performed comparably to antidep | ano_falado, numero_falado, pessoa_real, termo_de_evidencia | src_dimidjian_2006 | sourced |
-| s07 | Peter Gollwitzer's work on implementation intentions is the cleanest version of this. | pessoa_real | src_gollwitzer_1999 | sourced |
-| s07 | A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to large effect on goal attainment. | ano_falado, tamanho_de_efeito, numero_falado, pessoa_real, termo_de_evidencia | src_gollwitzer_sheeran_2006 | sourced |
-| s08 | In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days. | ano_falado, numero_falado, pessoa_real | src_lally_2010 | sourced |
-| s08 | The number that escaped into the internet is sixty six days to form a habit. | numero_falado | src_lally_2010 | sourced |
-| s08 | The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve. | numero_falado | src_lally_2010 | sourced |
-| s08 | Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never crossed the threshold inside th | numero_falado | src_lally_2010 | sourced |
-| s08 | In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participants put that effect near zero.  | ano_falado, tamanho_de_efeito, numero_falado, termo_de_evidencia | src_hagger_2016 | sourced |
-| s09 | Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling. | pessoa_real | src_aristotle_ne | sourced |
-| s09 | William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many useful actions as we can. | numero_falado, pessoa_real | src_james_1890 | sourced |
+| Cena | Afirmação | Tipo | Fonte | Conferida contra | Por / quando | Status |
+|---|---|---|---|---|---|---|
+| s04 | Fuschia Sirois and Timothy Pychyl argued in two thousand thirteen that delay functions as short-term mood repair. | attribution_and_paraphrase | src_sirois_pychyl_2013 | resumo no repositório aberto (eprints.whiterose.ac.uk/91793) | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s04 | So you're not failing at discipline. You're succeeding at something else. Feeling better in the next ten minutes. | isencao_ilustrativa | — | nao se aplica — uso ilustrativo | claude-code-2026-11-11 / 2026-11-11 | ISENTA |
+| s05 | A folder of unpaid bills becomes a confrontation. A thirty minute walk becomes an identity test. | isencao_ilustrativa | — | nao se aplica — uso ilustrativo | claude-code-2026-11-11 / 2026-11-11 | ISENTA |
+| s06 | In a two thousand six randomized trial led by Sona Dimidjian, with two hundred forty one adults, behavioral activation p | study_design_and_result | src_dimidjian_2006 | registro do artigo e texto no PMC (PMC2918721) | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s06 | I want to be careful here. A later reanalysis did not reproduce its advantage over cognitive therapy, so treat this as o | limitation | src_lorenzoluaces_dobson_2019 | PDF aberto no Springer | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s07 | Peter Gollwitzer's work on implementation intentions is the cleanest version of this. | attribution | src_gollwitzer_1999 | referência bibliográfica | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s07 | A two thousand six meta analysis by Gollwitzer and Sheeran, covering ninety four independent tests, found a medium to la | statistic | src_gollwitzer_sheeran_2006 | registro no repositório da Universidade de Konstanz | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s08 | In two thousand ten, Phillippa Lally's team tracked ninety six people adopting a daily behaviour for eighty four days. | study_design | src_lally_2010 | release da UCL e registro do artigo | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s08 | The number that escaped into the internet is sixty six days to form a habit. | popular_misreading | src_lally_2010 | comparação entre divulgação popular e o estudo | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s08 | The fuller version is less tidy. Sixty six days is the median among the people whose data fit the curve. | correction | src_lally_2010 | leitura crítica do estudo primário | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s08 | Estimates ran from about eighteen days to a projection past two hundred fifty. And roughly half the participants never c | statistic_range | src_lally_2010 | release da UCL e leituras críticas do estudo | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s08 | In two thousand sixteen, a twenty three lab preregistered replication with two thousand one hundred forty one participan | statistic | src_hagger_2016 | PDF aberto do artigo | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s08 | That doesn't prove the effect is absent. It does mean you shouldn't build your week on the fuel tank metaphor. | limitation | src_hagger_2016 | seção de conclusões do artigo | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s09 | Aristotle, in the Nicomachean Ethics, puts virtue in the category of habit rather than feeling. | primary_text_paraphrase | src_aristotle_ne | texto de domínio público (Project Gutenberg 8438) | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s09 | In the Ross translation, we become just by doing just acts, and brave by doing brave acts. | translation_quotation | src_aristotle_ne | texto de domínio público (Project Gutenberg 8438) | claude-code-2026-11-11 / 2026-11-11 | verificada |
+| s09 | William James, in eighteen ninety, wrote that we should make automatic and habitual, as early as possible, as many usefu | direct_quotation | src_james_1890 | texto de domínio público (Project Gutenberg 57628) | claude-code-2026-11-11 / 2026-11-11 | verificada |
 
 ## Retiradas antes de entrar na narração
 

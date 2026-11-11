@@ -3,6 +3,8 @@
 Compilado em 2026-11-11 por source_researcher + fact_checker.
 Método: busca web em 2026-11-11; cada item confere citacao bibliografica e o numero efetivamente usado na narracao. Numero nao confirmado na fonte primaria NAO entra na narracao.
 
+> Honestidade de autonomia: encontrar e ler fonte primária é trabalho de pessoa ou de agente com acesso à web. Este estágio apenas **valida** o dossiê recebido e **bloqueia** o episódio se algo não estiver rastreável.
+
 ## Fontes usadas
 
 ### src_sirois_pychyl_2013

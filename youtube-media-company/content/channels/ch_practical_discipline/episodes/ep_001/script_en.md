@@ -2,7 +2,11 @@
 
 **Thesis.** Waiting for motivation is not laziness and not a character flaw: it is a bet that pays immediately and compounds against you, because the act of waiting is what turns an ordinary task into one that requires an unusual state.
 
-**Production mode.** `assisted_pilot` — Roteiro original escrito nesta sessao pelo Claude Code em modo PILOTO ASSISTIDO (nenhuma chave de LLM externa configurada; nenhuma despesa). Direcao editorial do canal ch_practical_discipline. Nenhuma citacao atribuida a pessoa real sem fonte verificada em sources.json.
+**Production mode.** `assisted_pilot`
+
+**Autoria.** Claude Code — sessão 2026-11-11, modo assistido
+
+> O roteiro, a pesquisa e a verificação deste episódio foram trabalho intelectual desta sessão. O pipeline NÃO gerou nada disso sozinho e não vai gerar no próximo episódio sem uma LLM configurada ou uma pessoa fazendo o mesmo trabalho.
 
 ---
 

@@ -6,6 +6,8 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const { art, W, ROOT, chCfg } = require('./editorial');
+const cfg = require('../episode-config');
+const { declare } = require('../autonomy');
 const { LocalTTS, TTS_PYTHON } = require('../tts/local-tts');
 const { SceneRenderer, OUT_W, OUT_H, FPS, CRF, PRESET, motionFor } = require('../render/renderer');
 const { ffmpeg, probe, audioStats } = require('../media');
@@ -14,8 +16,8 @@ const PAUSE = { beat: 0.38, scene: 1.10, lead: 0.60, outro: 1.80 };
 const SR = 24000;
 
 /** 8. Storyboard: cena, texto na tela, ativo, licenca, narracao e proposito visual. */
-async function storyboard({ paths, channelId }) {
-  const s = JSON.parse(fs.readFileSync(path.join(paths.base, 'script_en.json'), 'utf8'));
+async function storyboard({ paths, channelId, epId }) {
+  const s = cfg.loadScript(channelId, epId);
   const c = chCfg(channelId);
   const scenes = s.scenes.map((sc, i) => ({
     id: sc.id, index: i, role: sc.role, motif: sc.motif, accent: sc.accent,
@@ -31,11 +33,11 @@ async function storyboard({ paths, channelId }) {
       fonts: [{ family: c.visual_identity.type.display, license: c.visual_identity.type.license },
               { family: c.visual_identity.type.body, license: c.visual_identity.type.license }] }
   }));
-  const out = { episode_id: 'ep_001', channel_id: channelId, visual_identity: c.visual_identity,
+  const out = { episode_id: epId, channel_id: channelId, visual_identity: c.visual_identity,
     note: 'Duracoes ficam null ate o estagio de voz medir o audio real. Nenhuma duracao estimada entra no storyboard final.',
     scenes };
   const f = W(path.join(paths.base, 'storyboard.json'), out);
-  return { mode: 'real', outputs: ['storyboard.json'], artifacts: [art(f, 'json')],
+  return { mode: 'real', autonomy: declare('storyboard'), outputs: ['storyboard.json'], artifacts: [art(f, 'json')],
     notes: `${scenes.length} cenas, ${scenes.length} motivos visuais distintos, cameras: ${[...new Set(scenes.map(x => x.camera))].length}.`,
     cost: { usd: 0, provider: 'local' } };
 }
@@ -57,7 +59,7 @@ async function media_rights({ paths }) {
     checked_by: 'media_rights_curator', checked_at: new Date().toISOString() };
   const f = W(path.join(paths.base, 'media_rights.json'), out);
   if (unknown.length) throw new Error(`${unknown.length} ativo(s) com licenca indefinida`);
-  return { mode: 'real', outputs: ['media_rights.json'], artifacts: [art(f, 'json')],
+  return { mode: 'real', autonomy: declare('storyboard'), outputs: ['storyboard.json'], artifacts: [art(f, 'json')],
     notes: `${assets.length} ativos, 0 com licenca desconhecida, 0 de terceiros.`, cost: { usd: 0, provider: 'local' } };
 }
 
@@ -75,8 +77,8 @@ async function concatWav(list, outFile, workDir) {
 }
 
 /** 10. Narracao real com TTS local. Duracao MEDIDA por fala; nada de estimativa. */
-async function voice({ paths, log }) {
-  const s = JSON.parse(fs.readFileSync(path.join(paths.base, 'script_en.json'), 'utf8'));
+async function voice({ paths, channelId, epId, log }) {
+  const s = cfg.loadScript(channelId, epId);
   const tts = new LocalTTS();
   const info = await tts.start();
   const sil = {};
@@ -149,7 +151,7 @@ async function voice({ paths, log }) {
   sb.total_duration_s = +np.duration.toFixed(3);
   W(sbPath, sb);
 
-  return { mode: 'real', model: `${info.engine} ${info.version} (${info.license})`,
+  return { mode: 'real', autonomy: declare('voice'), model: `${info.engine} ${info.version} (${info.license})`,
     outputs: ['narration.wav', 'narration_timeline.json'],
     artifacts: [art(narration, 'audio', `${np.duration.toFixed(2)}s, ${np.audio.codec} ${np.audio.sample_rate}Hz`), art(f1, 'json')],
     notes: `${timeline.length} falas sintetizadas localmente, ${np.duration.toFixed(1)}s, pico ${st.max_volume_db} dBFS, ${tl.realtime_factor}x tempo real.`,
@@ -186,7 +188,7 @@ async function align({ paths, log }) {
   const f = W(path.join(paths.base, 'intelligibility_report.json'), report);
   log.info(`  WER ${(wer * 100).toFixed(2)}% (${meta.words} palavras reconhecidas)`);
   if (wer > 0.30) throw new Error(`narracao ininteligivel: WER ${(wer * 100).toFixed(1)}%`);
-  return { mode: 'real', model: meta.model, outputs: ['intelligibility_report.json', 'work/asr_align.json'],
+  return { mode: 'real', autonomy: declare('align'), model: meta.model, outputs: ['intelligibility_report.json', 'work/asr_align.json'],
     artifacts: [art(f, 'json'), art(out, 'json')],
     notes: `WER ${(wer * 100).toFixed(2)}%, ${meta.words} palavras com timestamp.`, cost: { usd: 0, provider: 'local' } };
 }
@@ -203,16 +205,21 @@ function levenshteinWords(a, b) {
 }
 
 /** 12. Render de cenas: cada cena vira um MP4 independente -> remontagem isolada. */
-async function scenes({ paths, log, onlyScene = null }) {
-  const s = JSON.parse(fs.readFileSync(path.join(paths.base, 'script_en.json'), 'utf8'));
+async function scenes({ paths, channelId, epId, log, onlyScene = null }) {
+  const s = cfg.loadScript(channelId, epId);
   const tl = JSON.parse(fs.readFileSync(path.join(paths.base, 'narration_timeline.json'), 'utf8'));
   const r = new SceneRenderer();
   const made = []; const artifacts = [];
   // Impressao digital das entradas de UMA cena. Se nada que a afeta mudou e o
   // MP4 dela esta no disco, a cena e reaproveitada: corrigir uma cena nao obriga
   // a refazer as outras nove.
+  // A assinatura inclui o CODIGO DE COMPOSICAO: mudar a arte de um motivo passa
+  // a invalidar as cenas que o usam, em vez de deixar frame velho no arquivo final.
+  const composeSrc = fs.readFileSync(path.join(__dirname, '..', 'render', 'compose.js'), 'utf8');
+  const composeHash = crypto.createHash('sha256').update(composeSrc).digest('hex');
   const fingerprint = (sc, i) => crypto.createHash('sha256').update(JSON.stringify({
     scene: sc, index: i, beats: tl.beat_durations[sc.id], duration: tl.scene_durations[sc.id],
+    compose: composeHash,
     renderer: { w: OUT_W, h: OUT_H, fps: FPS, crf: CRF, preset: PRESET }
   })).digest('hex');
   try {
@@ -245,7 +252,7 @@ async function scenes({ paths, log, onlyScene = null }) {
   } finally { await r.close(); }
   const f = W(path.join(paths.base, 'scenes_manifest.json'), { scenes: made, renderer: 'playwright+ffmpeg zoompan/xfade', width: OUT_W, height: OUT_H, fps: FPS });
   artifacts.push(art(f, 'json'));
-  return { mode: 'real', outputs: made.map((m) => `scenes/${m.id}.mp4`), artifacts,
+  return { mode: 'real', autonomy: declare('scenes'), outputs: made.map((m) => `scenes/${m.id}.mp4`), artifacts,
     notes: `${made.filter(m => !m.reused).length} cena(s) renderizada(s), ${made.filter(m => m.reused).length} reaproveitada(s). Sincronia maxima fora: ${Math.max(...made.map(m => m.sync_delta_s || 0)).toFixed(3)}s.`,
     cost: { usd: 0, provider: 'local' } };
 }
@@ -273,7 +280,7 @@ async function edit({ paths, log }) {
   if (!p.video || !p.audio) throw new Error('MP4 final sem faixa de video ou audio');
   if (p.video.width !== OUT_W || p.video.height !== OUT_H) throw new Error(`resolucao errada: ${p.video.width}x${p.video.height}`);
   if (drift > 0.5) throw new Error(`deriva audio/video de ${drift.toFixed(2)}s`);
-  return { mode: 'real', outputs: ['video_long_1080p.mp4'],
+  return { mode: 'real', autonomy: declare('edit'), outputs: ['video_long_1080p.mp4'],
     artifacts: [art(out, 'video', `${p.video.width}x${p.video.height} ${p.video.codec}/${p.audio.codec} ${p.duration.toFixed(1)}s`)],
     notes: `${p.duration.toFixed(1)}s, ${(p.size / 1048576).toFixed(1)} MB, deriva A/V ${drift.toFixed(3)}s.`,
     cost: { usd: 0, provider: 'local' } };

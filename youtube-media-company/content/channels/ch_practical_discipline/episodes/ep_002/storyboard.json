@@ -1,0 +1,842 @@
+{
+  "episode_id": "ep_002",
+  "channel_id": "ch_practical_discipline",
+  "visual_identity": {
+    "principle": "tipografia grande e geometria desenhada por código; nenhuma foto de banco de imagem, nenhuma imagem generativa",
+    "palette": {
+      "bg_deep": "#0B0D10",
+      "bg_soft": "#141821",
+      "ink": "#F2F4F7",
+      "ink_dim": "#9AA4B2",
+      "accent": "#E8552F",
+      "accent_2": "#2F7FE8",
+      "line": "#2A313D"
+    },
+    "type": {
+      "display": "Inter Display",
+      "body": "Inter",
+      "license": "SIL Open Font License 1.1 (instalada no sistema)"
+    },
+    "motion": "câmera lenta e contínua por cena (deriva/zoom) com revelação de texto em batidas sincronizadas à narração"
+  },
+  "note": "Duracoes medidas do audio sintetizado (amostras do wav), nao estimadas.",
+  "scenes": [
+    {
+      "id": "s01",
+      "index": 0,
+      "role": "hook",
+      "motif": "number_trio",
+      "accent": "accent_2",
+      "visual_purpose": "Colocar os tres numeros em cena e quebrar os dois primeiros, sem ainda dizer por que. A tensao sustenta o episodio.",
+      "camera": "push_in",
+      "on_screen": {
+        "kicker": "",
+        "title": "21. 66. 59.",
+        "sub": "All three are real. None of them is about you."
+      },
+      "narration": [
+        "Twenty one days.",
+        "Sixty six days. Fifty nine days.",
+        "All three of those numbers are real. Each one comes from an actual book or an actual study.",
+        "And not one of them is about you.",
+        "Not because you're special. Because of what those numbers are, underneath."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Twenty one days.",
+          "screen": "title",
+          "duration_s": 2.98
+        },
+        {
+          "index": 1,
+          "text": "Sixty six days. Fifty nine days.",
+          "screen": "hold",
+          "duration_s": 3.705
+        },
+        {
+          "index": 2,
+          "text": "All three of those numbers are real. Each one comes from an actual book or an actual study.",
+          "screen": "hold",
+          "duration_s": 6.905
+        },
+        {
+          "index": 3,
+          "text": "And not one of them is about you.",
+          "screen": "sub",
+          "duration_s": 3.055
+        },
+        {
+          "index": 4,
+          "text": "Not because you're special. Because of what those numbers are, underneath.",
+          "screen": "beat:None of them is about you.",
+          "duration_s": 6.1
+        }
+      ],
+      "duration_s": 22.745,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s02",
+      "index": 1,
+      "role": "origin",
+      "motif": "origin_timeline",
+      "accent": "accent",
+      "visual_purpose": "Desmontar o numero mais antigo mostrando a fonte real e o que ela descrevia, sem acusar ninguem de ma fe.",
+      "camera": "drift_right",
+      "on_screen": {
+        "kicker": "Where 21 came from",
+        "title": "A plastic surgeon, in 1960",
+        "sub": "He was describing self-image after surgery. Not habits.",
+        "cite": "Maltz, Psycho-Cybernetics (1960)"
+      },
+      "narration": [
+        "Start with twenty one, because it's the oldest and the most wrong.",
+        "It comes from a book published in nineteen sixty. Psycho-Cybernetics, by Maxwell Maltz.",
+        "Maltz was a plastic surgeon. He was not studying habits.",
+        "He noticed that his patients took a while to stop seeing their old face. That amputees sensed a phantom limb for a stretch before it faded.",
+        "What he wrote was that it requires a minimum of about twenty one days for an old mental image to dissolve and a new one to jell.",
+        "A minimum. About. And it's describing self-image after surgery, not flossing.",
+        "Those qualifiers fell off somewhere in the decades since. The number kept travelling without them."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Start with twenty one, because it's the oldest and the most wrong.",
+          "screen": "kicker",
+          "duration_s": 4.98
+        },
+        {
+          "index": 1,
+          "text": "It comes from a book published in nineteen sixty. Psycho-Cybernetics, by Maxwell Maltz.",
+          "screen": "title",
+          "duration_s": 6.88
+        },
+        {
+          "index": 2,
+          "text": "Maltz was a plastic surgeon. He was not studying habits.",
+          "screen": "sub",
+          "duration_s": 4.78
+        },
+        {
+          "index": 3,
+          "text": "He noticed that his patients took a while to stop seeing their old face. That amputees sensed a phantom limb for a stretch before it faded.",
+          "screen": "hold",
+          "duration_s": 9.855
+        },
+        {
+          "index": 4,
+          "text": "What he wrote was that it requires a minimum of about twenty one days for an old mental image to dissolve and a new one to jell.",
+          "screen": "cite",
+          "duration_s": 9.805
+        },
+        {
+          "index": 5,
+          "text": "A minimum. About. And it's describing self-image after surgery, not flossing.",
+          "screen": "beat:A minimum. About.",
+          "duration_s": 6.18
+        },
+        {
+          "index": 6,
+          "text": "Those qualifiers fell off somewhere in the decades since. The number kept travelling without them.",
+          "screen": "hold",
+          "duration_s": 7.7
+        }
+      ],
+      "duration_s": 50.18,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s03",
+      "index": 2,
+      "role": "what_was_measured",
+      "motif": "asymptote_curve",
+      "accent": "accent_2",
+      "visual_purpose": "Mostrar que 66 descreve a forma de uma curva, nao um prazo. Esta e a reinterpretacao central do episodio.",
+      "camera": "pull_out",
+      "on_screen": {
+        "kicker": "What 66 actually measured",
+        "title": "The shape of a curve",
+        "sub": "Not completion. Automaticity — how little deliberation the action needed.",
+        "cite": "Lally et al., 2010 — 96 people, 84 days"
+      },
+      "narration": [
+        "Now sixty six, which at least came from a study.",
+        "In two thousand ten, Phillippa Lally's team at University College London followed ninety six people for eighty four days.",
+        "Each person picked one daily behaviour and reported, every single day, how automatic it felt.",
+        "That last part matters more than the number. What got measured was not whether they finished the task.",
+        "It was automaticity. How little deliberation the action still needed.",
+        "Plot that over time and you get a curve that climbs fast and then flattens out.",
+        "Sixty six days is roughly where the average curve got close to its own ceiling. It describes a shape. It is not a deadline."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Now sixty six, which at least came from a study.",
+          "screen": "kicker",
+          "duration_s": 4.305
+        },
+        {
+          "index": 1,
+          "text": "In two thousand ten, Phillippa Lally's team at University College London followed ninety six people for eighty four days.",
+          "screen": "cite",
+          "duration_s": 9.255
+        },
+        {
+          "index": 2,
+          "text": "Each person picked one daily behaviour and reported, every single day, how automatic it felt.",
+          "screen": "hold",
+          "duration_s": 7.605
+        },
+        {
+          "index": 3,
+          "text": "That last part matters more than the number. What got measured was not whether they finished the task.",
+          "screen": "sub",
+          "duration_s": 7.355
+        },
+        {
+          "index": 4,
+          "text": "It was automaticity. How little deliberation the action still needed.",
+          "screen": "sub",
+          "duration_s": 5.48
+        },
+        {
+          "index": 5,
+          "text": "Plot that over time and you get a curve that climbs fast and then flattens out.",
+          "screen": "title",
+          "duration_s": 5.88
+        },
+        {
+          "index": 6,
+          "text": "Sixty six days is roughly where the average curve got close to its own ceiling. It describes a shape. It is not a deadline.",
+          "screen": "beat:It describes a shape, not a deadline.",
+          "duration_s": 10.15
+        }
+      ],
+      "duration_s": 50.03,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s04",
+      "index": 3,
+      "role": "evidence_base",
+      "motif": "evidence_gap",
+      "accent": "accent",
+      "visual_purpose": "Revelar o tamanho real do corpo de evidencia antes de dar o numero novo, para o espectador receber o numero ja relativizado.",
+      "camera": "drift_up",
+      "on_screen": {
+        "kicker": "The newest number",
+        "title": "Four studies",
+        "sub": "Twenty studies reviewed. Only four reported how long it took.",
+        "cite": "Singh, Murphy, Maher & Smith, 2024 — Healthcare 12(23), 2,601 adults"
+      },
+      "narration": [
+        "Then two thousand twenty four, and the biggest look at this so far.",
+        "Singh, Murphy, Maher and Smith pulled together twenty studies covering two thousand six hundred and one adults.",
+        "Here's the first uncomfortable detail. Of those twenty studies, only four actually reported how long habit formation took.",
+        "Four. That's the entire evidence base under the number everyone repeats.",
+        "Among the people who did form a habit, the median was about fifty nine days.",
+        "And the range ran from four days to three hundred and thirty five."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Then two thousand twenty four, and the biggest look at this so far.",
+          "screen": "kicker",
+          "duration_s": 5.355
+        },
+        {
+          "index": 1,
+          "text": "Singh, Murphy, Maher and Smith pulled together twenty studies covering two thousand six hundred and one adults.",
+          "screen": "cite",
+          "duration_s": 8.08
+        },
+        {
+          "index": 2,
+          "text": "Here's the first uncomfortable detail. Of those twenty studies, only four actually reported how long habit formation took.",
+          "screen": "title",
+          "duration_s": 9.505
+        },
+        {
+          "index": 3,
+          "text": "Four. That's the entire evidence base under the number everyone repeats.",
+          "screen": "sub",
+          "duration_s": 5.68
+        },
+        {
+          "index": 4,
+          "text": "Among the people who did form a habit, the median was about fifty nine days.",
+          "screen": "hold",
+          "duration_s": 6.005
+        },
+        {
+          "index": 5,
+          "text": "And the range ran from four days to three hundred and thirty five.",
+          "screen": "beat:Four days to 335 days.",
+          "duration_s": 5.9
+        }
+      ],
+      "duration_s": 40.525,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s05",
+      "index": 4,
+      "role": "spread",
+      "motif": "distribution_spread",
+      "accent": "accent",
+      "visual_purpose": "Tese original do episodio, parte um: o espalhamento nao e ruido em volta do numero, o espalhamento e o achado.",
+      "camera": "push_diag",
+      "on_screen": {
+        "kicker": "The part that gets dropped",
+        "title": "The spread is the finding",
+        "sub": "Four to 335 days is not a timeline with error bars. It is a statement about how much this varies."
+      },
+      "narration": [
+        "Sit with that range for a second.",
+        "Four days to three hundred and thirty five days.",
+        "That is not a timeline with error bars around it.",
+        "It's a statement that this varies by almost two orders of magnitude, depending on the person and the behaviour.",
+        "When a range is that wide, the middle of it stops being a prediction. It becomes trivia."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Sit with that range for a second.",
+          "screen": "kicker",
+          "duration_s": 3.08
+        },
+        {
+          "index": 1,
+          "text": "Four days to three hundred and thirty five days.",
+          "screen": "hold",
+          "duration_s": 4.105
+        },
+        {
+          "index": 2,
+          "text": "That is not a timeline with error bars around it.",
+          "screen": "title",
+          "duration_s": 4.08
+        },
+        {
+          "index": 3,
+          "text": "It's a statement that this varies by almost two orders of magnitude, depending on the person and the behaviour.",
+          "screen": "sub",
+          "duration_s": 7.83
+        },
+        {
+          "index": 4,
+          "text": "When a range is that wide, the middle of it stops being a prediction. It becomes trivia.",
+          "screen": "beat:The middle of that range is trivia.",
+          "duration_s": 7.6
+        }
+      ],
+      "duration_s": 26.695,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s06",
+      "index": 5,
+      "role": "survivorship",
+      "motif": "survivorship_funnel",
+      "accent": "accent_2",
+      "visual_purpose": "Tese original parte dois: o numero e uma estatistica de sobreviventes, entregue como previsao. E o golpe silencioso do nicho.",
+      "camera": "drift_left",
+      "on_screen": {
+        "kicker": "Who the number is about",
+        "title": "23 percent",
+        "sub": "The median is the midpoint of the people who finished — not of the people who tried.",
+        "cite": "Singh et al., 2024"
+      },
+      "narration": [
+        "And there's a second detail in that same review, which I think is the important one.",
+        "Only twenty three percent of participants reached the threshold the researchers had set for a habit.",
+        "Twenty three percent.",
+        "So the median isn't the midpoint of everyone who tried. It's the midpoint of the people who got there.",
+        "That's a survivorship number. You're being quoted the average time of the finishers and handed it as a forecast for yourself.",
+        "Nobody is lying to you. The number just lost its denominator on the way over."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "And there's a second detail in that same review, which I think is the important one.",
+          "screen": "kicker",
+          "duration_s": 6.255
+        },
+        {
+          "index": 1,
+          "text": "Only twenty three percent of participants reached the threshold the researchers had set for a habit.",
+          "screen": "title",
+          "duration_s": 7.53
+        },
+        {
+          "index": 2,
+          "text": "Twenty three percent.",
+          "screen": "cite",
+          "duration_s": 2.555
+        },
+        {
+          "index": 3,
+          "text": "So the median isn't the midpoint of everyone who tried. It's the midpoint of the people who got there.",
+          "screen": "sub",
+          "duration_s": 7.105
+        },
+        {
+          "index": 4,
+          "text": "That's a survivorship number. You're being quoted the average time of the finishers and handed it as a forecast for yourself.",
+          "screen": "beat:You are being quoted the finishers.",
+          "duration_s": 8.98
+        },
+        {
+          "index": 5,
+          "text": "Nobody is lying to you. The number just lost its denominator on the way over.",
+          "screen": "hold",
+          "duration_s": 7.15
+        }
+      ],
+      "duration_s": 39.575,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s07",
+      "index": 6,
+      "role": "harm",
+      "motif": "deadline_calendar",
+      "accent": "accent",
+      "visual_purpose": "Mostrar o dano concreto: a pergunta instala um prazo, e prazo produz veredicto sobre a pessoa. Isto conecta com a linha editorial do canal sem repetir o ep_001.",
+      "camera": "slow_push",
+      "on_screen": {
+        "kicker": "Why the question hurts",
+        "title": "A timeline is a deadline",
+        "sub": "And a deadline produces a verdict — about you, not about the behaviour."
+      },
+      "narration": [
+        "Which would be a harmless statistics complaint, except for what the number does once it's in your head.",
+        "A timeline is a deadline. And a deadline produces a verdict.",
+        "Pick sixty six. Day sixty seven arrives, and it still takes effort.",
+        "You now have evidence. Not about the behaviour. About yourself.",
+        "The honest reading says you're sitting comfortably inside a range that runs to three hundred and thirty five days.",
+        "The number in your head says you failed six weeks ago.",
+        "A statistic quietly became a character assessment, and nobody asked it to."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "Which would be a harmless statistics complaint, except for what the number does once it's in your head.",
+          "screen": "kicker",
+          "duration_s": 7.08
+        },
+        {
+          "index": 1,
+          "text": "A timeline is a deadline. And a deadline produces a verdict.",
+          "screen": "title",
+          "duration_s": 5.305
+        },
+        {
+          "index": 2,
+          "text": "Pick sixty six. Day sixty seven arrives, and it still takes effort.",
+          "screen": "hold",
+          "duration_s": 5.53
+        },
+        {
+          "index": 3,
+          "text": "You now have evidence. Not about the behaviour. About yourself.",
+          "screen": "sub",
+          "duration_s": 4.98
+        },
+        {
+          "index": 4,
+          "text": "The honest reading says you're sitting comfortably inside a range that runs to three hundred and thirty five days.",
+          "screen": "hold",
+          "duration_s": 8.58
+        },
+        {
+          "index": 5,
+          "text": "The number in your head says you failed six weeks ago.",
+          "screen": "beat:The number says you failed six weeks ago.",
+          "duration_s": 4.33
+        },
+        {
+          "index": 6,
+          "text": "A statistic quietly became a character assessment, and nobody asked it to.",
+          "screen": "hold",
+          "duration_s": 6.625
+        }
+      ],
+      "duration_s": 42.43,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s08",
+      "index": 7,
+      "role": "replacement",
+      "motif": "cue_repetition",
+      "accent": "accent_2",
+      "visual_purpose": "Entregar a troca aplicavel: o que a pesquisa realmente faz variar nao e o calendario, e repeticao em contexto estavel.",
+      "camera": "pull_diag",
+      "on_screen": {
+        "kicker": "Swap the question",
+        "title": "Repetitions in a stable context",
+        "sub": "Same trigger, same place, same position in the day."
+      },
+      "narration": [
+        "So change what you're asking.",
+        "Every one of these studies is measuring the same underlying thing: how automatic an action becomes when it's repeated in a stable context.",
+        "The clock is not the input. Repetition in the same setting is.",
+        "Same trigger, same place, same position in the day.",
+        "That's the variable you actually hold.",
+        "Days pass whether or not you do anything. Repetitions don't."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "So change what you're asking.",
+          "screen": "kicker",
+          "duration_s": 2.83
+        },
+        {
+          "index": 1,
+          "text": "Every one of these studies is measuring the same underlying thing: how automatic an action becomes when it's repeated in a stable context.",
+          "screen": "title",
+          "duration_s": 10.105
+        },
+        {
+          "index": 2,
+          "text": "The clock is not the input. Repetition in the same setting is.",
+          "screen": "sub",
+          "duration_s": 5.18
+        },
+        {
+          "index": 3,
+          "text": "Same trigger, same place, same position in the day.",
+          "screen": "sub",
+          "duration_s": 4.405
+        },
+        {
+          "index": 4,
+          "text": "That's the variable you actually hold.",
+          "screen": "hold",
+          "duration_s": 3.38
+        },
+        {
+          "index": 5,
+          "text": "Days pass whether or not you do anything. Repetitions don't.",
+          "screen": "beat:Days pass on their own. Repetitions do not.",
+          "duration_s": 5.7
+        }
+      ],
+      "duration_s": 31.6,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s09",
+      "index": 8,
+      "role": "clinical_and_limit",
+      "motif": "citation",
+      "accent": "ink",
+      "visual_purpose": "Ancorar a troca numa recomendacao clinica real e, na mesma cena, admitir o quanto a evidencia e fina. Admitir o limite e a assinatura do canal.",
+      "camera": "drift_down",
+      "on_screen": {
+        "kicker": "Written for doctors",
+        "title": "Repeat it in the same context until it is effortless",
+        "sub": "And start absurdly small — one bus stop, not the whole route.",
+        "cite": "Gardner, Lally & Wardle, 2012 — BJGP 62(605)"
+      },
+      "narration": [
+        "There's a version of this written for doctors, and it's refreshingly boring.",
+        "In two thousand twelve, Gardner, Lally and Wardle published guidance in the British Journal of General Practice.",
+        "Have the patient repeat one chosen behaviour in the same context until it becomes automatic and effortless.",
+        "And start absurdly small. Their example is a sedentary person getting off the bus one stop early, instead of walking the whole route.",
+        "There is no timeline anywhere in that advice.",
+        "And here's the limit I owe you. Four studies is thin. That twenty twenty four review used narrative synthesis rather than pooling the numbers, because the designs disagreed too much to average.",
+        "So even fifty nine is soft. I'm not handing you a better number. I'm saying the number is the wrong object."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "There's a version of this written for doctors, and it's refreshingly boring.",
+          "screen": "kicker",
+          "duration_s": 5.655
+        },
+        {
+          "index": 1,
+          "text": "In two thousand twelve, Gardner, Lally and Wardle published guidance in the British Journal of General Practice.",
+          "screen": "cite",
+          "duration_s": 8.255
+        },
+        {
+          "index": 2,
+          "text": "Have the patient repeat one chosen behaviour in the same context until it becomes automatic and effortless.",
+          "screen": "title",
+          "duration_s": 8.055
+        },
+        {
+          "index": 3,
+          "text": "And start absurdly small. Their example is a sedentary person getting off the bus one stop early, instead of walking the whole route.",
+          "screen": "sub",
+          "duration_s": 9.98
+        },
+        {
+          "index": 4,
+          "text": "There is no timeline anywhere in that advice.",
+          "screen": "hold",
+          "duration_s": 3.83
+        },
+        {
+          "index": 5,
+          "text": "And here's the limit I owe you. Four studies is thin. That twenty twenty four review used narrative synthesis rather than pooling the numbers, because the designs disagreed too much to average.",
+          "screen": "beat:Four studies is thin.",
+          "duration_s": 14.08
+        },
+        {
+          "index": 6,
+          "text": "So even fifty nine is soft. I'm not handing you a better number. I'm saying the number is the wrong object.",
+          "screen": "hold",
+          "duration_s": 8.775
+        }
+      ],
+      "duration_s": 58.63,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s10",
+      "index": 9,
+      "role": "payoff",
+      "motif": "closing_statement",
+      "accent": "accent",
+      "visual_purpose": "Fechar com a instrucao minima, concreta e verificavel, e um convite que so faz sentido para quem assistiu.",
+      "camera": "final_push",
+      "on_screen": {
+        "kicker": "The swap",
+        "title": "Count repetitions. Not days.",
+        "sub": "Write down the cue, not the deadline. Then tally how many times the cue fired and you went."
+      },
+      "narration": [
+        "So here's the swap.",
+        "Stop counting days. Count repetitions in the same context.",
+        "Write down the cue, not the deadline. After I pour the coffee. When I close the laptop. Before I take my shoes off.",
+        "Then keep a tally of how many times that cue fired and you went. That number means something. Day forty one does not.",
+        "And when it still feels like effort at week ten, you haven't missed a deadline.",
+        "You're inside a range that runs to three hundred and thirty five days, and you're still in it.",
+        "If you want to try it, put your cue in the comments. Not the goal. The thing that happens right before."
+      ],
+      "beats": [
+        {
+          "index": 0,
+          "text": "So here's the swap.",
+          "screen": "kicker",
+          "duration_s": 2.355
+        },
+        {
+          "index": 1,
+          "text": "Stop counting days. Count repetitions in the same context.",
+          "screen": "title",
+          "duration_s": 5.03
+        },
+        {
+          "index": 2,
+          "text": "Write down the cue, not the deadline. After I pour the coffee. When I close the laptop. Before I take my shoes off.",
+          "screen": "sub",
+          "duration_s": 8.58
+        },
+        {
+          "index": 3,
+          "text": "Then keep a tally of how many times that cue fired and you went. That number means something. Day forty one does not.",
+          "screen": "hold",
+          "duration_s": 8.73
+        },
+        {
+          "index": 4,
+          "text": "And when it still feels like effort at week ten, you haven't missed a deadline.",
+          "screen": "hold",
+          "duration_s": 5.555
+        },
+        {
+          "index": 5,
+          "text": "You're inside a range that runs to three hundred and thirty five days, and you're still in it.",
+          "screen": "beat:You are still inside the range.",
+          "duration_s": 6.655
+        },
+        {
+          "index": 6,
+          "text": "If you want to try it, put your cue in the comments. Not the goal. The thing that happens right before.",
+          "screen": "title",
+          "duration_s": 8.775
+        }
+      ],
+      "duration_s": 45.68,
+      "asset": {
+        "type": "motion_graphics_generated_by_code",
+        "generator": "src/render/compose.js",
+        "source": "obra original do canal",
+        "license": "proprietario do canal (gerado por codigo nesta producao)",
+        "attribution_required": false,
+        "third_party_media": false,
+        "fonts": [
+          {
+            "family": "Inter Display",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          },
+          {
+            "family": "Inter",
+            "license": "SIL Open Font License 1.1 (instalada no sistema)"
+          }
+        ]
+      }
+    }
+  ],
+  "total_duration_s": 408.09
+}

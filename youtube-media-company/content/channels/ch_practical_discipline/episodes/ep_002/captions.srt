@@ -1,0 +1,440 @@
+1
+00:00:00,600 --> 00:00:02,600
+Twenty one days.
+
+2
+00:00:02,980 --> 00:00:06,305
+Sixty six days. Fifty nine days.
+
+3
+00:00:06,685 --> 00:00:11,980
+All three of those numbers are real. Each
+one comes from an actual book or an actual
+
+4
+00:00:11,980 --> 00:00:13,210
+study.
+
+5
+00:00:13,590 --> 00:00:16,265
+And not one of them is about you.
+
+6
+00:00:16,645 --> 00:00:21,645
+Not because you're special. Because of
+what those numbers are, underneath.
+
+7
+00:00:22,745 --> 00:00:27,345
+Start with twenty one, because it's the
+oldest and the most wrong.
+
+8
+00:00:27,725 --> 00:00:33,700
+It comes from a book published in nineteen
+sixty. Psycho-Cybernetics, by Maxwell
+
+9
+00:00:33,772 --> 00:00:34,225
+Maltz.
+
+10
+00:00:34,605 --> 00:00:39,005
+Maltz was a plastic surgeon. He was not
+studying habits.
+
+11
+00:00:39,385 --> 00:00:44,260
+He noticed that his patients took a while
+to stop seeing their old face. That
+
+12
+00:00:44,260 --> 00:00:48,860
+amputees sensed a phantom limb for a
+stretch before it faded.
+
+13
+00:00:49,240 --> 00:00:54,940
+What he wrote was that it requires a
+minimum of about twenty one days for an
+old
+
+14
+00:00:54,940 --> 00:00:58,665
+mental image to dissolve and a new one to
+jell.
+
+15
+00:00:59,045 --> 00:01:04,845
+A minimum. About. And it's describing
+self-image after surgery, not flossing.
+
+16
+00:01:05,225 --> 00:01:10,460
+Those qualifiers fell off somewhere in the
+decades since. The number kept travelling
+
+17
+00:01:10,460 --> 00:01:11,825
+without them.
+
+18
+00:01:12,925 --> 00:01:16,850
+Now sixty six, which at least came from a
+study.
+
+19
+00:01:17,230 --> 00:01:24,140
+In two thousand ten, Phillippa Lally's
+team at University College London followed
+
+20
+00:01:24,141 --> 00:01:26,105
+ninety six people for eighty four days.
+
+21
+00:01:26,485 --> 00:01:32,240
+Each person picked one daily behaviour and
+reported, every single day, how automatic
+
+22
+00:01:32,240 --> 00:01:33,710
+it felt.
+
+23
+00:01:34,090 --> 00:01:39,700
+That last part matters more than the
+number. What got measured was not whether
+they
+
+24
+00:01:39,700 --> 00:01:41,065
+finished the task.
+
+25
+00:01:41,445 --> 00:01:46,545
+It was automaticity. How little
+deliberation the action still needed.
+
+26
+00:01:46,925 --> 00:01:52,425
+Plot that over time and you get a curve
+that climbs fast and then flattens out.
+
+27
+00:01:52,805 --> 00:01:58,720
+Sixty six days is roughly where the
+average curve got close to its own
+ceiling. It
+
+28
+00:01:58,720 --> 00:02:01,855
+describes a shape. It is not a deadline.
+
+29
+00:02:02,955 --> 00:02:07,930
+Then two thousand twenty four, and the
+biggest look at this so far.
+
+30
+00:02:08,310 --> 00:02:15,180
+Singh, Murphy, Maher and Smith pulled
+together twenty studies covering two
+thousand
+
+31
+00:02:15,181 --> 00:02:16,010
+six hundred and one adults.
+
+32
+00:02:16,390 --> 00:02:22,240
+Here's the first uncomfortable detail. Of
+those twenty studies, only four actually
+
+33
+00:02:22,240 --> 00:02:25,515
+reported how long habit formation took.
+
+34
+00:02:25,895 --> 00:02:31,195
+Four. That's the entire evidence base
+under the number everyone repeats.
+
+35
+00:02:31,575 --> 00:02:37,200
+Among the people who did form a habit, the
+median was about fifty nine days.
+
+36
+00:02:37,580 --> 00:02:42,380
+And the range ran from four days to three
+hundred and thirty five.
+
+37
+00:02:43,480 --> 00:02:46,180
+Sit with that range for a second.
+
+38
+00:02:46,560 --> 00:02:50,285
+Four days to three hundred and thirty five
+days.
+
+39
+00:02:50,665 --> 00:02:54,365
+That is not a timeline with error bars
+around it.
+
+40
+00:02:54,745 --> 00:03:00,000
+It's a statement that this varies by
+almost two orders of magnitude, depending
+on
+
+41
+00:03:00,000 --> 00:03:02,195
+the person and the behaviour.
+
+42
+00:03:02,575 --> 00:03:07,740
+When a range is that wide, the middle of
+it stops being a prediction. It becomes
+
+43
+00:03:07,740 --> 00:03:09,075
+trivia.
+
+44
+00:03:10,175 --> 00:03:16,050
+And there's a second detail in that same
+review, which I think is the important
+one.
+
+45
+00:03:16,430 --> 00:03:22,140
+Only twenty three percent of participants
+reached the threshold the researchers had
+
+46
+00:03:22,140 --> 00:03:23,580
+set for a habit.
+
+47
+00:03:23,960 --> 00:03:26,135
+Twenty three percent.
+
+48
+00:03:26,515 --> 00:03:31,820
+So the median isn't the midpoint of
+everyone who tried. It's the midpoint of
+the
+
+49
+00:03:31,820 --> 00:03:33,240
+people who got there.
+
+50
+00:03:33,620 --> 00:03:38,560
+That's a survivorship number. You're being
+quoted the average time of the finishers
+
+51
+00:03:38,560 --> 00:03:42,220
+and handed it as a forecast for yourself.
+
+52
+00:03:42,600 --> 00:03:48,650
+Nobody is lying to you. The number just
+lost its denominator on the way over.
+
+53
+00:03:49,750 --> 00:03:54,820
+Which would be a harmless statistics
+complaint, except for what the number does
+once
+
+54
+00:03:54,820 --> 00:03:56,450
+it's in your head.
+
+55
+00:03:56,830 --> 00:04:01,755
+A timeline is a deadline. And a deadline
+produces a verdict.
+
+56
+00:04:02,135 --> 00:04:07,285
+Pick sixty six. Day sixty seven arrives,
+and it still takes effort.
+
+57
+00:04:07,665 --> 00:04:12,265
+You now have evidence. Not about the
+behaviour. About yourself.
+
+58
+00:04:12,645 --> 00:04:18,440
+The honest reading says you're sitting
+comfortably inside a range that runs to
+three
+
+59
+00:04:18,741 --> 00:04:20,845
+hundred and thirty five days.
+
+60
+00:04:21,225 --> 00:04:25,175
+The number in your head says you failed
+six weeks ago.
+
+61
+00:04:25,555 --> 00:04:31,080
+A statistic quietly became a character
+assessment, and nobody asked it to.
+
+62
+00:04:32,180 --> 00:04:34,630
+So change what you're asking.
+
+63
+00:04:35,010 --> 00:04:40,700
+Every one of these studies is measuring
+the same underlying thing: how automatic
+an
+
+64
+00:04:40,700 --> 00:04:44,735
+action becomes when it's repeated in a
+stable context.
+
+65
+00:04:45,115 --> 00:04:49,915
+The clock is not the input. Repetition in
+the same setting is.
+
+66
+00:04:50,295 --> 00:04:54,320
+Same trigger, same place, same position in
+the day.
+
+67
+00:04:54,700 --> 00:04:57,700
+That's the variable you actually hold.
+
+68
+00:04:58,080 --> 00:05:02,680
+Days pass whether or not you do anything.
+Repetitions don't.
+
+69
+00:05:03,780 --> 00:05:09,055
+There's a version of this written for
+doctors, and it's refreshingly boring.
+
+70
+00:05:09,435 --> 00:05:16,420
+In two thousand twelve, Gardner, Lally and
+Wardle published guidance in the British
+
+71
+00:05:16,421 --> 00:05:17,310
+Journal of General Practice.
+
+72
+00:05:17,690 --> 00:05:22,980
+Have the patient repeat one chosen
+behaviour in the same context until it
+becomes
+
+73
+00:05:22,980 --> 00:05:25,365
+automatic and effortless.
+
+74
+00:05:25,745 --> 00:05:31,480
+And start absurdly small. Their example is
+a sedentary person getting off the bus
+
+75
+00:05:31,480 --> 00:05:35,345
+one stop early, instead of walking the
+whole route.
+
+76
+00:05:35,725 --> 00:05:39,175
+There is no timeline anywhere in that
+advice.
+
+77
+00:05:39,555 --> 00:05:46,700
+And here's the limit I owe you. Four
+studies is thin. That twenty twenty four
+review
+
+78
+00:05:46,700 --> 00:05:51,580
+used narrative synthesis rather than
+pooling the numbers, because the designs
+
+79
+00:05:51,580 --> 00:05:53,255
+disagreed too much to average.
+
+80
+00:05:53,635 --> 00:05:59,360
+So even fifty nine is soft. I'm not
+handing you a better number. I'm saying
+the
+
+81
+00:05:59,360 --> 00:06:01,310
+number is the wrong object.
+
+82
+00:06:02,410 --> 00:06:04,385
+So here's the swap.
+
+83
+00:06:04,765 --> 00:06:09,415
+Stop counting days. Count repetitions in
+the same context.
+
+84
+00:06:09,795 --> 00:06:14,920
+Write down the cue, not the deadline.
+After I pour the coffee. When I close the
+
+85
+00:06:14,920 --> 00:06:17,995
+laptop. Before I take my shoes off.
+
+86
+00:06:18,375 --> 00:06:23,600
+Then keep a tally of how many times that
+cue fired and you went. That number means
+
+87
+00:06:23,600 --> 00:06:26,725
+something. Day forty one does not.
+
+88
+00:06:27,105 --> 00:06:32,280
+And when it still feels like effort at
+week ten, you haven't missed a deadline.
+
+89
+00:06:32,660 --> 00:06:38,300
+You're inside a range that runs to three
+hundred and thirty five days, and you're
+
+90
+00:06:38,301 --> 00:06:38,935
+still in it.
+
+91
+00:06:39,315 --> 00:06:44,420
+If you want to try it, put your cue in the
+comments. Not the goal. The thing that
+
+92
+00:06:44,420 --> 00:06:46,290
+happens right before.

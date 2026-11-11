@@ -39,7 +39,7 @@ async function handle(input, ctx) {
   // Episodio padrao: o mais recente COM trabalho feito. Um episodio recem-aberto
   // (ou de laboratorio) nao sequestra o "status" de quem ja produziu.
   const withWork = eps.filter((e) => Object.values(e.stages || {}).some((s) => s.status === 'done'));
-  const epId = (text.match(/ep_\d+/) || [])[0] || (withWork[0] && withWork[0].id) || (eps[0] && eps[0].id) || 'ep_001';
+  const epId = (text.match(/ep_\d+/) || [])[0] || (withWork[0] && withWork[0].id) || (eps[0] && eps[0].id) || null;
   const reply = (message, actions = [], data = null) => ({ message, actions, data, at: new Date().toISOString() });
 
   if (/publicar|publish|subir|enviar pro youtube|upload/.test(low)) return reply(DENY.publish, ['abrir_fila_de_publicacao']);
@@ -73,7 +73,9 @@ async function handle(input, ctx) {
   if (/bloqueio|travad|o que falta|pend[eê]ncia/.test(low)) {
     const b = brief(store, epId);
     const blocks = [];
-    if (!process.env.YOUTUBE_CLIENT_ID) blocks.push('YouTube OAuth não configurado → publicação e analytics BLOQUEADOS (decisão sua, no navegador).');
+    const yt = require('./youtube/oauth');
+    const st = await yt.state(channelId).catch(() => ({ status: 'ERRO' }));
+    if (st.status !== 'AUTORIZADO') blocks.push(`YouTube: ${st.status}${st.reason ? ' — ' + st.reason : ''}. Publicação e analytics BLOQUEADOS. O passo é seu, no navegador: docs/youtube-oauth.md.`);
     if (b && b.gates && !b.gates.can_be_approved) blocks.push(`Gates reprovados: ${b.gates.blocking_failures.join(', ')}.`);
     if (b && b.approval.status === 'pending') blocks.push('Falta sua aprovação do vídeo no Estúdio de Revisão.');
     if (b && b.failed.length) blocks.push(`Estágios com falha: ${b.failed.map((f) => f.id).join(', ')}.`);
@@ -82,6 +84,7 @@ async function handle(input, ctx) {
     return reply(blocks.length ? blocks.map((b2, i) => `${i + 1}. ${b2}`).join('\n') : 'Nenhum bloqueio aberto.', ['abrir_gabinete']);
   }
 
+  if (!epId && !/nov[oa] /.test(low)) return reply('Nenhum episódio aberto ainda. Peça "novo episódio: <tema>" e eu abro a missão.');
   const novo = low.match(/nov[oa] (epis[oó]dio|v[ií]deo|pauta)\s*:?\s*(.*)/);
   if (novo) {
     const tema = (novo[2] || '').trim();
@@ -135,8 +138,23 @@ async function handle(input, ctx) {
       '', 'Quer que eu abra isso como missão?'].join('\n'), ['abrir_gabinete']);
   }
 
+  if (/epis[oó]dios|lista/.test(low)) {
+    const rows = eps.map((e) => {
+      const done = Object.values(e.stages || {}).filter((x) => x.status === 'done').length;
+      return `${e.id} — ${e.title || 's/ título'} · ${done}/19 estágios · gates ${e.gates ? e.gates.verdict : 'não avaliados'} · aprovação ${e.approval.status}`;
+    });
+    return reply(rows.length ? rows.join('\n') : 'Nenhum episódio aberto.', ['abrir_producao']);
+  }
+  if (/autonom|sozinho|automa/.test(low)) {
+    const na = require('./autonomy').notAutonomous();
+    return reply(['Sendo honesto sobre o que esta empresa faz sozinha:', '',
+      'Roda sozinho: validação, narração, render, legenda, corte dos Shorts, auditoria e bloqueio.',
+      '', 'NÃO roda sozinho hoje:',
+      ...na.map((x) => `- ${x.stage} (${x.label}): ${x.gap}`),
+      '', 'Ou seja: o episódio 3 vai precisar do mesmo trabalho intelectual — seu, meu numa sessão, ou de uma LLM configurada com autorização de gasto.'].join('\n'));
+  }
   return reply(['Sou o CEO virtual desta empresa. Falo com base no estado real do pipeline, não de cabeça.',
-    'Posso: "status", "custo", "bloqueios", "reunião executiva", "novo episódio: <tema>", "refazer <estágio>", "calendário".',
+    'Posso: "status", "custo", "bloqueios", "episódios", "autonomia", "reunião executiva", "novo episódio: <tema>", "refazer <estágio>", "calendário".',
     'Não posso: publicar, gastar ou conectar conta. Essas três são suas.'].join('\n'));
 }
 module.exports = { handle, DENY };
