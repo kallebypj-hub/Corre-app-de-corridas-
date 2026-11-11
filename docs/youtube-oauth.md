@@ -15,6 +15,8 @@ No **Google Cloud Console**, com a conta dona do canal:
    - **YouTube Reporting API** (impressões e CTR — não existem na Analytics API)
 3. Em **Tela de consentimento OAuth**: tipo **Externo**. Enquanto estiver em *Teste*, adicione seu e-mail em **Usuários de teste**, senão o Google recusa o login.
 4. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, tipo **Aplicativo da Web**.
+
+> **Um tipo só, e por quê.** Em todo o projeto — código, painel e este documento — a credencial é **Aplicativo da Web**. Não é Aplicativo de desktop. O motivo é concreto: este sistema já é um servidor HTTP e atende num endereço e num caminho **fixos** (`http://127.0.0.1:3777/api/youtube/oauth/callback`). Só o tipo Aplicativo da Web tem o campo onde você cadastra esse endereço exato, e redirect cadastrado é redirect que casa. O tipo Aplicativo de desktop foi feito para sortear uma porta livre na hora e nem tem campo de redirect no console — com caminho fixo, isso dá `redirect_uri_mismatch`. O Google exige HTTPS nos redirects de aplicativo web, com **uma exceção explícita: endereço de loopback** (`localhost` e `127.0.0.1`). O nosso é loopback, então `http` é aceito. O túnel do passo 3 não muda nada disso: do lado do Google o redirect continua sendo `127.0.0.1:3777`.
 5. Em **URIs de redirecionamento autorizados**, cole exatamente:
 
 ```
@@ -53,13 +55,24 @@ ssh -L 3777:127.0.0.1:3777 usuario@IP_DA_SUA_VPS
 Deixe essa janela aberta. Enquanto ela estiver aberta, `http://127.0.0.1:3777` **no seu navegador Windows** é o painel que roda na VPS.
 
 Por que assim:
-- o `redirect_uri` continua sendo `127.0.0.1`, que é exatamente o que o Google espera e o que o próprio Google recomenda para app instalado;
+- o `redirect_uri` continua sendo `127.0.0.1:3777`, que é exatamente o endereço cadastrado na credencial **Aplicativo da Web** e o endereço que o Google aceita em `http` por ser loopback;
+- o navegador que atende o retorno é o **seu**, no Windows, e o túnel entrega esse retorno ao servidor da VPS — para o Google, tudo aconteceu em loopback;
 - o painel nunca fica exposto na internet, então não precisa de HTTPS nem de API_KEY para esse uso;
 - o segredo e o token nunca saem da VPS.
 
 Se preferir não usar SSH, a alternativa é expor o painel com HTTPS e `API_KEY` — mas aí o `redirect_uri` muda e você precisa recadastrá-lo no Google. O túnel é mais simples e mais seguro.
 
-## Passo 4 — autorizar
+## Passo 4 — validar o procedimento antes de autorizar
+
+Na VPS:
+
+```bash
+node src/cli.js youtube doctor
+```
+
+Confere, numa passada: se o `client_id` e o segredo estão no `.env`, se o `client_id` tem a cara de um `client_id`, se o redirect é loopback com o caminho e a porta certos, quais escopos são pedidos e que nenhum escopo de escrita de canal é pedido. **Não imprime nenhum segredo** — só presença, tamanho e uma impressão digital de 12 caracteres. Se sair alguma linha `FALHA`, corrija antes de abrir a tela do Google.
+
+## Passo 5 — autorizar
 
 Na VPS, em outro terminal:
 
@@ -81,16 +94,18 @@ Ao voltar, o sistema:
 - troca o código por token e guarda **cifrado** (AES-256-GCM, arquivo 0600);
 - **chama a API** para descobrir qual canal o token alcança — só então o estado vira `AUTORIZADO`.
 
-## Passo 5 — confirmar que é o canal certo e vincular
+## Passo 6 — confirmar que é o canal certo e vincular (obrigatório)
 
 ```bash
 node src/cli.js channel          # mostra qual canal o token alcança
 node src/cli.js channel bind     # grava o ID real como canal oficial
 ```
 
-O `bind` **recusa** se o canal autorizado não for o Quiet Resolve, e recusa se for o Kalleby Prado. Depois de vinculado, qualquer token que aponte para outro ID é rejeitado antes de qualquer envio.
+O `bind` **recusa** se o canal autorizado não for o Quiet Resolve, e recusa se for o Kalleby Prado — aí nem `--force` passa.
 
-## Passo 6 — auditar o canal (só leitura)
+**Este passo não é opcional.** Enquanto o canal não estiver vinculado por ID (`bound: true`), o sistema recusa **toda** escrita: envio, agendamento, publicação, qualquer uma. Depois de vinculado, a autorização de cada operação é por **ID do YouTube, string idêntica**, conferido na API na hora. Título e handle servem para vincular e para auditar, nunca para liberar uma escrita — título se renomeia, ID não.
+
+## Passo 7 — auditar o canal (só leitura)
 
 ```bash
 node src/cli.js channel audit
@@ -100,23 +115,39 @@ Lê identidade, descrição, palavras-chave, playlists, seções e o inventário
 
 Boa parte da otimização de canal (descrição, palavras-chave, banner, playlists, seções) exige um escopo de **escrita** que este projeto deliberadamente **não pede** hoje: `https://www.googleapis.com/auth/youtube`. Conceder esse escopo é decisão sua, e só vale a pena quando você quiser que o sistema aplique as mudanças em vez de só propor.
 
-## Passo 7 — primeiro envio privado
+## Passo 8 — primeiro envio privado
 
 ```bash
 node src/cli.js publish state ep_001      # mostra em que ponto está
 node src/cli.js publish private ep_001    # envia como PRIVADO
 ```
 
-Exige, nesta ordem: gates verdes, auditoria atual, aprovação do episódio **com a caixa de envio marcada**, OAuth verificado e o canal certo. O arquivo sobe como `private`, com privacidade forçada no cliente.
+Exige, nesta ordem: gates verdes, auditoria atual, aprovação do episódio **com a caixa de envio marcada**, OAuth verificado e o canal **vinculado por ID**. O arquivo sobe como `private`, com privacidade forçada no cliente.
 
-**Tornar público é outra decisão**, separada, com frase de confirmação exata, e exige que a aprovação daquele episódio tenha marcado `public_release_authorized`.
+### Quatro decisões, quatro caixas, nenhuma implícita
 
-## Passo 8 — ligar a medição
+| operação | caixa que ela lê | o que ela **não** concede |
+|---|---|---|
+| enviar como privado | `scheduled_upload_authorized` | agendar, publicar, coletar |
+| agendar publicação | `publication_schedule_authorized` | publicar agora, coletar |
+| **tornar público** | `public_release_authorized` **+ frase exata** `PUBLICAR ep_001 EM PUBLICO` | autorização para o próximo vídeo |
+| iniciar coleta | `audience_collection_authorized` | mudar privacidade |
+
+Marcar uma caixa nunca marca outra. Autorizar o envio privado não autoriza agendar, e agendar não é publicar.
+
+### As duas datas
+
+O envio privado grava `uploaded_privately_at`. A publicação pública grava `published_publicly_at`, e **só** depois de a API confirmar que a privacidade virou `public`. Os marcos de 24h, 72h, 7 e 28 dias contam da segunda data. Vídeo privado ou agendado **não é analisado**: não há audiência para medir, e medir zero como se fosse resultado seria inventar fracasso.
+
+## Passo 9 — ligar a medição
 
 ```bash
 node src/cli.js publish collect ep_001    # o agendador passa a medir este vídeo
 node src/cli.js scheduler tick            # uma passagem; use cron ou systemd timer
+node src/cli.js scheduler status          # marcos abertos, remedições e falhas
 ```
+
+`publish collect` só aceita vídeo **público confirmado na API** e exige a caixa `audience_collection_authorized`. Em vídeo privado ele recusa, dizendo por quê.
 
 Impressões e CTR vêm da **Reporting API**, que é em lote: o primeiro arquivo pode levar **até 48h** depois de criar o job. Enquanto isso, se quiser antecipar, exporte do YouTube Studio e importe:
 
@@ -125,6 +156,10 @@ node src/cli.js import-studio ep_001 ~/export.csv d7
 ```
 
 O dado importado fica marcado com origem `youtube_studio_csv_manual` — nunca se mistura com dado de API.
+
+**Unidade do CTR, uma só no projeto inteiro:** fração de 0 a 1 (cliques ÷ impressões). `0.062` é 6,2%. O campo `impressions_ctr` é sempre a fração; `impressions_ctr_percent` é o mesmo valor em porcentagem, para leitura. A coluna do Studio vem em porcentagem e é dividida por 100 na importação.
+
+**Marco aberto não é marco medido.** Se o relatório de impressões ainda não existe, ou a curva de retenção ainda não populou, a medida entra como **provisória**: o marco fica aberto, o agendador volta a cada 3 horas por até 48 horas, e a medida é **substituída** quando o dado real aparecer. O histórico das tentativas fica gravado. Só falta **estrutural** (receita, porque o escopo monetário não foi pedido) fecha o marco, porque retentar não traria esse dado.
 
 ## O que ainda não foi provado
 

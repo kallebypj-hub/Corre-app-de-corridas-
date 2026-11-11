@@ -96,8 +96,14 @@ async function collectForVideo(channelId, { videoId, publishedAt, durationSecond
 
   const start = fmt(publishedAt), end = fmt(Date.now());
   const metrics = {}; const missing = []; const notes = [];
+  // falta TEMPORARIA (o dado ainda pode chegar) x falta ESTRUTURAL (nunca vai chegar)
+  const provisional = []; const structural = [];
   try { Object.assign(metrics, rowsToObject(await query(channelId, { videoId, startDate: start, endDate: end, metrics: CORE }))); }
-  catch (e) { for (const k of CORE) metrics[k] = 'indisponivel'; notes.push(`metricas principais: ${scrub(e.message)}`); }
+  catch (e) {
+    for (const k of CORE) metrics[k] = 'indisponivel';
+    notes.push(`metricas principais: ${scrub(e.message)}`);
+    provisional.push(`as metricas principais nao vieram da Analytics API (${scrub(e.message)}); isso pode ser atraso ou falha momentanea`);
+  }
   // --- alcance: Reporting API em lote, com queda para CSV do Studio ---
   const reporting = require('./reporting');
   let reach = null;
@@ -109,19 +115,30 @@ async function collectForVideo(channelId, { videoId, publishedAt, durationSecond
     reason: reach.reason || null, job_id: reach.job_id || null, report_id: reach.report_id || null,
     report_window: reach.report_window || null, column_mapping_verified: reach.column_mapping_verified ?? null,
     day_boundary_timezone: reporting.FACTS.day_boundary_timezone,
-    delay_note: reach.delay_note || `relatorio em lote: o primeiro arquivo pode levar ate ${reporting.FACTS.first_report_delay_hours_max}h apos criar o job` };
-  if (!reach.available) notes.push(`impressoes e CTR indisponiveis pela Reporting API: ${reach.reason}. Alternativa: exportar do YouTube Studio e importar com "node src/cli.js import-studio".`);
+    delay_note: reach.delay_note || `relatorio em lote: o primeiro arquivo pode levar ate ${reporting.FACTS.first_report_delay_hours_max}h apos criar o job`,
+    ctr_unit: reporting.FACTS.ctr_unit,
+    ctr_percent: reach.impressions_ctr_percent !== undefined ? reach.impressions_ctr_percent : null,
+    ctr_scale_in_file: reach.ctr_scale_in_file || null,
+    csv_origin: reach.csv_origin || null };
+  if (!reach.available) {
+    notes.push(`impressoes e CTR indisponiveis pela Reporting API: ${reach.reason}. Alternativa: exportar do YouTube Studio e importar com "node src/cli.js import-studio".`);
+    provisional.push(`impressoes e CTR ainda nao disponiveis (${reach.reason}); o relatorio em lote leva ate ${reporting.FACTS.first_report_delay_hours_max}h`);
+  }
 
   const rc = await retentionCurve(channelId, videoId, start, end);
   let curve = rc.curve;
-  if (!curve) { for (const k of ['retention_0_30s', 'retention_mid', 'retention_end']) metrics[k] = 'indisponivel'; notes.push(`curva de retencao: ${rc.reason}`); }
+  if (!curve) {
+    for (const k of ['retention_0_30s', 'retention_mid', 'retention_end']) metrics[k] = 'indisponivel';
+    notes.push(`curva de retencao: ${rc.reason}`);
+    provisional.push(`curva de retencao ainda nao disponivel (${rc.reason}); o YouTube demora a popular e exige audiencia minima`);
+  }
   else {
     const { summarise } = require('../evolution/retention');
     Object.assign(metrics, summarise(curve, durationSeconds));
   }
   const ts = await trafficSources(channelId, videoId, start, end);
   metrics.top_traffic_source = ts.top || 'indisponivel';
-  if (!ts.sources) notes.push(`origem de trafego: ${ts.reason}`);
+  if (!ts.sources) { notes.push(`origem de trafego: ${ts.reason}`); provisional.push(`origem de trafego ainda nao disponivel (${ts.reason})`); }
   const shortsRef = ts.sources ? (ts.sources.find((s) => /SHORTS/i.test(s.source)) || null) : null;
   metrics.shorts_referral_views = shortsRef ? shortsRef.views : 'indisponivel';
 
@@ -129,12 +146,18 @@ async function collectForVideo(channelId, { videoId, publishedAt, durationSecond
   const granted = (st.token && st.token.scopes) || [];
   const hasMonetary = granted.includes(MONETARY_SCOPE);
   for (const k of ['estimatedRevenue', 'cpm', 'playbackBasedCpm']) metrics[k] = 'indisponivel';
-  if (!hasMonetary) notes.push('receita indisponivel por decisao de escopo: o escopo yt-analytics-monetary.readonly nao foi pedido na autorizacao. Pedir exige decisao do dono e canal monetizado.');
+  if (!hasMonetary) {
+    notes.push('receita indisponivel por decisao de escopo: o escopo yt-analytics-monetary.readonly nao foi pedido na autorizacao. Pedir exige decisao do dono e canal monetizado.');
+    structural.push('receita, CPM e CPM por reproducao: falta estrutural, nao atraso — o escopo monetario nao foi pedido. Retentar nao traz este dado.');
+  }
 
   for (const [k, v] of Object.entries(metrics)) if (v === 'indisponivel') missing.push(k);
+  const completeness = { final: provisional.length === 0,
+    provisional_because: provisional, structural_gaps: structural,
+    rule: 'ausencia temporaria de metrica deixa o marco ABERTO (medida provisoria) e sera retentada; falta estrutural nao impede fechar o marco, porque retentar nao traria o dado.' };
   return { status: 'COLETADO', video_id: videoId, milestone: ms.milestone.id, milestone_label: ms.milestone.label,
     hours_since_publication: ms.hours, window: { from: start, to: end },
-    metrics, missing_metrics: missing, notes,
+    metrics, missing_metrics: missing, notes, completeness,
     sources: { core: 'youtube_analytics_api/reports.query', reach: reachMeta,
       retention: curve ? 'youtube_analytics_api/elapsedVideoTimeRatio' : null,
       traffic: ts.sources ? 'youtube_analytics_api/insightTrafficSourceType' : null },

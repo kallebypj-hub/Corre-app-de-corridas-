@@ -14,8 +14,19 @@
  *  - o PRIMEIRO relatorio pode levar ate 48h depois de criar o job.
  *  - relatorios expiram (~60 dias; ~30 para o backfill historico).
  *  - o dia fecha em horario do PACIFICO, nao UTC.
- *  - o mapeamento exato das colunas do CSV so se confirma com um arquivo real;
- *    ate la o parser registra `column_mapping_verified: false`.
+ *  - o mapeamento exato das colunas do CSV so se confirma com um arquivo real
+ *    BAIXADO DO GOOGLE. Dado sintetico de teste NUNCA marca o mapeamento como
+ *    verificado, por mais completo que seja.
+ *
+ * UNIDADE DO CTR — uma so, em todo o projeto:
+ *   `video_thumbnail_impressions_ctr` vem do Google como FRACAO (cliques
+ *   divididos por impressoes). 0.062 significa 6,2%.
+ *   Aqui dentro o valor canonico e sempre a FRACAO de 0 a 1, no campo
+ *   `impressions_ctr`. Quem precisa de porcentagem le `impressions_ctr_percent`,
+ *   que e a mesma coisa vezes 100. Nenhuma outra escala circula.
+ *   Protecao: fracao nao pode passar de 1. Se alguma linha vier acima de 1, a
+ *   coluna esta em porcentagem — o parser converte e registra que converteu,
+ *   em vez de aceitar um CTR de 620%.
  */
 const fs = require('fs');
 const path = require('path');
@@ -39,6 +50,10 @@ const FACTS = {
   backfill_retention_days: 30,
   day_boundary_timezone: 'America/Los_Angeles (Pacifico), nao UTC',
   available_since: '2026-01-15',
+  official_metric_names: ['video_thumbnail_impressions', 'video_thumbnail_impressions_ctr'],
+  ctr_unit: 'fracao de 0 a 1 (cliques / impressoes). 0.062 = 6,2%.',
+  ctr_canonical_field: 'impressions_ctr (fracao); impressions_ctr_percent e o mesmo valor em porcentagem',
+  ctr_definition: 'cliques divididos por impressoes de miniatura',
   requires_api_enabled: 'YouTube Reporting API habilitada no projeto do Google Cloud',
   scope: 'https://www.googleapis.com/auth/yt-analytics.readonly'
 };
@@ -108,35 +123,81 @@ function parseCSV(text) {
   const header = split(lines[0]).map((h) => h.toLowerCase());
   return { header, rows: lines.slice(1).map((l) => { const c = split(l); const o = {}; header.forEach((h, i) => { o[h] = c[i]; }); return o; }) };
 }
-/** Acha a coluna pelo nome, aceitando as variacoes plausiveis do CSV. */
+/**
+ * Acha a coluna pelo nome. O PRIMEIRO de cada lista e o nome oficial do
+ * relatorio; os seguintes sao variacoes toleradas, para o caso de o arquivo vir
+ * com outro cabecalho. A ordem importa: nome oficial ganha.
+ */
+const OFFICIAL_COLUMNS = {
+  date: 'date',
+  video: 'video_id',
+  impressions: 'video_thumbnail_impressions',
+  ctr: 'video_thumbnail_impressions_ctr'
+};
 const COLUMN_CANDIDATES = {
   date: ['date', 'day'],
   video: ['video_id', 'video', 'resource_id'],
-  impressions: ['impressions', 'thumbnail_impressions', 'card_impressions'],
-  ctr: ['impressions_ctr', 'thumbnail_impressions_ctr', 'impressions_click_through_rate', 'ctr']
+  impressions: ['video_thumbnail_impressions', 'thumbnail_impressions', 'impressions', 'card_impressions'],
+  ctr: ['video_thumbnail_impressions_ctr', 'thumbnail_impressions_ctr', 'impressions_ctr', 'impressions_click_through_rate', 'ctr']
 };
 function mapColumns(header) {
-  const map = {}; const unresolved = [];
+  const map = {}; const unresolved = []; const aliases = [];
   for (const [k, cands] of Object.entries(COLUMN_CANDIDATES)) {
     const hit = cands.find((c) => header.includes(c));
-    if (hit) map[k] = hit; else unresolved.push({ field: k, tried: cands });
+    if (!hit) { unresolved.push({ field: k, tried: cands }); continue; }
+    map[k] = hit;
+    if (hit !== OFFICIAL_COLUMNS[k]) aliases.push({ field: k, found: hit, official: OFFICIAL_COLUMNS[k] });
   }
-  return { map, unresolved };
+  return { map, unresolved, aliases,
+    official_names_used: ['impressions', 'ctr'].every((k) => map[k] === OFFICIAL_COLUMNS[k]) };
+}
+
+/**
+ * Descobre a escala da coluna de CTR a partir dos proprios numeros.
+ * Fracao nao passa de 1: valor acima de 1 denuncia porcentagem.
+ */
+function detectCtrScale(values) {
+  const nums = values.map(Number).filter((v) => Number.isFinite(v) && v > 0);
+  if (!nums.length) return { scale: 'fracao', factor: 1, confidence: 'sem dado', reason: 'nenhum valor positivo de CTR no periodo' };
+  const max = Math.max(...nums);
+  if (max > 1) return { scale: 'porcentagem', factor: 1 / 100, confidence: 'alta',
+    reason: `valor maximo ${max} passa de 1, e fracao nao passa de 1: a coluna esta em porcentagem e foi dividida por 100` };
+  return { scale: 'fracao', factor: 1, confidence: 'alta',
+    reason: `todos os valores ficam entre 0 e 1, como a documentacao do relatorio descreve (${FACTS.ctr_unit})` };
 }
 /**
  * Le o relatorio de alcance e extrai impressao e CTR do video pedido.
  * Nunca inventa: se a coluna nao existir, devolve indisponivel com o motivo.
  */
-function extractReach(csvText, { videoId = null, from = null, to = null } = {}) {
+/** Origens possiveis de um CSV. Apenas uma confirma o mapeamento de colunas. */
+const ORIGINS = {
+  google_download: 'arquivo baixado da Reporting API do Google',
+  sintetico: 'dado sintetico de teste',
+  manual_csv: 'planilha exportada a mao do YouTube Studio',
+  desconhecida: 'origem nao declarada'
+};
+
+function extractReach(csvText, { videoId = null, from = null, to = null, origin = 'desconhecida' } = {}) {
   const { header, rows } = parseCSV(csvText);
-  const { map, unresolved } = mapColumns(header);
+  const { map, unresolved, aliases, official_names_used } = mapColumns(header);
+  const fromGoogle = origin === 'google_download';
+  const resolved = unresolved.length === 0;
+  const verified = fromGoogle && resolved && official_names_used;
   const base = { source: 'youtube_reporting_api', report_header: header,
-    column_mapping: map, unresolved_columns: unresolved,
-    column_mapping_verified: unresolved.length === 0,
-    verification_note: 'o mapeamento das colunas so e dado como confirmado quando um arquivo real do Google passa por aqui; ate la, campo nao resolvido vira indisponivel.',
+    csv_origin: origin, csv_origin_label: ORIGINS[origin] || ORIGINS.desconhecida,
+    column_mapping: map, unresolved_columns: unresolved, column_aliases_used: aliases,
+    official_names_used,
+    column_mapping_verified: verified,
+    verification_note: verified
+      ? 'mapeamento confirmado: arquivo vindo do Google, com os nomes oficiais das colunas.'
+      : (!fromGoogle
+        ? `mapeamento NAO confirmado: o CSV veio de "${ORIGINS[origin] || origin}". Somente arquivo baixado do Google confirma o mapeamento — dado sintetico nunca confirma, por completo que seja.`
+        : (!resolved ? 'mapeamento NAO confirmado: ha coluna que nao foi reconhecida.'
+          : 'mapeamento NAO confirmado: o arquivo veio do Google mas com nomes de coluna alternativos, nao os oficiais.')),
+    ctr_unit: FACTS.ctr_unit,
     day_boundary_timezone: FACTS.day_boundary_timezone, rows_in_report: rows.length };
   if (!map.impressions || !map.ctr)
-    return { ...base, impressions: 'indisponivel', impressions_ctr: 'indisponivel',
+    return { ...base, impressions: 'indisponivel', impressions_ctr: 'indisponivel', impressions_ctr_percent: 'indisponivel',
       reason: `o relatorio nao traz coluna de ${!map.impressions ? 'impressoes' : 'CTR'} com nome reconhecido` };
   const sel = rows.filter((r) => {
     if (videoId && map.video && r[map.video] !== videoId) return false;
@@ -144,14 +205,20 @@ function extractReach(csvText, { videoId = null, from = null, to = null } = {}) 
     if (to && map.date && r[map.date] > String(to).replace(/-/g, '')) return false;
     return true;
   });
-  if (!sel.length) return { ...base, impressions: 'indisponivel', impressions_ctr: 'indisponivel',
+  if (!sel.length) return { ...base, impressions: 'indisponivel', impressions_ctr: 'indisponivel', impressions_ctr_percent: 'indisponivel',
     reason: videoId ? `o relatorio nao tem linha para o video ${videoId} no periodo` : 'nenhuma linha no periodo' };
+  const scale = detectCtrScale(sel.map((r) => r[map.ctr]));
   const imp = sel.reduce((a, r) => a + (Number(r[map.impressions]) || 0), 0);
-  // CTR agregado = cliques/impressoes; cliques sao reconstituidos de ctr*impressoes por linha
-  const clicks = sel.reduce((a, r) => a + (Number(r[map.ctr]) || 0) / 100 * (Number(r[map.impressions]) || 0), 0);
-  return { ...base, impressions: imp, impressions_ctr: imp ? +(clicks / imp).toFixed(6) : 'indisponivel',
+  // cliques reconstituidos linha por linha: ctr (em fracao) x impressoes daquele dia
+  const clicks = sel.reduce((a, r) => a + (Number(r[map.ctr]) || 0) * scale.factor * (Number(r[map.impressions]) || 0), 0);
+  const ratio = imp ? +(clicks / imp).toFixed(6) : null;
+  return { ...base, impressions: imp,
+    impressions_ctr: ratio === null ? 'indisponivel' : ratio,
+    impressions_ctr_percent: ratio === null ? 'indisponivel' : +(ratio * 100).toFixed(2),
+    estimated_clicks: +clicks.toFixed(1),
+    ctr_scale_in_file: scale.scale, ctr_scale_confidence: scale.confidence, ctr_scale_reason: scale.reason,
     days_covered: map.date ? [...new Set(sel.map((r) => r[map.date]))].length : null,
-    aggregation: 'impressoes somadas; CTR reconstituido como cliques/impressoes a partir das linhas diarias' };
+    aggregation: 'impressoes somadas; CTR agregado = cliques/impressoes, com os cliques reconstituidos de cada linha diaria (dia ponderado pelas proprias impressoes)' };
 }
 
 /** Caminho completo: job -> relatorio mais recente -> alcance do video. */
@@ -180,10 +247,11 @@ async function fetchReach(channelId, { videoId, from, to }) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
   const cached = path.join(CACHE_DIR, `${channelId}__${latest.id}.csv`);
   try { fs.writeFileSync(cached, csv); } catch (_) {}
-  const out = extractReach(csv, { videoId, from, to });
+  const out = extractReach(csv, { videoId, from, to, origin: 'google_download' });
   return { ...out, available: out.impressions !== 'indisponivel', job_id: job.job.id, report_id: latest.id,
     report_window: { start: latest.startTime, end: latest.endTime }, cached_file: cached,
     delay_note: `relatorio em lote: a janela termina em ${latest.endTime} e nao cobre as ultimas horas`, facts: FACTS };
 }
 module.exports = { ensureReachJob, listJobs, listReports, downloadReport, listReportTypes,
-  fetchReach, extractReach, parseCSV, mapColumns, REACH_TYPES, FACTS, CACHE_DIR, COLUMN_CANDIDATES };
+  fetchReach, extractReach, parseCSV, mapColumns, detectCtrScale,
+  REACH_TYPES, FACTS, CACHE_DIR, COLUMN_CANDIDATES, OFFICIAL_COLUMNS, ORIGINS };

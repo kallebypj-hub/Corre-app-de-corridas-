@@ -153,7 +153,11 @@ V.estudio = () => { const d = S.data, md = d.metadata, q = d.quality, ep = d.epi
     <div class="card"><h3>Decisão do presidente</h3>
       <div class="between"><span class="muted small">Status atual</span>${pill(ep.approval.status, ep.approval.status === 'approved' ? 'ok' : 'idle')}</div>
       <textarea id="apNotes" rows="3" placeholder="observações da revisão" style="margin-top:10px"></textarea>
-      <label class="small muted flex" style="margin-top:9px"><input type="checkbox" id="apSched" style="width:auto"> autorizar envio programado <b>deste</b> vídeo (privado)</label>
+      <div class="small muted" style="margin-top:9px">Quatro decisões separadas. Marcar uma <b>não</b> marca outra.</div>
+      <label class="small muted flex" style="margin-top:7px"><input type="checkbox" id="apSched" style="width:auto"> 1. enviar <b>este</b> vídeo como <b>privado</b> <span class="muted">(não autoriza agendar, publicar nem coletar)</span></label>
+      <label class="small muted flex" style="margin-top:5px"><input type="checkbox" id="apSchedPub" style="width:auto"> 2. <b>agendar</b> a publicação <span class="muted">(segue privado até a data; não é publicar agora)</span></label>
+      <label class="small muted flex" style="margin-top:5px"><input type="checkbox" id="apPublic" style="width:auto"> 3. <b>tornar público</b> <span class="muted">— ainda exige a frase exata na hora: PUBLICAR ${h(S.ep)} EM PUBLICO</span></label>
+      <label class="small muted flex" style="margin-top:5px"><input type="checkbox" id="apCollect" style="width:auto"> 4. <b>iniciar coleta</b> de audiência <span class="muted">(só funciona com o vídeo público confirmado na API)</span></label>
       <div class="flex" style="margin-top:11px"><button class="p" id="apOk" ${g && g.can_be_approved && !d.gates_stale ? '' : 'disabled'}>Aprovar</button><button id="apNo">Rejeitar</button></div>
       ${g && !g.can_be_approved ? `<div class="block" style="margin-top:10px">Aprovação travada pelos gates: ${h((g.blocking_failures || []).join(', '))}</div>` : ''}
       <div class="small muted" style="margin-top:9px">Aprovar aqui vale só para este vídeo. Não cria autorização para vídeos futuros.</div></div>
@@ -206,7 +210,11 @@ ensureSession().then(ok => { if (ok) load(); }); } }
   if (S.view === 'estudio') {
     const ok = $('#apOk'), no = $('#apNo');
     if (ok) ok.onclick = async () => { const r = await post(`/api/episodes/${S.ep}/approval`, { status: 'approved', by: 'presidente',
-      notes: $('#apNotes').value, scheduled_upload_authorized: $('#apSched').checked });
+      notes: $('#apNotes').value,
+      scheduled_upload_authorized: $('#apSched').checked,
+      publication_schedule_authorized: $('#apSchedPub') ? $('#apSchedPub').checked : false,
+      public_release_authorized: $('#apPublic') ? $('#apPublic').checked : false,
+      audience_collection_authorized: $('#apCollect') ? $('#apCollect').checked : false });
       alert(r.error ? `Bloqueado: ${r.error}` : 'Aprovado. Vale só para este vídeo.'); load(); };
     if (no) no.onclick = async () => { await post(`/api/episodes/${S.ep}/approval`, { status: 'rejected', by: 'presidente', notes: $('#apNotes').value }); load(); };
   }

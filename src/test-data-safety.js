@@ -19,7 +19,7 @@ const WATCHED = [
   'content/channels/ch_practical_discipline', 'config'
 ];
 const SUITES = ['test-gates.js', 'test-youtube.js', 'test-security.js', 'test-evolution.js',
-  'test-integration.js', 'test-independence.js', 'test.js'];
+  'test-integration.js', 'test-ato4-fixes.js', 'test-independence.js', 'test.js'];
 
 function walk(dir, acc = []) {
   if (!fs.existsSync(dir)) return acc;

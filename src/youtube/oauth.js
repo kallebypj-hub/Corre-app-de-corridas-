@@ -26,6 +26,83 @@ const SCOPES = [
 const STATE_TTL_MS = 10 * 60 * 1000;
 const STATE_FILE = path.join(store.DIR, 'oauth-state.json');
 
+/**
+ * UM UNICO TIPO DE CREDENCIAL, em todo o projeto e em toda a documentacao:
+ * "Aplicativo da Web" (Web application) no Google Cloud.
+ *
+ * Por que este e nao "Aplicativo de desktop":
+ *  - este sistema atende num endereco FIXO e num caminho FIXO
+ *    (http://127.0.0.1:3777/api/youtube/oauth/callback), porque o painel ja e
+ *    um servidor HTTP. O tipo Aplicativo da Web e o unico em que se cadastra o
+ *    redirect exato no console — e redirect cadastrado e redirect que casa.
+ *  - o Google exige HTTPS nos redirects de aplicativo web, com UMA excecao
+ *    explicita: endereco de loopback (localhost e 127.0.0.1). O nosso e loopback,
+ *    entao http e aceito.
+ *  - o tipo Aplicativo de desktop foi desenhado para porta efemera sorteada na
+ *    hora e nao tem campo de redirect no console, o que nao combina com um
+ *    caminho fixo e abre espaco para redirect_uri_mismatch.
+ *  - o tunel SSH nao muda nada disso: do lado do Google o redirect continua
+ *    sendo 127.0.0.1:3777, que e o que esta cadastrado.
+ */
+const CREDENTIAL_TYPE = {
+  google_console_type: 'Aplicativo da Web (Web application)',
+  reason: 'o callback tem endereco e caminho fixos; apenas o tipo Aplicativo da Web permite cadastrar o redirect exato',
+  redirect_must_be_registered: true,
+  http_allowed_because: 'loopback (127.0.0.1 e localhost) e a excecao do Google a exigencia de HTTPS no redirect',
+  works_through_ssh_tunnel: 'sim: o Google so ve 127.0.0.1:3777, que e o endereco cadastrado',
+  never_use: 'Aplicativo de desktop — porta efemera, sem redirect cadastrado, incompativel com caminho fixo'
+};
+
+const EXPECTED_CALLBACK_PATH = '/api/youtube/oauth/callback';
+
+/**
+ * Confere se o redirect configurado e utilizavel: loopback, caminho do callback
+ * e porta igual a do servidor. Nao imprime nem devolve segredo nenhum.
+ */
+function validateRedirect() {
+  const uri = redirectUri();
+  const problems = [];
+  let u = null;
+  try { u = new URL(uri); } catch (_) { return { ok: false, redirect_uri: uri, problems: ['nao e uma URL valida'], credential_type: CREDENTIAL_TYPE }; }
+  const loopback = u.hostname === '127.0.0.1' || u.hostname === 'localhost';
+  if (!loopback) problems.push(`o host "${u.hostname}" nao e loopback; o Google exigiria HTTPS e o tunel SSH nao serviria`);
+  if (loopback && u.protocol !== 'http:' && u.protocol !== 'https:') problems.push(`protocolo "${u.protocol}" invalido`);
+  if (u.pathname !== EXPECTED_CALLBACK_PATH) problems.push(`o caminho e "${u.pathname}" mas o servidor atende em "${EXPECTED_CALLBACK_PATH}"`);
+  const serverPort = String(process.env.PORT || 3777);
+  if (u.port && u.port !== serverPort) problems.push(`a porta do redirect (${u.port}) nao e a porta do servidor (${serverPort})`);
+  return { ok: problems.length === 0, redirect_uri: uri, host: u.hostname, port: u.port || null,
+    path: u.pathname, loopback, problems, credential_type: CREDENTIAL_TYPE,
+    register_in_console: uri,
+    note: problems.length === 0
+      ? 'cadastre exatamente este endereco em "URIs de redirecionamento autorizados" da credencial Aplicativo da Web'
+      : 'corrija os pontos acima antes de autorizar' };
+}
+
+/**
+ * Diagnostico do procedimento inteiro, SEM divulgar segredo.
+ * De cada credencial informa apenas presenca, tamanho e impressao digital curta.
+ */
+function doctor() {
+  const fp = (v) => (v ? crypto.createHash('sha256').update(String(v)).digest('hex').slice(0, 12) : null);
+  const id = process.env.YOUTUBE_CLIENT_ID || '';
+  const secret = process.env.YOUTUBE_CLIENT_SECRET || '';
+  const checks = [];
+  const add = (name, ok, detail) => checks.push({ check: name, ok, detail });
+  add('YOUTUBE_CLIENT_ID presente', !!id, id ? `${id.length} caracteres, impressao ${fp(id)}` : 'ausente no .env');
+  add('formato do client_id', !id || /\.apps\.googleusercontent\.com$/.test(id), id ? (/\.apps\.googleusercontent\.com$/.test(id) ? 'termina em .apps.googleusercontent.com' : 'NAO termina em .apps.googleusercontent.com: provavelmente nao e um client_id') : 'sem id para conferir');
+  add('YOUTUBE_CLIENT_SECRET presente', !!secret, secret ? `${secret.length} caracteres, impressao ${fp(secret)}` : 'ausente no .env');
+  const red = validateRedirect();
+  add('redirect utilizavel', red.ok, red.ok ? `${red.redirect_uri} (loopback, caminho e porta corretos)` : red.problems.join(' | '));
+  add('escopos pedidos', true, SCOPES.join(' '));
+  add('nenhum escopo de escrita de canal', !SCOPES.some((s) => /auth\/youtube$|force-ssl/.test(s)),
+    'o projeto nao pede permissao para alterar identidade, descricao ou privacidade de canal');
+  return { ok: checks.every((c) => c.ok), credential_type: CREDENTIAL_TYPE, checks,
+    redirect: { uri: red.redirect_uri, register_in_console: red.register_in_console },
+    secrets_disclosed: false,
+    secrets_note: 'nenhum valor de credencial aparece aqui: apenas presenca, tamanho e impressao digital de 12 caracteres.',
+    tunnel: 'do Windows: ssh -L 3777:127.0.0.1:3777 usuario@IP_DA_VPS, e depois abra http://127.0.0.1:3777 no navegador da sua maquina.' };
+}
+
 function configured() { return !!(process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET); }
 function redirectUri() {
   return process.env.YOUTUBE_REDIRECT_URI || `http://127.0.0.1:${process.env.PORT || 3777}/api/youtube/oauth/callback`;
@@ -125,10 +202,12 @@ async function verify(channelId) {
   const item = (res.json.items || [])[0];
   if (!item) return { ok: false, reason: 'o token e valido mas nao alcanca nenhum canal do YouTube' };
   const t = store.load(channelId);
+  const handle = (item.snippet && (item.snippet.customUrl || null)) || null;
   store.save(channelId, { ...t, channel_id_youtube: item.id,
-    channel_title: (item.snippet && item.snippet.title) || null, verified_at: new Date().toISOString() });
+    channel_title: (item.snippet && item.snippet.title) || null,
+    channel_handle: handle, verified_at: new Date().toISOString() });
   return { ok: true, youtube_channel_id: item.id, title: (item.snippet && item.snippet.title) || null,
-    uploads_playlist: ((item.contentDetails || {}).relatedPlaylists || {}).uploads || null,
+    handle, uploads_playlist: ((item.contentDetails || {}).relatedPlaylists || {}).uploads || null,
     verified_at: new Date().toISOString() };
 }
 
@@ -177,10 +256,12 @@ async function revoke(channelId) {
 let cache = { at: 0, value: null, channel: null };
 async function state(channelId, { live = true } = {}) {
   const base = { scopes_requested: SCOPES, redirect_uri: redirectUri(),
+    credential_type: CREDENTIAL_TYPE.google_console_type,
     default_privacy: process.env.DEFAULT_PRIVACY_STATUS || 'private' };
   if (!configured()) return { ...base, status: 'BLOQUEADO',
     reason: 'YOUTUBE_CLIENT_ID/YOUTUBE_CLIENT_SECRET ausentes no .env',
-    next_step: 'O proprietario cria um projeto no Google Cloud, habilita YouTube Data API v3 e YouTube Analytics API, cria credencial OAuth de aplicativo web com este redirect_uri e coloca ID e segredo no .env deste projeto.',
+    next_step: `O proprietario cria um projeto no Google Cloud, habilita YouTube Data API v3, YouTube Analytics API e YouTube Reporting API, cria credencial OAuth do tipo ${CREDENTIAL_TYPE.google_console_type} com este redirect_uri cadastrado e coloca ID e segredo no .env deste projeto.`,
+    credential_type: CREDENTIAL_TYPE,
     upload_possible: false, analytics_possible: false, token: { present: false } };
   const tok = store.describe(channelId);
   if (!tok.present || tok.usable === false) return { ...base, status: 'PENDENTE_AUTORIZACAO',
@@ -194,6 +275,7 @@ async function state(channelId, { live = true } = {}) {
   const v = await verify(channelId);
   const out = v.ok
     ? { ...base, status: 'AUTORIZADO', youtube_channel_id: v.youtube_channel_id, channel_title: v.title,
+        channel_handle: v.handle || null,
         verified_at: v.verified_at, upload_possible: true, analytics_possible: true, token: store.describe(channelId) }
     : { ...base, status: 'PENDENTE_AUTORIZACAO', reason: `token guardado nao passou na verificacao: ${v.reason}`,
         authorize_path: '/api/youtube/oauth/start', upload_possible: false, analytics_possible: false, token: tok };
@@ -202,4 +284,5 @@ async function state(channelId, { live = true } = {}) {
 }
 function invalidateCache() { cache = { at: 0, value: null, channel: null }; }
 module.exports = { configured, authUrl, handleCallback, verify, refresh, accessToken, revoke, state,
-  invalidateCache, consumeState, newState, SCOPES, redirectUri, STATE_TTL_MS };
+  invalidateCache, consumeState, newState, validateRedirect, doctor,
+  SCOPES, redirectUri, STATE_TTL_MS, CREDENTIAL_TYPE, EXPECTED_CALLBACK_PATH };

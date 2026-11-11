@@ -65,8 +65,15 @@ function importFile(file, { videoId = null, importedBy = 'presidente', note = nu
     metrics: {
       impressions: imp === null ? 'indisponivel' : imp,
       impressions_ctr: imp && clicks !== null ? +(clicks / imp).toFixed(6) : 'indisponivel',
+      impressions_ctr_percent: imp && clicks !== null ? +((clicks / imp) * 100).toFixed(2) : 'indisponivel',
       views: map.views ? sel.reduce((a, r) => a + (num(r[map.views]) || 0), 0) : 'indisponivel'
     },
+    // mesma unidade canonica do resto do projeto
+    ctr_unit: 'fracao de 0 a 1 (cliques / impressoes). 0.062 = 6,2%. A coluna do Studio vem em porcentagem e foi dividida por 100.',
+    ctr_canonical_field: 'impressions_ctr (fracao); impressions_ctr_percent e o mesmo valor em porcentagem',
+    csv_origin: 'manual_csv',
+    column_mapping_verified: false,
+    verification_note: 'planilha exportada a mao nunca confirma o mapeamento das colunas do relatorio da API: sao arquivos diferentes, com cabecalhos diferentes.',
     caveats: [
       'dado exportado a mao: o periodo e o recorte sao os que o dono escolheu no Studio, nao os do sistema',
       'o Studio fecha o dia em horario do Pacifico, igual a Reporting API',

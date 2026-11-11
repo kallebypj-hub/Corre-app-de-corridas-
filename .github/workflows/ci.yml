@@ -27,5 +27,7 @@ jobs:
         run: node src/test-evolution.js
       - name: Prova integrada do ciclo
         run: node src/test-integration.js
+      - name: Ajustes finais do ATO 4
+        run: node src/test-ato4-fixes.js
       - name: A bateria nao destroi dado de producao
         run: node src/test-data-safety.js

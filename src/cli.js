@@ -60,6 +60,15 @@ async function main() {
       console.log(JSON.stringify(await yt.revoke(CHANNEL), null, 2));
     } else if (sub === 'verify') {
       console.log(JSON.stringify(await yt.verify(CHANNEL), null, 2));
+    } else if (sub === 'doctor') {
+      const d = yt.doctor();
+      console.log(`\ntipo de credencial: ${d.credential_type.google_console_type}`);
+      console.log(`motivo: ${d.credential_type.reason}`);
+      console.log(`cadastre em "URIs de redirecionamento autorizados": ${d.redirect.register_in_console}\n`);
+      for (const c of d.checks) console.log(`  ${c.ok ? 'ok   ' : 'FALHA'} ${c.check} — ${c.detail}`);
+      console.log(`\n${d.secrets_note}`);
+      console.log(`tunel: ${d.tunnel}\n`);
+      console.log(d.ok ? 'procedimento validado: pode autorizar.' : 'corrija os pontos marcados como FALHA antes de autorizar.');
     } else {
       const st = await yt.state(CHANNEL);
       console.log(JSON.stringify(st, null, 2));
@@ -148,7 +157,7 @@ async function main() {
       const phrase = process.argv.slice(2).join(' ').includes(pubmod.CONFIRM_PHRASE(epId)) ? pubmod.CONFIRM_PHRASE(epId) : null;
       console.log(JSON.stringify(await pubmod.makePublic(store, epId, { by: 'presidente', confirmation: phrase }), null, 2)); return;
     }
-    if (sub === 'collect') { console.log(JSON.stringify(pubmod.startCollection(store, epId, { by: 'presidente' }), null, 2)); return; }
+    if (sub === 'collect') { console.log(JSON.stringify(await pubmod.startCollection(store, epId, { by: 'presidente' }), null, 2)); return; }
     console.log(JSON.stringify(pubmod.TRANSITIONS, null, 2));
   } else if (cmd === 'import-studio') {
     const si = require('./youtube/studio-import');
@@ -187,6 +196,7 @@ async function main() {
   node src/cli.js scheduler [tick|status|loop] [--dry-run]
   node src/cli.js publish [state|private|schedule|public|collect] <ep>
   node src/cli.js import-studio <ep> <arquivo.csv> [h24|h72|d7|d28]
+  node src/cli.js youtube doctor                 # valida credencial, redirect e escopos SEM mostrar segredo
   node src/cli.js editorial                     # provedor de geracao editorial e autonomia real
 episodios no disco: ${listEpisodeDirs(CHANNEL).join(', ') || '(nenhum)'}
   node src/cli.js doctor

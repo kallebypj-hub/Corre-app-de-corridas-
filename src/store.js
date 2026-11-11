@@ -11,7 +11,8 @@ const crypto = require('crypto');
 const { Logger } = require('./log');
 
 const ROOT = path.join(__dirname, '..');
-const VAR = path.join(ROOT, 'var');
+// configuravel para que suite de teste nunca escreva em var/ de producao
+const VAR = process.env.YMC_VAR_DIR || path.join(ROOT, 'var');
 
 function sha256File(p) {
   const h = crypto.createHash('sha256');
@@ -106,7 +107,9 @@ function applyEvent(st, ev) {
   switch (ev.type) {
     case 'episode.created':
       st.episodes[p.id] = { id: p.id, title: p.title || null, channelId: st.channelId, created: ev.ts,
-        stages: {}, approval: { status: 'pending', by: null, at: null, notes: null, scheduled_upload_authorized: false },
+        stages: {}, approval: { status: 'pending', by: null, at: null, notes: null,
+          scheduled_upload_authorized: false, publication_schedule_authorized: false,
+          public_release_authorized: false, audience_collection_authorized: false },
         gates: null, cost_usd: 0, mode_map: {}, meta: p.meta || {} };
       break;
     case 'episode.meta':
@@ -142,9 +145,12 @@ function applyEvent(st, ev) {
     }
     case 'approval.decided': {
       const ep = st.episodes[p.epId]; if (!ep) break;
+      // QUATRO decisoes independentes. Marcar uma nunca marca outra.
       ep.approval = { status: p.status, by: p.by, at: ev.ts, notes: p.notes || null,
         scheduled_upload_authorized: !!p.scheduled_upload_authorized,
-        public_release_authorized: !!p.public_release_authorized };
+        publication_schedule_authorized: !!p.publication_schedule_authorized,
+        public_release_authorized: !!p.public_release_authorized,
+        audience_collection_authorized: !!p.audience_collection_authorized };
       break;
     }
     case 'mission.created': st.missions.unshift({ ...p, at: ev.ts }); break;

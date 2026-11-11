@@ -27,7 +27,8 @@
     "channel": "node src/cli.js channel",
     "cycle": "node src/cli.js cycle",
     "scheduler": "node src/cli.js scheduler",
-    "test:data-safety": "node src/test-data-safety.js"
+    "test:data-safety": "node src/test-data-safety.js",
+    "test:ato4": "node src/test-ato4-fixes.js"
   },
   "engines": {
     "node": ">=20.0.0"

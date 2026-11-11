@@ -30,8 +30,9 @@ process.env.TOKEN_ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
 // senao a suite tentaria enviar para o Quiet Resolve — e seria recusada, certo.
 process.env.YT_CHANNELS_CONFIG = path.join(SANDBOX, 'channels.json');
 fs.writeFileSync(process.env.YT_CHANNELS_CONFIG, JSON.stringify({
+  // vinculado por ID: e esta a unica condicao em que escrita e permitida
   official: { internal_key: 'ch_yt_test', expected_title: 'Canal de Teste', expected_handle: '@teste',
-    youtube_channel_id: null, bound: false },
+    youtube_channel_id: 'UC_TESTE_123', bound: true, bound_at: '2026-11-11T00:00:00.000Z' },
   forbidden: [{ title: 'Kalleby Prado', reason: 'canal pessoal (replicado aqui para o teste do bloqueio)' }],
   authorized_not_in_use: [], policy: ['sandbox']
 }, null, 2));
@@ -213,6 +214,30 @@ const CH = 'ch_yt_test';
     assert.strictEqual(a.status, 'BLOQUEADO');
     assert.ok(Object.values(a.metrics).every((v) => v === 'indisponivel'));
     assert.ok(!Object.values(a.metrics).some((v) => v === 0));
+  });
+
+  // ---------- trava de canal no proprio cliente de upload ----------
+  await t('canal NAO vinculado bloqueia o cliente de upload', async () => {
+    const cfgPath = process.env.YT_CHANNELS_CONFIG;
+    const saved = fs.readFileSync(cfgPath, 'utf8');
+    const c = JSON.parse(saved);
+    c.official.bound = false; c.official.youtube_channel_id = null;
+    fs.writeFileSync(cfgPath, JSON.stringify(c, null, 2));
+    try {
+      await assert.rejects(() => M.upload.uploadVideo({ channelId: CH, epId: 'ep_nb', filePath: vid, metadata: META }),
+        /nao foi vinculado/i);
+    } finally { fs.writeFileSync(cfgPath, saved); }
+  });
+  await t('canal pessoal bloqueia o cliente de upload mesmo vinculado a outro', async () => {
+    const cfgPath = process.env.YT_CHANNELS_CONFIG;
+    const saved = fs.readFileSync(cfgPath, 'utf8');
+    const c = JSON.parse(saved);
+    c.forbidden = [{ title: 'Canal de Teste', reason: 'colocado na lista de proibidos de proposito, para provar que a lista vence o vinculo' }];
+    fs.writeFileSync(cfgPath, JSON.stringify(c, null, 2));
+    try {
+      await assert.rejects(() => M.upload.uploadVideo({ channelId: CH, epId: 'ep_pb', filePath: vid, metadata: META }),
+        /lista de proibidos/i);
+    } finally { fs.writeFileSync(cfgPath, saved); }
   });
 
   // ---------- revogacao ----------

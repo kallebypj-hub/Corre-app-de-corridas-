@@ -33,6 +33,8 @@ async function enqueue(store, epId, { privacy = 'private', publishAt = null, app
 /** Envio real. So roda com as tres chaves. Retorna o estado REAL conferido na API. */
 async function publishPrivate(store, epId, { filePath, metadata, by, force = false, onProgress = null }) {
   assertPublishable(store, epId);
+  // trava de canal depois das checagens locais: exige canal vinculado por ID
+  await require('./channel-guard').assertWritable(store.channelId, 'envio privado');
   const st = await oauth.state(store.channelId);
   if (st.status !== 'AUTORIZADO') throw new Error(`OAuth em estado ${st.status}: ${st.reason || 'sem autorizacao'}`);
   const existing = upload.readRec(store.channelId, epId);

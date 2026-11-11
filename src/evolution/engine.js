@@ -79,16 +79,74 @@ class EvolutionEngine {
   }
 
   /* ---------- 3. publicacao ---------- */
-  recordPublication(epId, { video_id, url, privacy, published_at, author = 'publishing_analytics' }) {
+  /**
+   * Registra uma etapa de publicacao.
+   *
+   * DUAS DATAS DIFERENTES, e a diferenca decide tudo:
+   *  - `uploaded_privately_at`: o arquivo subiu como privado. Ninguem viu. Nao
+   *    comeca marco de audiencia nenhum.
+   *  - `published_publicly_at`: o video ficou publico DE FATO, confirmado na API.
+   *    E so esta data que liga o relogio dos marcos de 24h, 72h, 7 e 28 dias.
+   *
+   * Video que continua privado nao e analisado: nao existe audiencia para medir,
+   * e medir zero como se fosse resultado seria inventar fracasso.
+   */
+  recordPublication(epId, { kind = 'upload_privado', video_id, url, privacy,
+    uploaded_privately_at = null, published_publicly_at = null,
+    privacy_confirmed_by_api = false, author = 'publishing_analytics' }) {
     const id = `exp_${epId}`;
+    if (!['upload_privado', 'agendamento', 'publicacao_publica'].includes(kind))
+      throw new Error(`etapa de publicacao desconhecida: ${kind}`);
+    if (kind === 'publicacao_publica') {
+      if (!published_publicly_at) throw new Error('publicacao publica exige published_publicly_at');
+      if (privacy !== 'public') throw new Error(`publicacao publica exige privacidade "public" confirmada; veio "${privacy}"`);
+      if (!privacy_confirmed_by_api) throw new Error('publicacao publica exige confirmacao vinda da API, nao suposicao local');
+    }
     return this.store.append('experiment.published', {
-      experiment_id: id, episode_id: epId, video_id, url, privacy,
-      published_at: published_at || new Date().toISOString()
+      experiment_id: id, episode_id: epId, kind, video_id, url, privacy,
+      uploaded_privately_at: uploaded_privately_at || (kind === 'upload_privado' ? new Date().toISOString() : null),
+      published_publicly_at: kind === 'publicacao_publica' ? published_publicly_at : null,
+      privacy_confirmed_by_api: !!privacy_confirmed_by_api,
+      audience_clock_started: kind === 'publicacao_publica',
+      note: kind === 'upload_privado'
+        ? 'arquivo privado no YouTube: sem audiencia, nenhum marco comeca a contar'
+        : (kind === 'agendamento' ? 'agendado: segue privado ate a data, o relogio ainda nao comecou'
+          : 'publico e confirmado na API: a partir daqui os marcos de audiencia contam')
     }, { author });
   }
 
+  /**
+   * O relogio da audiencia esta rodando? Unica fonte de verdade para os marcos.
+   */
+  audienceClock(epId) {
+    const x = this.store.experiment(`exp_${epId}`);
+    if (!x || !x.publication) return { started: false, reason: 'episodio sem registro de publicacao' };
+    const pub = x.publication;
+    if (!pub.published_publicly_at)
+      return { started: false, at: null, uploaded_privately_at: pub.uploaded_privately_at || null,
+        reason: pub.uploaded_privately_at
+          ? 'o video esta no YouTube como privado: nao ha audiencia, logo nao ha marco a medir'
+          : 'nenhuma publicacao publica registrada' };
+    if (pub.privacy !== 'public')
+      return { started: false, at: null, reason: `ha data de publicacao publica mas a privacidade registrada e "${pub.privacy}"` };
+    return { started: true, at: pub.published_publicly_at,
+      uploaded_privately_at: pub.uploaded_privately_at || null,
+      confirmed_by_api: !!pub.privacy_confirmed_by_api,
+      reason: 'publicacao publica confirmada na API' };
+  }
+
   /* ---------- 4. medidas reais, por marco ---------- */
-  recordMeasurement(epId, { milestone, metrics, source, window, author = 'publishing_analytics' }) {
+  /**
+   * Medida de um marco.
+   *
+   * COMPLETUDE: ausencia TEMPORARIA de metrica nao fecha o marco. Uma medida
+   * entra como `provisoria` enquanto houver dado que ainda pode chegar (o
+   * relatorio em lote de impressoes leva ate 48h, a curva de retencao demora a
+   * popular). Provisoria continua sendo retentada e e SUBSTITUIDA quando o dado
+   * real aparecer. Somente `final` encerra o marco.
+   */
+  recordMeasurement(epId, { milestone, metrics, source, window, author = 'publishing_analytics',
+    completeness = null, provisionalBecause = [], structuralGaps = [], attempt = 1, supersedes = null }) {
     if (!MILESTONES.find((m) => m.id === milestone)) throw new Error(`marco desconhecido: ${milestone}`);
     const id = `exp_${epId}`;
     const missing = [];
@@ -97,10 +155,18 @@ class EvolutionEngine {
       if (v === 'indisponivel' || v === null || v === undefined) { missing.push(k); clean[k] = null; }
       else clean[k] = v;
     }
+    const prov = Array.isArray(provisionalBecause) ? provisionalBecause : [];
+    const final = completeness ? completeness === 'final' : prov.length === 0;
     return this.store.append('measurement.recorded', {
       experiment_id: id, episode_id: epId, milestone, metrics: clean,
       missing_metrics: missing, source: source || 'youtube_analytics_api', window: window || null,
-      note: missing.length ? `${missing.length} metrica(s) nao vieram da API e ficam como ausentes, nunca como zero` : null
+      completeness: final ? 'final' : 'provisoria',
+      provisional_because: prov, structural_gaps: structuralGaps || [],
+      attempt, supersedes,
+      note: (missing.length ? `${missing.length} metrica(s) nao vieram da API e ficam como ausentes, nunca como zero. ` : '')
+        + (final
+          ? 'medida FINAL: o que falta e falta estrutural, nao atraso — o marco esta encerrado.'
+          : `medida PROVISORIA: ${prov.join('; ')}. O marco segue aberto e sera remedido quando o dado real aparecer.`)
     }, { author });
   }
 

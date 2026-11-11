@@ -83,7 +83,16 @@ class EvolutionStore {
       switch (e.type) {
         case 'experiment.registered': Object.assign(x, p, { registered_at: e.ts }); break;
         case 'experiment.produced': x.production = p; break;
-        case 'experiment.published': x.publication = p; break;
+        // as etapas de publicacao se ACUMULAM: a data do envio privado nao se
+        // perde quando a publicacao publica e registrada depois.
+        case 'experiment.published': {
+          const prev = x.publication || {};
+          x.publication = { ...prev, ...p,
+            uploaded_privately_at: p.uploaded_privately_at || prev.uploaded_privately_at || null,
+            published_publicly_at: p.published_publicly_at || prev.published_publicly_at || null };
+          (x.publication_steps = x.publication_steps || []).push({ kind: p.kind || 'desconhecida', ts: e.ts, privacy: p.privacy || null });
+          break;
+        }
         case 'measurement.recorded': x.measurements.push({ ...p, ts: e.ts }); break;
         case 'retention.mapped': x.retention = { ...p, ts: e.ts }; break;
         case 'funnel.evaluated': x.funnels.push({ ...p, ts: e.ts }); break;
@@ -98,6 +107,14 @@ class EvolutionStore {
       x.current_verdict = x.verdicts.length ? x.verdicts[x.verdicts.length - 1] : { verdict: 'aguardando dados', reason: 'nenhum veredicto emitido ainda' };
       x.current_funnel = x.funnels.length ? x.funnels[x.funnels.length - 1] : null;
       x.superseded_verdicts = x.verdicts.slice(0, -1);
+      // Remedicao nao duplica marco: a ULTIMA medida de cada marco e a que vale,
+      // e as anteriores (provisorias) continuam no registro, visiveis.
+      const byMs = {};
+      for (const m of x.measurements) byMs[m.milestone] = m;
+      x.measurement_by_milestone = byMs;
+      x.current_measurements = Object.values(byMs);
+      x.open_milestones = Object.values(byMs).filter((m) => m.completeness === 'provisoria').map((m) => m.milestone);
+      x.final_milestones = Object.values(byMs).filter((m) => m.completeness !== 'provisoria').map((m) => m.milestone);
     }
     return [...map.values()].sort((a, b) => String(a.experiment_id).localeCompare(String(b.experiment_id)));
   }

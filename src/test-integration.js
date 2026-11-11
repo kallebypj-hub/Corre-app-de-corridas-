@@ -72,9 +72,14 @@ function syntheticCollector(metrics, { withCurve = true } = {}) {
       const x = i / 40;
       curve.push({ ratio: x, audience: x < 0.08 ? 1 - x * 2.2 : Math.max(0.08, 0.82 - x * 0.75) });
     }
+    const missing = Object.entries(metrics).filter(([, v]) => v === 'indisponivel').map(([k]) => k);
     return { status: 'COLETADO', video_id: videoId, milestone, source: 'SINTETICO_TESTE',
       window: { from: '2026-11-01', to: '2026-11-11' },
-      metrics, missing_metrics: Object.entries(metrics).filter(([, v]) => v === 'indisponivel').map(([k]) => k),
+      metrics, missing_metrics: missing,
+      // o que falta aqui falta por DECISAO (escopo monetario, Shorts sem referencia),
+      // nao por atraso: a medida e final.
+      completeness: { final: true, provisional_because: [],
+        structural_gaps: missing.map((k) => `${k}: ausente por decisao de escopo neste laboratorio sintetico`) },
       retention_curve: withCurve ? curve : null, traffic_sources: [{ source: 'BROWSE', views: metrics.views || 0, share_pct: 100 }],
       notes: ['DADO SINTETICO DE TESTE — nao veio do YouTube'] };
   };
@@ -109,12 +114,22 @@ function syntheticCollector(metrics, { withCurve = true } = {}) {
 
   // 3
   await step(3, 'publicacao simulada, sem atingir o Google', () => {
-    engine.recordPublication('ep_s01', { video_id: 'SINTETICO_VID_001', url: 'https://example.invalid/SINTETICO_VID_001',
-      privacy: 'private', published_at: new Date(Date.now() - 200 * 3600000).toISOString(), author: 'teste_integrado' });
+    const up = new Date(Date.now() - 240 * 3600000).toISOString();
+    const pub = new Date(Date.now() - 200 * 3600000).toISOString();
+    engine.recordPublication('ep_s01', { kind: 'upload_privado', video_id: 'SINTETICO_VID_001',
+      url: 'https://example.invalid/SINTETICO_VID_001', privacy: 'private',
+      uploaded_privately_at: up, author: 'teste_integrado' });
+    // antes de ficar publico, o relogio da audiencia NAO roda
+    assert.strictEqual(engine.audienceClock('ep_s01').started, false, 'envio privado ligou o relogio');
+    engine.recordPublication('ep_s01', { kind: 'publicacao_publica', video_id: 'SINTETICO_VID_001',
+      url: 'https://example.invalid/SINTETICO_VID_001', privacy: 'public',
+      uploaded_privately_at: up, published_publicly_at: pub, privacy_confirmed_by_api: true, author: 'teste_integrado' });
     const x = engine.store.experiment('exp_ep_s01');
     assert.strictEqual(x.publication.video_id, 'SINTETICO_VID_001');
+    assert.strictEqual(x.publication.uploaded_privately_at, up, 'perdeu a data do envio privado');
+    assert.strictEqual(x.publication.published_publicly_at, pub);
     assert.ok(!/youtube\.com/.test(x.publication.url), 'a URL sintetica nao pode parecer real');
-    return 'publicacao marcada como sintetica, 200h atras';
+    return 'envio privado 240h atras, publicacao publica confirmada 200h atras: o relogio conta da segunda';
   });
 
   // 4, 5, 6, 7, 8 — o ciclo faz tudo numa chamada
@@ -191,8 +206,13 @@ function syntheticCollector(metrics, { withCurve = true } = {}) {
     assert.ok(saved.applies_learning.length >= 1);
 
     // e o ciclo do segundo agora tem referencia: o funil consegue comparar
-    engine.recordPublication('ep_s02', { video_id: 'SINTETICO_VID_002', url: 'https://example.invalid/SINTETICO_VID_002',
-      privacy: 'private', published_at: new Date(Date.now() - 200 * 3600000).toISOString(), author: 'teste_integrado' });
+    const up2 = new Date(Date.now() - 240 * 3600000).toISOString();
+    const pub2 = new Date(Date.now() - 200 * 3600000).toISOString();
+    engine.recordPublication('ep_s02', { kind: 'upload_privado', video_id: 'SINTETICO_VID_002',
+      url: 'https://example.invalid/SINTETICO_VID_002', privacy: 'private', uploaded_privately_at: up2, author: 'teste_integrado' });
+    engine.recordPublication('ep_s02', { kind: 'publicacao_publica', video_id: 'SINTETICO_VID_002',
+      url: 'https://example.invalid/SINTETICO_VID_002', privacy: 'public', uploaded_privately_at: up2,
+      published_publicly_at: pub2, privacy_confirmed_by_api: true, author: 'teste_integrado' });
     await engine.recordProduction('ep_s02', { gates: '32/32' });
     const run2 = await cycle.runFor(LAB, 'ep_s02', { collector: syntheticCollector({
       impressions: 15000, impressionsCtr: 0.049, views: 820, estimatedMinutesWatched: 2600,

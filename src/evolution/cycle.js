@@ -22,7 +22,8 @@ function baselineFor(engine, epId, milestone) {
   const others = engine.experiments().filter((x) => x.episode_id !== epId);
   const vals = {};
   for (const x of others) {
-    const m = x.measurements.find((mm) => mm.milestone === milestone);
+    // a medida que vale e a ULTIMA daquele marco, nao a primeira provisoria
+    const m = (x.measurement_by_milestone || {})[milestone];
     if (!m) continue;
     for (const [k, v] of Object.entries(m.metrics || {})) {
       if (typeof v !== 'number') continue;
@@ -81,17 +82,27 @@ async function runFor(channelId, epId, { collector, now = Date.now(), force = fa
   if (!x.publication) return { episode_id: epId, ran: false,
     steps: [step('publicacao', 'ausente', 'episodio nao publicado: sem audiencia, nao ha ciclo a rodar')] };
 
+  // --- o relogio e a PUBLICACAO PUBLICA confirmada, nunca o envio privado ---
+  const clock = engine.audienceClock(epId);
+  if (!clock.started) return { episode_id: epId, ran: false, audience_clock_started: false,
+    steps: [step('relogio de audiencia', 'nao comecou', clock.reason)],
+    note: 'video privado ou agendado nao e analisado: nao existe audiencia para medir, e medir zero como se fosse resultado seria inventar fracasso.' };
+
   const pub = x.publication;
-  const hours = (now - new Date(pub.published_at).getTime()) / 3600000;
+  const hours = (now - new Date(clock.at).getTime()) / 3600000;
   let due = null;
   for (const m of MILESTONES) if (hours >= m.hours) due = m;
   if (!due) return { episode_id: epId, ran: false,
-    steps: [step('marco', 'ainda nao', `${hours.toFixed(1)}h desde a publicacao; o primeiro marco e ${MILESTONES[0].label}`)] };
+    steps: [step('marco', 'ainda nao', `${hours.toFixed(1)}h desde a publicacao publica; o primeiro marco e ${MILESTONES[0].label}`)] };
 
-  // --- idempotencia ---
-  const already = x.measurements.find((m) => m.milestone === due.id);
-  if (already && !force) return { episode_id: epId, ran: false, milestone: due.id,
-    steps: [step('idempotencia', 'ja medido', `o marco ${due.id} ja foi registrado em ${already.ts}; nada foi duplicado`)] };
+  // --- idempotencia: so medida FINAL encerra o marco ---
+  const already = (x.measurement_by_milestone || {})[due.id];
+  if (already && already.completeness !== 'provisoria' && !force)
+    return { episode_id: epId, ran: false, milestone: due.id,
+      steps: [step('idempotencia', 'ja medido', `o marco ${due.id} ja tem medida FINAL de ${already.ts}; nada foi duplicado`)] };
+  const remeasuring = !!(already && already.completeness === 'provisoria');
+  if (remeasuring) step('remedicao', 'marco aberto',
+    `o marco ${due.id} tem medida provisoria de ${already.ts} (${(already.provisional_because || []).join('; ')}); vou tentar completar, e a nova medida substitui a anterior sem apagar o historico`);
 
   // --- 1. coleta ---
   let collected;
@@ -101,21 +112,37 @@ async function runFor(channelId, epId, { collector, now = Date.now(), force = fa
     step('coleta', collected.status === 'COLETADO' ? 'ok' : 'bloqueada', collected.reason || `${Object.keys(collected.metrics || {}).length} metricas`);
   } catch (e) {
     engine.store.append('measurement.recorded', { experiment_id: x.experiment_id, episode_id: epId, milestone: due.id,
-      metrics: {}, missing_metrics: ['todas'], source: 'falha', note: `coleta falhou: ${e.message}` }, { author });
-    return { episode_id: epId, ran: true, milestone: due.id, failed: true,
+      metrics: {}, missing_metrics: ['todas'], source: 'falha', completeness: 'provisoria',
+      provisional_because: [`a coleta falhou: ${e.message}`], attempt: (already ? (already.attempt || 1) + 1 : 1),
+      supersedes: already ? already.ts : null,
+      note: `coleta falhou: ${e.message}. Marco NAO encerrado: falha nao e medida.` }, { author });
+    return { episode_id: epId, ran: true, milestone: due.id, failed: true, provisional: true,
+      provisional_because: [`coleta falhou: ${e.message}`],
       steps: [step('coleta', 'falhou', e.message)] };
   }
   if (collected.status !== 'COLETADO') {
     engine.store.append('measurement.recorded', { experiment_id: x.experiment_id, episode_id: epId, milestone: due.id,
-      metrics: {}, missing_metrics: ['todas'], source: collected.status, note: collected.reason }, { author });
-    return { episode_id: epId, ran: true, milestone: due.id, blocked: true, steps };
+      metrics: {}, missing_metrics: ['todas'], source: collected.status, completeness: 'provisoria',
+      provisional_because: [collected.reason || `coleta devolveu status ${collected.status}`],
+      attempt: (already ? (already.attempt || 1) + 1 : 1), supersedes: already ? already.ts : null,
+      note: `${collected.reason}. Marco NAO encerrado: ausencia de dado nao e resultado.` }, { author });
+    return { episode_id: epId, ran: true, milestone: due.id, blocked: true, provisional: true,
+      provisional_because: [collected.reason || collected.status], steps };
   }
 
-  // --- 2. medicao ---
+  // --- 2. medicao, com completude declarada ---
+  const comp = collected.completeness || { final: (collected.missing_metrics || []).length === 0, provisional_because: [], structural_gaps: [] };
   engine.recordMeasurement(epId, { milestone: due.id, metrics: collected.metrics,
     source: collected.source || (collected.sources ? JSON.stringify(collected.sources) : 'youtube_api'),
-    window: collected.window, author });
-  step('medicao', 'registrada', `${Object.keys(collected.metrics).length} metricas, ${(collected.missing_metrics || []).length} ausentes`);
+    window: collected.window, author,
+    completeness: comp.final ? 'final' : 'provisoria',
+    provisionalBecause: comp.provisional_because || [],
+    structuralGaps: comp.structural_gaps || [],
+    attempt: (already ? (already.attempt || 1) + 1 : 1),
+    supersedes: already ? already.ts : null });
+  step('medicao', comp.final ? 'registrada (final)' : 'registrada (provisoria)',
+    `${Object.keys(collected.metrics).length} metricas, ${(collected.missing_metrics || []).length} ausentes`
+    + (comp.final ? '' : ` — segue aberta: ${(comp.provisional_because || []).join('; ')}`));
 
   // --- 3. retencao mapeada nas cenas ---
   let retMap = null;
@@ -171,8 +198,11 @@ async function runFor(channelId, epId, { collector, now = Date.now(), force = fa
   if (hours >= 48) { review = engine.review48h(epId, { now }); step('revisao_48h', review.actionable ? 'liberada' : 'travada',
     review.actionable ? `${review.recommendations.length} recomendacao(oes) para decisao humana` : review.blockers.join(' | ')); }
 
-  log.info(`[${epId}] ciclo no marco ${due.id}: veredicto ${issued.verdict}`);
+  log.info(`[${epId}] ciclo no marco ${due.id}: veredicto ${issued.verdict}${comp.final ? '' : ' (medida provisoria)'}`);
   return { episode_id: epId, ran: true, milestone: due.id, hours_since_publication: +hours.toFixed(2),
+    audience_clock_started: true, published_publicly_at: clock.at,
+    provisional: !comp.final, provisional_because: comp.provisional_because || [],
+    remeasured: remeasuring,
     verdict: issued.verdict, audit_approved: issued.audit.approved, knowledge: know, review, baseline: bl, steps };
 }
 module.exports = { runFor, baselineFor, proposeVerdict };
