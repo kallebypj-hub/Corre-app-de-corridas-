@@ -12,9 +12,29 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 
 const ROOT = path.join(__dirname, '..');
-const TMP = path.join(ROOT, 'var', 'test-yt');
+/**
+ * ISOLAMENTO TOTAL: a suite roda inteira dentro de um diretorio temporario do
+ * sistema. Ela NAO escreve e NAO apaga nada em var/ — nem token, nem registro
+ * de upload, nem log de experimento. Uma versao anterior desta suite apagava
+ * var/uploads inteiro no fim; isso destruiria o historico de publicacao real.
+ */
+const SANDBOX = fs.mkdtempSync(path.join(os.tmpdir(), 'ymc-yt-test-'));
+const TMP = path.join(SANDBOX, 'work');
+process.env.YT_UPLOAD_STATE_DIR = path.join(SANDBOX, 'uploads');
+process.env.YT_TOKEN_DIR = path.join(SANDBOX, 'tokens');
+process.env.TOKEN_ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
+// A trava de canal e de producao. No sandbox ela aponta para o canal de teste,
+// senao a suite tentaria enviar para o Quiet Resolve — e seria recusada, certo.
+process.env.YT_CHANNELS_CONFIG = path.join(SANDBOX, 'channels.json');
+fs.writeFileSync(process.env.YT_CHANNELS_CONFIG, JSON.stringify({
+  official: { internal_key: 'ch_yt_test', expected_title: 'Canal de Teste', expected_handle: '@teste',
+    youtube_channel_id: null, bound: false },
+  forbidden: [{ title: 'Kalleby Prado', reason: 'canal pessoal (replicado aqui para o teste do bloqueio)' }],
+  authorized_not_in_use: [], policy: ['sandbox']
+}, null, 2));
 let pass = 0, fail = 0;
 async function t(name, fn) {
   try { await fn(); pass++; console.log(`\x1b[32m  ok\x1b[0m   ${name}`); }
@@ -29,7 +49,7 @@ const CH = 'ch_yt_test';
 
 (async () => {
   const mock = require('./youtube/_mock-google');
-  fs.rmSync(TMP, { recursive: true, force: true }); fs.mkdirSync(TMP, { recursive: true });
+  fs.mkdirSync(TMP, { recursive: true });
 
   // ---------- sem credenciais ----------
   delete process.env.YOUTUBE_CLIENT_ID; delete process.env.YOUTUBE_CLIENT_SECRET;
@@ -219,9 +239,8 @@ const CH = 'ch_yt_test';
     for (const s of ['ya29.SEGREDO', '1//SEGREDO', 'ya29.XYZ', 'abc123']) assert.ok(!clean.includes(s), `vazou ${s}`);
   });
 
-  fs.rmSync(TMP, { recursive: true, force: true });
-  fs.rmSync(path.join(ROOT, 'var', 'uploads'), { recursive: true, force: true });
-  require('./youtube/token-store').clear(CH);
+  // limpa SO o sandbox; nada em var/ e tocado
+  fs.rmSync(SANDBOX, { recursive: true, force: true });
   console.log(`\n${fail === 0 ? '\x1b[32m' : '\x1b[31m'}${pass} aprovados, ${fail} falhas\x1b[0m`);
   console.log('\x1b[90mEscopo desta suite: o cliente desta casa, contra espelho local.');
   console.log('Ela NAO prova que o Google aceitou nada — isso exige as credenciais do dono.\x1b[0m');

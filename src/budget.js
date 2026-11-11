@@ -10,7 +10,8 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const CFG = path.join(ROOT, 'config', 'budget.json');
-const LEDGER_DIR = path.join(ROOT, 'var', 'budget');
+// Configuravel para que suite de teste nunca escreva no livro-caixa real.
+const LEDGER_DIR = process.env.BUDGET_LEDGER_DIR || path.join(ROOT, 'var', 'budget');
 
 function config() { return JSON.parse(fs.readFileSync(CFG, 'utf8')); }
 function ledgerPath(channelId) { fs.mkdirSync(LEDGER_DIR, { recursive: true }); return path.join(LEDGER_DIR, `${channelId}.jsonl`); }

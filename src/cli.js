@@ -95,6 +95,74 @@ async function main() {
       console.log(`  veredicto: ${x.current_verdict.verdict}  | medicoes: ${x.measurements.length} | edicoes: ${x.edits.length}`);
       if (!x.publication) console.log('  publicacao: nenhuma — sem dado de audiencia, o funil nao e avaliado');
     }
+  } else if (cmd === 'channel') {
+    const guard = require('./youtube/channel-guard');
+    const sub = rest[0];
+    if (sub === 'bind') { console.log(JSON.stringify(await guard.bind(CHANNEL, { force: rest.includes('--force') }), null, 2)); return; }
+    if (sub === 'audit') {
+      const audit = require('./youtube/channel-audit');
+      const proposal = JSON.parse(require('fs').readFileSync(path.join(__dirname, '..', 'config', 'channel-optimization.json'), 'utf8'));
+      const r = await audit.audit(CHANNEL, { proposal: { channel_name: proposal.channel } });
+      const out = path.join(__dirname, '..', 'reports', `auditoria-canal-${new Date().toISOString().slice(0, 10)}.json`);
+      require('fs').writeFileSync(out, JSON.stringify(r, null, 2));
+      console.log(JSON.stringify(r.available ? { channel: r.channel.title, id: r.channel.youtube_channel_id,
+        videos: r.inventory_summary, recomendacoes: r.recommendations.length, relatorio: out } : r, null, 2));
+      return;
+    }
+    console.log(JSON.stringify(await guard.check(CHANNEL), null, 2));
+    console.log(JSON.stringify(guard.status(), null, 2));
+  } else if (cmd === 'cycle') {
+    const cycle = require('./evolution/cycle');
+    const analytics = require('./youtube/analytics');
+    const r = await cycle.runFor(CHANNEL, epId, { collector: (ch, o) => analytics.collectForVideo(ch, o) });
+    console.log(JSON.stringify(r, null, 2));
+  } else if (cmd === 'scheduler') {
+    const sched = require('./scheduler');
+    const analytics = require('./youtube/analytics');
+    const collector = (ch, o) => analytics.collectForVideo(ch, o);
+    const sub = rest[0];
+    if (sub === 'status') { console.log(JSON.stringify(sched.status(CHANNEL), null, 2)); return; }
+    if (sub === 'loop') { await sched.loop(CHANNEL, { collector }); return; }
+    const r = await sched.tick(CHANNEL, { collector, dryRun: rest.includes('--dry-run') });
+    console.log(JSON.stringify(r, null, 2));
+  } else if (cmd === 'publish') {
+    const pubmod = require('./youtube/publication');
+    const sub = rest[0];
+    const fs2 = require('fs');
+    const base = path.join(__dirname, '..', 'content', 'channels', CHANNEL, 'episodes', epId);
+    if (sub === 'state') { console.log(JSON.stringify(await pubmod.stateOf(store, epId), null, 2)); return; }
+    if (sub === 'private') {
+      const metadata = JSON.parse(fs2.readFileSync(path.join(base, 'metadata.json'), 'utf8'));
+      let last = 0;
+      const r = await pubmod.uploadPrivate(store, epId, { filePath: path.join(base, 'video_long_1080p.mp4'), metadata,
+        by: 'presidente (linha de comando)', force: rest.includes('--force'),
+        onProgress: (sent, total) => { const p2 = Math.floor(sent / total * 100); if (p2 >= last + 10) { last = p2; log.info(`envio ${p2}%`); } } });
+      console.log(JSON.stringify(r, null, 2)); return;
+    }
+    if (sub === 'schedule') {
+      const at = rest.find((x) => /^\d{4}-\d{2}-\d{2}/.test(x));
+      if (!at) throw new Error('informe a data: node src/cli.js publish schedule <ep> 2026-12-01T13:00:00Z');
+      console.log(JSON.stringify(await pubmod.schedule(store, epId, { publishAt: at, by: 'presidente' }), null, 2)); return;
+    }
+    if (sub === 'public') {
+      const phrase = process.argv.slice(2).join(' ').includes(pubmod.CONFIRM_PHRASE(epId)) ? pubmod.CONFIRM_PHRASE(epId) : null;
+      console.log(JSON.stringify(await pubmod.makePublic(store, epId, { by: 'presidente', confirmation: phrase }), null, 2)); return;
+    }
+    if (sub === 'collect') { console.log(JSON.stringify(pubmod.startCollection(store, epId, { by: 'presidente' }), null, 2)); return; }
+    console.log(JSON.stringify(pubmod.TRANSITIONS, null, 2));
+  } else if (cmd === 'import-studio') {
+    const si = require('./youtube/studio-import');
+    const file = rest.find((x) => x.endsWith('.csv'));
+    if (!file) { console.log(`coloque o CSV exportado do Studio em ${si.INBOX} e rode: node src/cli.js import-studio <ep> <arquivo.csv>`); return; }
+    const { EvolutionEngine } = require('./evolution/engine');
+    const e = new EvolutionEngine(CHANNEL);
+    const x = e.store.experiment(`exp_${epId}`);
+    const r = si.importFile(file, { videoId: x && x.publication ? x.publication.video_id : null });
+    e.recordMeasurement(epId, { milestone: rest.find((m) => ['h24', 'h72', 'd7', 'd28'].includes(m)) || 'd7',
+      metrics: r.metrics, source: r.source, window: r.period, author: 'presidente (importacao manual)' });
+    console.log(JSON.stringify(r, null, 2));
+  } else if (cmd === 'editorial') {
+    console.log(JSON.stringify(require('./editorial/generator').status(), null, 2));
   } else if (cmd === 'budget') {
     console.log(JSON.stringify(require('./budget').summary(CHANNEL), null, 2));
   } else if (cmd === 'doctor') {
@@ -114,6 +182,12 @@ async function main() {
   node src/cli.js upload <ep> [--force]      # envio PRIVADO real; exige gates, aprovacao e OAuth
   node src/cli.js evolution [review|knowledge|timeline] [<ep>]
   node src/cli.js budget
+  node src/cli.js channel [status|bind|audit]   # trava de canal e auditoria do Quiet Resolve
+  node src/cli.js cycle <ep>                    # ciclo de aprendizagem completo
+  node src/cli.js scheduler [tick|status|loop] [--dry-run]
+  node src/cli.js publish [state|private|schedule|public|collect] <ep>
+  node src/cli.js import-studio <ep> <arquivo.csv> [h24|h72|d7|d28]
+  node src/cli.js editorial                     # provedor de geracao editorial e autonomia real
 episodios no disco: ${listEpisodeDirs(CHANNEL).join(', ') || '(nenhum)'}
   node src/cli.js doctor
 estagios: ${STAGES.map((s) => s.id).join(', ')}`);

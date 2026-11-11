@@ -9,6 +9,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
+const os = require('os');
+// tudo que esta suite escreve vai para um sandbox; var/ de producao nao e tocado
+process.env.BUDGET_LEDGER_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ymc-evo-budget-'));
 const { EvolutionStore } = require('./evolution/store');
 const { EvolutionEngine } = require('./evolution/engine');
 const funnel = require('./evolution/funnel');
@@ -26,7 +29,10 @@ async function t(name, fn) {
   try { await fn(); pass++; console.log(`\x1b[32m  ok\x1b[0m   ${name}`); }
   catch (e) { fail++; console.log(`\x1b[31m  FALHA\x1b[0m ${name}\n        ${e.message}`); }
 }
-const cleanup = () => fs.rmSync(path.join(ROOT, 'var', 'evolution', LAB), { recursive: true, force: true });
+const cleanup = () => {
+  fs.rmSync(path.join(ROOT, 'var', 'evolution', LAB), { recursive: true, force: true });
+  fs.rmSync(process.env.BUDGET_LEDGER_DIR, { recursive: true, force: true });
+};
 
 (async () => {
   cleanup();

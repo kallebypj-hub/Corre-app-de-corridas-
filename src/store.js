@@ -142,7 +142,9 @@ function applyEvent(st, ev) {
     }
     case 'approval.decided': {
       const ep = st.episodes[p.epId]; if (!ep) break;
-      ep.approval = { status: p.status, by: p.by, at: ev.ts, notes: p.notes || null, scheduled_upload_authorized: !!p.scheduled_upload_authorized };
+      ep.approval = { status: p.status, by: p.by, at: ev.ts, notes: p.notes || null,
+        scheduled_upload_authorized: !!p.scheduled_upload_authorized,
+        public_release_authorized: !!p.public_release_authorized };
       break;
     }
     case 'mission.created': st.missions.unshift({ ...p, at: ev.ts }); break;

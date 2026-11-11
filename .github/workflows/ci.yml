@@ -25,3 +25,7 @@ jobs:
         run: node src/test-security.js
       - name: Motor de evolucao
         run: node src/test-evolution.js
+      - name: Prova integrada do ciclo
+        run: node src/test-integration.js
+      - name: A bateria nao destroi dado de producao
+        run: node src/test-data-safety.js

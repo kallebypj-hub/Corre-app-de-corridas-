@@ -20,7 +20,8 @@ const { Logger } = require('../log');
 
 const log = new Logger('youtube.upload');
 const CHUNK = Number(process.env.YT_UPLOAD_CHUNK_BYTES || 8 * 1024 * 1024); // multiplo de 256 KiB
-const STATE_DIR = path.join(__dirname, '..', '..', 'var', 'uploads');
+// Configuravel para que a suite de testes NUNCA escreva nem apague em var/uploads.
+const STATE_DIR = process.env.YT_UPLOAD_STATE_DIR || path.join(__dirname, '..', '..', 'var', 'uploads');
 
 function recFile(channelId, epId) {
   fs.mkdirSync(STATE_DIR, { recursive: true, mode: 0o700 });
@@ -85,6 +86,8 @@ async function uploadVideo({ channelId, epId, filePath, metadata, onProgress = n
   if (!fs.existsSync(filePath)) throw new Error(`arquivo inexistente: ${filePath}`);
   const st = await oauth.state(channelId);
   if (st.status !== 'AUTORIZADO') throw new Error(`upload bloqueado: OAuth em estado ${st.status}. ${st.reason || ''}`.trim());
+  // Segunda trava, no nivel mais baixo: nem um chamador descuidado envia para o canal errado.
+  await require('./channel-guard').assertWritable(channelId, 'upload');
 
   const total = fs.statSync(filePath).size;
   const digest = sha256File(filePath);

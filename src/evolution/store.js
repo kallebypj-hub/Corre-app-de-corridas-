@@ -12,7 +12,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..', '..');
-const DIR = path.join(ROOT, 'var', 'evolution');
+const DIR = process.env.EVOLUTION_DIR || path.join(ROOT, 'var', 'evolution');
 
 const EVENT_TYPES = new Set([
   'experiment.registered', 'experiment.produced', 'experiment.published',

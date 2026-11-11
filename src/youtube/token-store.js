@@ -12,7 +12,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DIR = path.join(__dirname, '..', '..', 'var', 'tokens');
+// Configuravel pelo mesmo motivo: teste usa diretorio temporario proprio.
+const DIR = process.env.YT_TOKEN_DIR || path.join(__dirname, '..', '..', 'var', 'tokens');
 const KEY_FILE = path.join(DIR, '.key');
 
 function ensureDir() {

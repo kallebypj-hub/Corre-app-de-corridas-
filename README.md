@@ -15,7 +15,6 @@ Um vídeo longo real, narrado, legendado, com miniaturas, três Shorts derivados
 ## Como subir
 
 ```bash
-cd youtube-media-company
 cp .env.example .env          # já vem com limite de gasto em zero
 node src/cli.js doctor        # confere ffmpeg, playwright, TTS local
 node src/server.js            # painel em http://127.0.0.1:3777

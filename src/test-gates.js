@@ -9,6 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const http = require('http');
+const os = require('os');
+const { spawn } = require('child_process');
+const PORT = Number(process.env.GATES_TEST_PORT || 3896);
 const { Store } = require('./store');
 const { factcheck } = require('./stages/audit');
 const { media_rights } = require('./stages/production');
@@ -36,13 +39,18 @@ function freshLab() {
 }
 const req = (method, p, body, channel) => new Promise((res, rej) => {
   const d = body ? JSON.stringify(body) : null;
-  const r = http.request({ hostname: '127.0.0.1', port: Number(process.env.PORT || 3777), path: p, method,
+  const r = http.request({ hostname: '127.0.0.1', port: PORT, path: p, method,
     headers: { ...(d ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(d) } : {}), ...(channel ? { 'x-channel': channel } : {}) } },
     (x) => { let b = ''; x.on('data', (c) => (b += c)); x.on('end', () => { try { res({ status: x.statusCode, body: JSON.parse(b) }); } catch (_) { res({ status: x.statusCode, body: b }); } }); });
   r.on('error', rej); if (d) r.write(d); r.end();
 });
 
+let SRV = null;
 (async () => {
+  // a suite nao depende de servidor ja rodando: ela sobe o seu, em porta propria
+  SRV = spawn(process.execPath, [path.join(ROOT, 'src', 'server.js')],
+    { env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', API_KEY: '' }, stdio: 'ignore' });
+  await new Promise((r) => setTimeout(r, 2500));
   console.log('\n— um fato sem fonte impede a entrega —');
   await t('afirmacao factual nova sem fonte REPROVA o estagio de auditoria', async () => {
     const paths = freshLab();
@@ -131,6 +139,7 @@ const req = (method, p, body, channel) => new Promise((res, rej) => {
   });
 
   fs.rmSync(path.join(ROOT, 'content', 'channels', 'ch_lab_content'), { recursive: true, force: true });
+  if (SRV) SRV.kill();
   fs.rmSync(path.join(ROOT, 'var', 'channels', LAB_CH), { recursive: true, force: true });
   console.log(`\n${fail === 0 ? '\x1b[32m' : '\x1b[31m'}${pass} bloqueios comprovados, ${fail} falhas\x1b[0m`);
   if (fail) process.exit(1);

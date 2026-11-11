@@ -1,34 +1,90 @@
 {
   "id": "ch_practical_discipline",
-  "status": "pilot_provisional_identity",
+  "status": "canal_existente_do_proprietario",
   "language": "en-US",
   "niche": "practical philosophy of discipline and habit",
-  "working_name": "The Hard Part",
+  "working_name": "Quiet Resolve",
   "name_proposals": [
-    { "name": "The Hard Part", "why": "nomeia exatamente o momento que o nicho evita: a parte difícil. Curto, memorável, cabe em miniatura e não promete resultado.", "risk": "termo genérico; checar colisão de canal antes de registrar" },
-    { "name": "Friction Theory", "why": "posiciona o canal como uma tese sobre atrito, não como motivação. Sinaliza ensaio e análise.", "risk": "soa acadêmico; pode reduzir clique fora do nicho" },
-    { "name": "Do It Tired", "why": "frase de ação que resume a linha editorial inteira e funciona como assinatura falada no fim do vídeo.", "risk": "mais próximo de slogan; pode envelhecer rápido" }
+    {
+      "name": "Quiet Resolve",
+      "why": "nome existente, handle casado, descreve a tese do canal: resolucao sem barulho",
+      "risk": "nenhum — e o nome em uso",
+      "decision": "MANTER"
+    }
   ],
-  "registration": "NENHUM nome registrado, nenhuma conta Google criada. Operação roda com identidade provisória até aprovação do proprietário.",
+  "registration": "Canal JA EXISTE e pertence ao proprietario. O nome Quiet Resolve e o handle @QuietResolveDaily sao preservados. Nenhuma mudanca publica de identidade sem aprovacao.",
   "editorial_thesis": {
     "statement": "Disciplina não é um traço de caráter nem um estado emocional: é o resultado de arranjos concretos que reduzem o custo de começar. Cada episódio isola um arranjo, mostra onde ele falha e entrega uma mudança aplicável no mesmo dia.",
-    "not_this": ["frases motivacionais sobre imagens em sequência", "citação atribuída a estoico sem fonte", "promessa de transformação em 30 dias", "resumo de livro de autoajuda"],
-    "this_instead": ["miniensaio narrado que formula um problema, analisa uma contradição e entrega uma ideia útil", "exemplo concreto e verificável", "admitir o limite da ideia dentro do próprio vídeo"]
+    "not_this": [
+      "frases motivacionais sobre imagens em sequência",
+      "citação atribuída a estoico sem fonte",
+      "promessa de transformação em 30 dias",
+      "resumo de livro de autoajuda"
+    ],
+    "this_instead": [
+      "miniensaio narrado que formula um problema, analisa uma contradição e entrega uma ideia útil",
+      "exemplo concreto e verificável",
+      "admitir o limite da ideia dentro do próprio vídeo"
+    ]
   },
   "audience": "adultos 25-45 que já tentaram rotina e falharam; procuram explicação mecânica, não entusiasmo",
   "voice_of_channel": {
     "tone": "calmo, direto, analítico, sem grito e sem bordão",
     "person": "segunda pessoa com reconhecimento do próprio esforço do espectador",
-    "forbidden": ["hustle", "grind", "warrior", "alpha", "beast mode", "no excuses"]
+    "forbidden": [
+      "hustle",
+      "grind",
+      "warrior",
+      "alpha",
+      "beast mode",
+      "no excuses"
+    ]
   },
   "visual_identity": {
     "principle": "tipografia grande e geometria desenhada por código; nenhuma foto de banco de imagem, nenhuma imagem generativa",
-    "palette": { "bg_deep": "#0B0D10", "bg_soft": "#141821", "ink": "#F2F4F7", "ink_dim": "#9AA4B2", "accent": "#E8552F", "accent_2": "#2F7FE8", "line": "#2A313D" },
-    "type": { "display": "Inter Display", "body": "Inter", "license": "SIL Open Font License 1.1 (instalada no sistema)" },
-    "motion": "câmera lenta e contínua por cena (deriva/zoom) com revelação de texto em batidas sincronizadas à narração"
+    "palette": {
+      "bg_deep": "#0B0D10",
+      "bg_soft": "#141821",
+      "ink": "#F2F4F7",
+      "ink_dim": "#9AA4B2",
+      "accent": "#E8552F",
+      "accent_2": "#2F7FE8",
+      "line": "#2A313D"
+    },
+    "type": {
+      "display": "Inter Display",
+      "body": "Inter",
+      "license": "SIL Open Font License 1.1 (instalada no sistema)"
+    },
+    "motion": "câmera lenta e contínua por cena (deriva/zoom) com revelação de texto em batidas sincronizadas à narração",
+    "proposal": "ver config/channel-optimization.json — proposta A (Still Frame) recomendada, que e a linguagem ja usada nos episodios 1 e 2"
   },
-  "cadence": { "long_per_week": 1, "target_minutes": [6, 9], "shorts_per_long": 3, "weekly_review": true, "monthly_analytics_review": true,
-    "scale_rule": "não aumentar volume se cair qualidade, se houver inconsistência ou risco de conteúdo repetitivo" },
-  "isolation": { "oauth": "proprio", "assets": "proprio", "budget": "proprio", "analytics": "proprio", "memory": "proprio",
-    "note": "nenhum dado de AI Company OS, Kaeps ou agencia de criativos e carregado aqui" }
+  "cadence": {
+    "long_per_week": 1,
+    "target_minutes": [
+      6,
+      9
+    ],
+    "shorts_per_long": 3,
+    "weekly_review": true,
+    "monthly_analytics_review": true,
+    "scale_rule": "não aumentar volume se cair qualidade, se houver inconsistência ou risco de conteúdo repetitivo"
+  },
+  "isolation": {
+    "oauth": "proprio",
+    "assets": "proprio",
+    "budget": "proprio",
+    "analytics": "proprio",
+    "memory": "proprio",
+    "note": "nenhum dado de AI Company OS, Kaeps ou agencia de criativos e carregado aqui"
+  },
+  "handle": "@QuietResolveDaily",
+  "youtube": {
+    "official_channel": "Quiet Resolve",
+    "handle": "@QuietResolveDaily",
+    "channel_id": null,
+    "bound": false,
+    "forbidden_channel": "Kalleby Prado (pessoal)",
+    "note": "ID real so e preenchido apos OAuth, conferido contra titulo e handle pela trava de canal"
+  }
 }

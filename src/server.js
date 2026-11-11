@@ -214,7 +214,10 @@ async function api(req, res, u) {
           blocking: ['qa:' + ((ep.stages.qa || {}).status || 'pendente')] });
     }
     store.append('approval.decided', { epId, status: body.status, by: body.by || 'presidente',
-      notes: body.notes || null, scheduled_upload_authorized: !!body.scheduled_upload_authorized });
+      notes: body.notes || null,
+      scheduled_upload_authorized: !!body.scheduled_upload_authorized,
+      // Decisao SEPARADA: autorizar envio privado nao autoriza publicacao publica.
+      public_release_authorized: !!body.public_release_authorized });
     store.append('memory.recorded', { kind: 'decisao_de_aprovacao', epId, status: body.status, notes: body.notes || null });
     return json(res, 200, { ok: true, approval: store.episode(epId).approval });
   }

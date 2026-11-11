@@ -16,8 +16,14 @@ const MONETARY_SCOPE = 'https://www.googleapis.com/auth/yt-analytics-monetary.re
 
 const CORE = ['views', 'estimatedMinutesWatched', 'averageViewDuration', 'averageViewPercentage',
   'subscribersGained', 'subscribersLost', 'likes', 'comments', 'shares'];
-const REACH = ['impressions', 'impressionsCtr'];
-const ALL_KEYS = CORE.concat(REACH, ['retention_0_30s', 'retention_mid', 'retention_end',
+/**
+ * IMPORTANTE: impressions e impressionsCtr NAO existem em reports.query da
+ * Analytics API. Pedi-las ali devolve erro e o CTR nunca chegaria. Elas vem da
+ * Reporting API (relatorio em lote) ou de CSV exportado do Studio.
+ */
+const REACH = [];
+const REACH_FROM_REPORTING = ['impressions', 'impressionsCtr'];
+const ALL_KEYS = CORE.concat(REACH_FROM_REPORTING, ['retention_0_30s', 'retention_mid', 'retention_end',
   'top_traffic_source', 'shorts_referral_views', 'estimatedRevenue', 'cpm', 'playbackBasedCpm']);
 
 function unavailableAll(reason, extra = {}) {
@@ -92,8 +98,19 @@ async function collectForVideo(channelId, { videoId, publishedAt, durationSecond
   const metrics = {}; const missing = []; const notes = [];
   try { Object.assign(metrics, rowsToObject(await query(channelId, { videoId, startDate: start, endDate: end, metrics: CORE }))); }
   catch (e) { for (const k of CORE) metrics[k] = 'indisponivel'; notes.push(`metricas principais: ${scrub(e.message)}`); }
-  try { Object.assign(metrics, rowsToObject(await query(channelId, { videoId, startDate: start, endDate: end, metrics: REACH }))); }
-  catch (e) { for (const k of REACH) metrics[k] = 'indisponivel'; notes.push('impressoes e CTR nao foram liberados para este filtro'); }
+  // --- alcance: Reporting API em lote, com queda para CSV do Studio ---
+  const reporting = require('./reporting');
+  let reach = null;
+  try { reach = await reporting.fetchReach(channelId, { videoId, from: start, to: end }); }
+  catch (e) { reach = { impressions: 'indisponivel', impressions_ctr: 'indisponivel', available: false, reason: scrub(e.message) }; }
+  metrics.impressions = reach.impressions;
+  metrics.impressionsCtr = reach.impressions_ctr !== undefined ? reach.impressions_ctr : 'indisponivel';
+  const reachMeta = { source: reach.available ? 'youtube_reporting_api' : null, available: !!reach.available,
+    reason: reach.reason || null, job_id: reach.job_id || null, report_id: reach.report_id || null,
+    report_window: reach.report_window || null, column_mapping_verified: reach.column_mapping_verified ?? null,
+    day_boundary_timezone: reporting.FACTS.day_boundary_timezone,
+    delay_note: reach.delay_note || `relatorio em lote: o primeiro arquivo pode levar ate ${reporting.FACTS.first_report_delay_hours_max}h apos criar o job` };
+  if (!reach.available) notes.push(`impressoes e CTR indisponiveis pela Reporting API: ${reach.reason}. Alternativa: exportar do YouTube Studio e importar com "node src/cli.js import-studio".`);
 
   const rc = await retentionCurve(channelId, videoId, start, end);
   let curve = rc.curve;
@@ -118,6 +135,9 @@ async function collectForVideo(channelId, { videoId, publishedAt, durationSecond
   return { status: 'COLETADO', video_id: videoId, milestone: ms.milestone.id, milestone_label: ms.milestone.label,
     hours_since_publication: ms.hours, window: { from: start, to: end },
     metrics, missing_metrics: missing, notes,
+    sources: { core: 'youtube_analytics_api/reports.query', reach: reachMeta,
+      retention: curve ? 'youtube_analytics_api/elapsedVideoTimeRatio' : null,
+      traffic: ts.sources ? 'youtube_analytics_api/insightTrafficSourceType' : null },
     retention_curve: curve, traffic_sources: ts.sources || null,
     monetary_scope_granted: hasMonetary,
     collected_at: new Date().toISOString() };
@@ -139,4 +159,4 @@ async function collect(channelId, publications = [], { days = 28 } = {}) {
     collected_at: new Date().toISOString() };
 }
 module.exports = { collect, collectForVideo, query, retentionCurve, trafficSources, milestoneFor,
-  unavailable: unavailableAll, CORE, REACH, ALL_KEYS, MONETARY_SCOPE, ANALYTICS_BASE };
+  unavailable: unavailableAll, CORE, REACH, REACH_FROM_REPORTING, ALL_KEYS, MONETARY_SCOPE, ANALYTICS_BASE };

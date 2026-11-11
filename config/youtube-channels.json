@@ -1,0 +1,31 @@
+{
+  "revision": 1,
+  "updated": "2026-11-11",
+  "official": {
+    "internal_key": "ch_practical_discipline",
+    "expected_title": "Quiet Resolve",
+    "expected_handle": "@QuietResolveDaily",
+    "youtube_channel_id": null,
+    "bound": false,
+    "bound_at": null,
+    "note": "O ID real so e preenchido depois do OAuth, conferido contra o titulo e o handle acima. Enquanto estiver null, nenhum envio e permitido."
+  },
+  "forbidden": [
+    {
+      "title": "Kalleby Prado",
+      "approx_subscribers": 1310,
+      "reason": "canal PESSOAL do proprietario. Proibido enviar, publicar, excluir ou alterar qualquer configuracao.",
+      "youtube_channel_id": null
+    }
+  ],
+  "authorized_not_in_use": [
+    { "title": "Caiu na Rede", "note": "autorizado para a empresa, fora de uso no piloto" },
+    { "title": "Sala 666", "note": "autorizado para a empresa, fora de uso no piloto" }
+  ],
+  "policy": [
+    "A conta Google do dono tem varios canais. O OAuth autoriza UM canal: o que ele escolher na tela de consentimento.",
+    "Antes de qualquer escrita (envio, agendamento, publicacao, mudanca de canal), o sistema confere na API qual canal o token alcanca.",
+    "Se o canal autorizado nao for o oficial, a operacao e RECUSADA — inclusive se for um dos outros canais da empresa.",
+    "Se o canal autorizado bater com a lista de proibidos, a operacao e recusada e o fato e registrado."
+  ]
+}
