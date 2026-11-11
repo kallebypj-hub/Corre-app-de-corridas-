@@ -27,17 +27,25 @@ Esse endereço é `127.0.0.1` de propósito. Ele **não** precisa ser o IP da VP
 
 6. Copie o **ID do cliente** e o **Segredo do cliente**.
 
-## Passo 2 — colocar no .env da VPS
+## Passo 2 — gravar a credencial sem ler nem digitar a chave
+
+**O Google mostra a chave secreta uma única vez, na tela de criação.** Depois disso só aparecem os 4 últimos caracteres. Se a chave do cliente já não estiver visível, abra o cliente na página de Credenciais e use **Reset Secret** (ou o recurso de rotação de chave, que evita a janela de indisponibilidade). Na hora em que a chave aparecer, clique em **BAIXAR JSON**.
+
+Depois, na VPS:
 
 ```bash
-cd ~/Corre-app-de-corridas-          # o projeto agora ocupa a raiz do repositório
-nano .env                            # o arquivo já está em modo 0600
+cd /opt/quiet-resolve        # ou onde o projeto estiver
+./bin/qr-credenciais
 ```
 
-```env
-YOUTUBE_CLIENT_ID=...apps.googleusercontent.com
-YOUTUBE_CLIENT_SECRET=...
-YOUTUBE_REDIRECT_URI=http://127.0.0.1:3777/api/youtube/oauth/callback
+O assistente faz, nesta ordem: **audita a si mesmo** e mostra as 14 garantias; procura um JSON de credencial em `var/credenciais-entrada/`; se não achar, pede para você **colar o JSON inteiro de uma vez** — ele é uma linha só — com o eco do terminal desligado; grava no `.env` em 0600 preservando as outras chaves; destrói o arquivo de entrada se tiver usado um; e roda o `youtube doctor`.
+
+Você nunca lê, digita nem cola a chave em pedaços. Nenhum valor aparece na tela, em log, em histórico de shell ou em qualquer lugar fora do `.env`.
+
+Quem prova as garantias não é o próprio assistente, é `src/credentials-audit.js`, que lê o fonte de fora — auditor que mora dentro do código auditado casa com os próprios padrões e se aprova sozinho. Para ver só a auditoria:
+
+```bash
+./bin/qr-credenciais --auditar
 ```
 
 Opcional e recomendado: `TOKEN_ENCRYPTION_KEY=<64 caracteres hexadecimais>`. Sem ele o sistema gera a chave sozinho em `var/tokens/.key`, com permissão 0600.
@@ -64,7 +72,7 @@ Se preferir não usar SSH, a alternativa é expor o painel com HTTPS e `API_KEY`
 
 ## Passo 4 — validar o procedimento antes de autorizar
 
-Na VPS:
+O `qr-credenciais` já roda isto no fim. Para rodar de novo a qualquer momento:
 
 ```bash
 node src/cli.js youtube doctor

@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+'use strict';
+/**
+ * qr-credenciais — grava as credenciais OAuth do Google no .env privado.
+ *
+ * Caminho preferido, sem o dono ler nem digitar a chave:
+ *   1. na tela do cliente OAuth do Google, clicar em BAIXAR JSON
+ *   2. rodar: qr-credenciais
+ *   3. colar o JSON inteiro de uma vez (ele e uma linha so), as cegas
+ *
+ * Ou, se o arquivo puder chegar na maquina: soltar em var/credenciais-entrada/
+ * e rodar qr-credenciais, que acha sozinho.
+ *
+ * --auditar  mostra so as garantias e sai
+ * --campos   pede ID e chave em dois campos, em vez do JSON inteiro
+ *
+ * O assistente audita a si mesmo antes de tocar na chave, importa, apaga o
+ * arquivo de entrada e valida com o doctor. Nenhum valor aparece na tela.
+ */
+const path = require('path');
+const ROOT = path.join(__dirname, '..');
+const cred = require(path.join(ROOT, 'src', 'credentials'));
+const auditor = require(path.join(ROOT, 'src', 'credentials-audit'));
+
+const C = { d: '\x1b[90m', b: '\x1b[1m', g: '\x1b[32m', r: '\x1b[31m', y: '\x1b[33m', z: '\x1b[0m' };
+const args = process.argv.slice(2);
+const only = (f) => args.includes(f);
+
+(async () => {
+  /* ---- 1. auditoria: o dono ve as garantias antes de entregar a chave ---- */
+  console.log(`\n${C.b}qr-credenciais${C.z} ${C.d}— grava a credencial OAuth no .env privado e nada mais${C.z}\n`);
+  const a = auditor.audit();
+  console.log(`${C.b}Auditoria do assistente${C.z} ${C.d}(${a.audited}, ${a.audited_lines} linhas, sha256 ${a.audited_sha256.slice(0, 12)})${C.z}`);
+  for (const c of a.checks) console.log(`  ${c.ok ? C.g + 'ok   ' : C.r + 'FALHA'}${C.z} ${c.check}`);
+  console.log(`\n  escreve so em: ${a.writes_only.join(', ')}`);
+  console.log(`  transmite para: ${a.transmits_to.length ? a.transmits_to.join(', ') : C.g + 'lugar nenhum' + C.z}`);
+  console.log(`\n${a.ok ? C.g : C.r}${a.verdict}${C.z}\n`);
+  if (!a.ok) process.exit(1);
+  if (only('--auditar')) process.exit(0);
+
+  /* ---- 2. estado atual ---- */
+  const st = cred.status();
+  console.log(`${C.b}Estado do .env${C.z} ${C.d}(${st.env_file}, permissao ${a.env_file.mode}, ignorado pelo git: ${a.env_file.ignored_by_git})${C.z}`);
+  for (const k of st.keys) {
+    const tag = !k.present ? `${C.y}ausente${C.z}`
+      : (k.looks_like_placeholder ? `${C.y}valor de exemplo${C.z}` : `${C.g}preenchido${C.z} ${C.d}(${k.length} car., impressao ${k.fingerprint})${C.z}`);
+    console.log(`  ${k.key}: ${tag}`);
+  }
+
+  /* ---- 3. entrada ---- */
+  const inbox = cred.scanInbox();
+  let r = null;
+  if (inbox.length) {
+    if (inbox.length > 1) {
+      console.log(`\n${C.y}Ha ${inbox.length} arquivos de credencial na pasta de entrada. Deixe so o certo:${C.z}`);
+      for (const f of inbox) console.log(`  ${path.basename(f)}`);
+      process.exit(1);
+    }
+    console.log(`\n${C.b}Importando${C.z} ${path.basename(inbox[0])} ${C.d}da pasta de entrada${C.z}`);
+    try { r = cred.fromJsonFile(inbox[0]); }
+    catch (e) { console.log(`\n${C.r}${e.message}${C.z}\n`); process.exit(1); }
+  } else {
+    console.log(`\n${C.y}Nenhum JSON de credencial em ${cred.INBOX.replace(ROOT + '/', '')}${C.z}`);
+    console.log(`${C.d}Na tela do cliente OAuth do Google: Reset Secret (ou criar cliente Aplicativo da Web) e BAIXAR JSON.`);
+    console.log(`Solte o arquivo nessa pasta e rode de novo — voce nao precisa abrir nem ler o arquivo.${C.z}`);
+    if (!process.stdin.isTTY) process.exit(2);
+    // caminho de UMA colagem: o JSON do Google e uma linha so
+    console.log(`\n${C.d}Ou cole o JSON inteiro agora, de uma vez, as cegas.${C.z}`);
+    try { r = only('--campos') ? await cred.fromPrompt() : await cred.fromPastedJson(); }
+    catch (e) { console.log(`\n${C.r}${e.message}${C.z}\n`); process.exit(2); }
+  }
+
+  /* ---- 4. relatorio sem segredo ---- */
+  console.log(`\n${C.g}Credenciais gravadas.${C.z}`);
+  console.log(`  arquivo: ${r.file} ${C.d}(permissao ${r.mode})${C.z}`);
+  console.log(`  origem: ${r.origin}`);
+  for (const k of r.keys) console.log(`  ${k.key}: ${k.length} caracteres, impressao ${k.fingerprint}`);
+  console.log(`  outras chaves preservadas: ${r.other_keys_preserved}`);
+  if (r.backup) console.log(`  backup do anterior: ${r.backup}`);
+  if (r.redirect_note) console.log(`  ${r.redirect_registered ? C.g : C.y}${r.redirect_note}${C.z}`);
+  if (r.shred_note) console.log(`  ${C.d}${r.shred_note}${C.z}`);
+  console.log(`  ${C.d}${r.note}${C.z}`);
+
+  /* ---- 5. doctor ---- */
+  for (const k of Object.keys(require.cache)) if (/src[\/\\](env|youtube[\/\\]oauth)\.js$/.test(k)) delete require.cache[k];
+  require(path.join(ROOT, 'src', 'env'));
+  const d = require(path.join(ROOT, 'src', 'youtube', 'oauth')).doctor();
+  console.log(`\n${C.b}Validacao (youtube doctor)${C.z}`);
+  for (const c of d.checks) console.log(`  ${c.ok ? C.g + 'ok   ' : C.r + 'FALHA'}${C.z} ${c.check} ${C.d}— ${c.detail}${C.z}`);
+  console.log(`\n  cadastre este endereco em "URIs de redirecionamento autorizados": ${d.redirect.register_in_console}`);
+  console.log(`\n${d.ok ? C.g + 'Pronto para autorizar.' + C.z : C.r + 'Corrija as FALHAS antes de autorizar.' + C.z}`);
+  if (d.ok) {
+    console.log(`${C.d}Proximo passo: subir o painel e abrir o inicio do OAuth. Na tela do Google, escolher o canal Quiet Resolve.${C.z}\n`);
+  } else { console.log(''); }
+  process.exit(d.ok ? 0 : 1);
+})();

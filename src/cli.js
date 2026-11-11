@@ -159,6 +159,13 @@ async function main() {
     }
     if (sub === 'collect') { console.log(JSON.stringify(await pubmod.startCollection(store, epId, { by: 'presidente' }), null, 2)); return; }
     console.log(JSON.stringify(pubmod.TRANSITIONS, null, 2));
+  } else if (cmd === 'credenciais') {
+    const auditor = require('./credentials-audit');
+    const cred = require('./credentials');
+    const sub = rest[0];
+    if (sub === 'status') { console.log(JSON.stringify(cred.status(), null, 2)); return; }
+    console.log(JSON.stringify(auditor.audit(), null, 2));
+    return;
   } else if (cmd === 'import-studio') {
     const si = require('./youtube/studio-import');
     const file = rest.find((x) => x.endsWith('.csv'));
@@ -197,6 +204,8 @@ async function main() {
   node src/cli.js publish [state|private|schedule|public|collect] <ep>
   node src/cli.js import-studio <ep> <arquivo.csv> [h24|h72|d7|d28]
   node src/cli.js youtube doctor                 # valida credencial, redirect e escopos SEM mostrar segredo
+  ./bin/qr-credenciais                           # grava a credencial do JSON baixado do Google, sem expor valor
+  node src/cli.js credenciais [auditar|status]   # auditoria do assistente / estado do .env
   node src/cli.js editorial                     # provedor de geracao editorial e autonomia real
 episodios no disco: ${listEpisodeDirs(CHANNEL).join(', ') || '(nenhum)'}
   node src/cli.js doctor
